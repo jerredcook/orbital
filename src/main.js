@@ -4,7 +4,8 @@ import {
   Viewer, ImageryLayer, TileMapServiceImageryProvider, EllipsoidTerrainProvider,
   buildModuleUrl, Cartesian3, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
-  PolylineCollection, Material,
+  PolylineCollection, Material, DistanceDisplayCondition, Matrix3, Quaternion,
+  CallbackProperty,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
@@ -134,6 +135,38 @@ boot();
 
 // ------------------------------------------------------------- selection ----
 
+// ------------------------------------------------------------- 3D models ----
+// Inside this camera range the selected satellite's dot hands off to a real
+// 3D model: NASA's published glTFs for the ISS and Hubble, class-appropriate
+// generics (built by tools/make-models.mjs) for everything else.
+
+const MODEL_SWAP_M = 150_000;
+
+function modelUriFor(sat) {
+  if (sat.norad === 25544) return '/models/iss.glb';
+  if (sat.norad === 20580) return '/models/hubble.glb';
+  if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return '/models/debris.glb';
+  if (/\bR\/B\b/.test(sat.name)) return '/models/rocketbody.glb';
+  if (sat.name.startsWith('STARLINK')) return '/models/starlink.glb';
+  return '/models/generic-sat.glb';
+}
+
+// Orientation from the propagated state: +X along velocity, +Z zenith.
+const scrX = new Cartesian3(), scrY = new Cartesian3(), scrZ = new Cartesian3();
+const scrM = new Matrix3(), scrQ = new Quaternion();
+function orientationFor(posEcf, velEcf) {
+  Cartesian3.normalize(Cartesian3.fromElements(velEcf.x, velEcf.y, velEcf.z, scrX), scrX);
+  Cartesian3.normalize(posEcf, scrZ);
+  Cartesian3.normalize(Cartesian3.cross(scrZ, scrX, scrY), scrY);
+  Cartesian3.cross(scrY, scrZ, scrX);
+  Matrix3.fromArray([
+    scrX.x, scrX.y, scrX.z,
+    scrY.x, scrY.y, scrY.z,
+    scrZ.x, scrZ.y, scrZ.z,
+  ], 0, scrM); // column-major: columns are the model axes in world space
+  return Quaternion.fromRotationMatrix(scrM, scrQ);
+}
+
 // ECF position of a satrec at the sim clock's current time, or null.
 function currentPosition(satrec) {
   const date = JulianDate.toDate(viewer.clock.currentTime);
@@ -147,13 +180,48 @@ function selectByIndex(index) {
   clearSelection();
   const sat = catalog[index];
   const satrec = satellite.twoline2satrec(sat.l1, sat.l2);
+  const pos = currentPosition(satrec) ?? Cartesian3.ZERO;
   const highlight = overlay.add({
-    position: currentPosition(satrec) ?? Cartesian3.ZERO,
+    position: pos,
     pixelSize: 7,
     color: SELECT_COLOR,
     id: index,
+    // beyond the swap range the dot shows; inside it the model takes over
+    distanceDisplayCondition: new DistanceDisplayCondition(MODEL_SWAP_M, Number.MAX_VALUE),
   });
-  selected = { index, satrec, highlight };
+  // CallbackProperties evaluate the orbit at exact render time, so the model
+  // is glassy-smooth under camera tracking (imperative per-tick updates lag
+  // the entity-view camera by one frame — fatal at 200 m range / 7.6 km/s).
+  const scratchDate = { date: null, gmst: 0 };
+  const stateAt = (time) => {
+    const date = JulianDate.toDate(time);
+    const pv = satellite.propagate(satrec, date);
+    if (!pv?.position) return null;
+    scratchDate.gmst = satellite.gstime(date);
+    return pv;
+  };
+  const modelEntity = viewer.entities.add({
+    position: new CallbackProperty((time, result) => {
+      const pv = stateAt(time);
+      if (!pv) return undefined;
+      const e = satellite.eciToEcf(pv.position, scratchDate.gmst);
+      return Cartesian3.fromElements(e.x * 1000, e.y * 1000, e.z * 1000, result);
+    }, false),
+    orientation: new CallbackProperty((time, result) => {
+      const pv = stateAt(time);
+      if (!pv) return undefined;
+      const p = satellite.eciToEcf(pv.position, scratchDate.gmst);
+      const v = satellite.eciToEcf(pv.velocity, scratchDate.gmst);
+      const q = orientationFor(new Cartesian3(p.x * 1000, p.y * 1000, p.z * 1000), v);
+      return Quaternion.clone(q, result);
+    }, false),
+    model: {
+      uri: modelUriFor(sat),
+      minimumPixelSize: 72,
+      distanceDisplayCondition: new DistanceDisplayCondition(0, MODEL_SWAP_M),
+    },
+  });
+  selected = { index, satrec, highlight, modelEntity };
   swarm.setSuppressed(index);   // the overlay point replaces the swarm dot
   drawOrbitTrack(satrec);
   fillInfoPanel(sat);
@@ -168,6 +236,7 @@ function clearSelection() {
   overlay.removeAll();
   viewer.entities.removeAll();
   viewer.trackedEntity = undefined;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
   following = false;
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
@@ -177,7 +246,7 @@ function clearSelection() {
 // Closed-ellipse orbit track: sample one full period in ECI, project to the
 // fixed frame at the current GMST so it renders as the classic orbital ring.
 function drawOrbitTrack(satrec) {
-  if (!$('toggle-orbit').checked) return;
+  if (!$('toggle-orbit').checked || !selected) return;
   const now = JulianDate.toDate(viewer.clock.currentTime);
   const gmst = satellite.gstime(now);
   const periodMin = (2 * Math.PI) / satrec.no; // satrec.no = rad/min
@@ -190,7 +259,7 @@ function drawOrbitTrack(satrec) {
     const ecf = satellite.eciToEcf(pv.position, gmst);
     positions.push(new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000));
   }
-  viewer.entities.add({
+  selected.trackEntity = viewer.entities.add({
     polyline: {
       positions,
       width: 1.3,
@@ -214,10 +283,6 @@ viewer.clock.onTick.addEventListener((clock) => {
   $('info-alt').textContent = `${(geo.height).toFixed(0)} km`;
   const v = pv.velocity;
   $('info-speed').textContent = `${Math.hypot(v.x, v.y, v.z).toFixed(2)} km/s`;
-
-  if (following && selected.followEntity) {
-    selected.followEntity.position = pos;
-  }
 });
 
 // ---------------------------------------------------------------- picking ----
@@ -227,6 +292,8 @@ handler.setInputAction((click) => {
   const picked = viewer.scene.pick(click.position);
   if (defined(picked) && typeof picked.id === 'number') {
     selectByIndex(picked.id);
+  } else if (picked?.id && picked.id === selected?.modelEntity) {
+    // clicking the 3D model keeps the selection
   } else {
     clearSelection();
     $('infopanel').hidden = true;
@@ -271,17 +338,16 @@ $('info-track').addEventListener('click', () => {
   if (!selected) return;
   if (following) {
     viewer.trackedEntity = undefined;
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
     following = false;
     $('info-track').classList.remove('active');
     $('info-track').textContent = 'Follow this satellite';
     return;
   }
-  const entity = viewer.entities.add({
-    position: Cartesian3.ZERO,
-    point: { pixelSize: 0 },
-  });
-  selected.followEntity = entity;
-  viewer.trackedEntity = entity;
+  // Track the model entity itself, and let the camera get close enough to
+  // actually see the spacecraft.
+  viewer.trackedEntity = selected.modelEntity;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 20;
   following = true;
   $('info-track').classList.add('active');
   $('info-track').textContent = 'Stop following';
@@ -300,7 +366,10 @@ document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
 });
 
 $('toggle-orbit').addEventListener('change', () => {
-  viewer.entities.removeAll();
+  if (selected?.trackEntity) {
+    viewer.entities.remove(selected.trackEntity);
+    selected.trackEntity = null;
+  }
   if (selected && $('toggle-orbit').checked) drawOrbitTrack(selected.satrec);
 });
 
@@ -628,4 +697,5 @@ window.__orbital = {
   selectByIndex,
   get catalog() { return catalog; },
   get swarm() { return swarm; },
+  get selected() { return selected; },
 };

@@ -33,6 +33,7 @@ satellite imagery, create a free Cesium Ion account and set
 | Time warp | − / + buttons, NOW to return to real time |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
+| See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 
 ## Architecture
 
@@ -45,6 +46,8 @@ src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
 src/tca.worker.js           closest-approach search for conjunction pairs
+tools/make-models.mjs       generates the generic spacecraft GLBs
+public/models/              ISS + Hubble (NASA) and generated generics
 ```
 
 Design decisions worth knowing before you extend it:
@@ -103,9 +106,9 @@ Design decisions worth knowing before you extend it:
 1. **More debris** — the full SATCAT DEB population via space-track.org
    GP data (~25k more objects).  The swarm renderer won't blink; the
    SGP4 worker may want batching by then.
-2. **3D models on zoom** — load a glTF of the ISS (NASA publishes one)
-   and a generic bus-with-panels model; swap point → model when camera
-   distance < ~100 km from the selected object.
+2. **More real models** — the mapping in `modelUriFor` is NORAD-ID and
+   name-pattern based; NASA/ESA publish more spacecraft glTFs (Aqua,
+   Terra, JWST…) that can drop straight into `public/models/`.
 3. **Auto-refresh** — re-fetch element sets on the cache TTL and diff the
    catalog: new NORAD IDs = launches, dropped IDs = decays.  Toast the
    changes ("3 objects added since yesterday").
@@ -113,6 +116,20 @@ Design decisions worth knowing before you extend it:
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
    band filter) and probably batching across several workers.
+
+Design notes for the 3D close-up view:
+
+- **Selected satellite renders as a 3D model inside 150 km** (`Follow`,
+  then scroll in).  ISS and Hubble use NASA's published glTFs; everything
+  else gets a class-appropriate generic from `tools/make-models.mjs`
+  (bus-with-wings, Starlink flat-panel, spent stage, debris shard) picked
+  by NORAD ID / name pattern in `modelUriFor`.
+- The model entity's position/orientation are `CallbackProperty`s that
+  propagate SGP4 at exact render time.  Don't switch them to imperative
+  per-tick updates: Cesium's tracked-camera update runs before clock-tick
+  listeners, so stepped positions lag the camera by one frame — at 200 m
+  range and 7.6 km/s the model visibly tears.  Orientation is +X along
+  velocity, +Z zenith.
 5. **Desktop wrap** — `npm create tauri-app`, point it at this Vite
    project; you get a native menu-bar app for ~10 MB.
 6. **Ground stations & passes** — satvis (github.com/Flowm/satvis) has a
@@ -122,5 +139,7 @@ Design decisions worth knowing before you extend it:
 
 - Element sets and SATCAT: [CelesTrak](https://celestrak.org) (Dr. T.S.
   Kelso).  Please respect their bandwidth — keep the cache TTL ≥ 2 h.
+- ISS and Hubble 3D models: courtesy NASA (solarsystem.nasa.gov 3D
+  resources).  Other spacecraft models are generated, not real designs.
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).
