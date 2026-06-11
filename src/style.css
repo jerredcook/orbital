@@ -86,6 +86,7 @@ html, body {
 .swatch.meo { background: #C9A0FF; }
 .swatch.geo { background: #FFD166; }
 .swatch.heo { background: #FF8C66; }
+.swatch.deb { background: #8B93A1; }
 .count { margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: #6B7A8F; font-variant-numeric: tabular-nums; }
 .legend-divider { height: 1px; background: #1E2A3A; margin: 8px 0; }
 .legend-foot {

@@ -3,21 +3,23 @@
 import {
   Viewer, ImageryLayer, TileMapServiceImageryProvider, EllipsoidTerrainProvider,
   buildModuleUrl, Cartesian3, Color, PointPrimitiveCollection, JulianDate,
-  ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, NearFarScalar,
-  CallbackProperty, defined,
+  ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
 import { loadCatalog } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
+import { SatSwarm } from './swarm.js';
 
 // ---------------------------------------------------------------- scene ----
 
-const REGIME_COLORS = {
+// Display categories: the four orbit regimes for payloads, DEB for debris.
+const CAT_COLORS = {
   LEO: Color.fromCssColorString('#5EC8E5'),
   MEO: Color.fromCssColorString('#C9A0FF'),
   GEO: Color.fromCssColorString('#FFD166'),
   HEO: Color.fromCssColorString('#FF8C66'),
+  DEB: Color.fromCssColorString('#8B93A1'),
 };
 const SELECT_COLOR = Color.fromCssColorString('#FFB454');
 
@@ -40,15 +42,18 @@ viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
 viewer.clock.shouldAnimate = true;
 viewer.clock.multiplier = 1;
 
-const points = viewer.scene.primitives.add(new PointPrimitiveCollection());
+// The whole catalog renders through one GPU point-cloud primitive; this
+// little collection only ever holds the enlarged selection highlight.
+const overlay = viewer.scene.primitives.add(new PointPrimitiveCollection());
 
 // ---------------------------------------------------------------- state ----
 
-let catalog = [];          // [{ name, l1, l2, norad, meta, regime }]
-let pointRefs = [];        // PointPrimitive per catalog index
-let selected = null;       // { index, satrec, entity }
+let catalog = [];          // [{ name, l1, l2, norad, kind, meta, regime }]
+let swarm = null;          // SatSwarm, one point per catalog index
+let selected = null;       // { index, satrec, highlight }
 let following = false;
-const regimeVisible = { LEO: true, MEO: true, GEO: true, HEO: true };
+const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
+const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $('status').textContent = msg; };
@@ -69,13 +74,7 @@ worker.onmessage = (e) => {
   }
   if (msg.type === 'positions') {
     workerBusy = false;
-    const buf = msg.buf;
-    for (let i = 0; i < pointRefs.length; i++) {
-      const x = buf[i * 3];
-      if (Number.isNaN(x)) { pointRefs[i].show = false; continue; }
-      pointRefs[i].show = regimeVisible[catalog[i].regime];
-      pointRefs[i].position = new Cartesian3(x, buf[i * 3 + 1], buf[i * 3 + 2]);
-    }
+    swarm?.updatePositions(msg.buf);
   }
 };
 
@@ -101,21 +100,16 @@ async function boot() {
     return;
   }
 
-  const counts = { LEO: 0, MEO: 0, GEO: 0, HEO: 0 };
+  swarm = new SatSwarm(catalog.length);
+  const counts = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
   for (let i = 0; i < catalog.length; i++) {
-    const sat = catalog[i];
-    counts[sat.regime]++;
-    pointRefs.push(points.add({
-      position: Cartesian3.ZERO,
-      pixelSize: 2.2,
-      color: REGIME_COLORS[sat.regime],
-      scaleByDistance: new NearFarScalar(2.0e6, 2.2, 6.0e7, 1.0),
-      id: i,
-      show: false,
-    }));
+    const cat = catOf(catalog[i]);
+    counts[cat]++;
+    swarm.setStyle(i, CAT_COLORS[cat], cat === 'DEB' ? 1.7 : 2.2);
   }
-  for (const r of Object.keys(counts)) {
-    $(`count-${r}`).textContent = counts[r].toLocaleString();
+  viewer.scene.primitives.add(swarm);
+  for (const c of Object.keys(counts)) {
+    $(`count-${c}`).textContent = counts[c].toLocaleString();
   }
 
   worker.postMessage({
@@ -127,13 +121,27 @@ boot();
 
 // ------------------------------------------------------------- selection ----
 
+// ECF position of a satrec at the sim clock's current time, or null.
+function currentPosition(satrec) {
+  const date = JulianDate.toDate(viewer.clock.currentTime);
+  const pv = satellite.propagate(satrec, date);
+  if (!pv?.position) return null;
+  const ecf = satellite.eciToEcf(pv.position, satellite.gstime(date));
+  return new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
+}
+
 function selectByIndex(index) {
   clearSelection();
   const sat = catalog[index];
   const satrec = satellite.twoline2satrec(sat.l1, sat.l2);
-  selected = { index, satrec };
-  pointRefs[index].color = SELECT_COLOR;
-  pointRefs[index].pixelSize = 7;
+  const highlight = overlay.add({
+    position: currentPosition(satrec) ?? Cartesian3.ZERO,
+    pixelSize: 7,
+    color: SELECT_COLOR,
+    id: index,
+  });
+  selected = { index, satrec, highlight };
+  swarm.setSuppressed(index);   // the overlay point replaces the swarm dot
   drawOrbitTrack(satrec);
   fillInfoPanel(sat);
   $('infopanel').hidden = false;
@@ -141,9 +149,8 @@ function selectByIndex(index) {
 
 function clearSelection() {
   if (!selected) return;
-  const i = selected.index;
-  pointRefs[i].color = REGIME_COLORS[catalog[i].regime];
-  pointRefs[i].pixelSize = 2.2;
+  swarm.setSuppressed(-1);
+  overlay.removeAll();
   viewer.entities.removeAll();
   viewer.trackedEntity = undefined;
   following = false;
@@ -186,7 +193,7 @@ viewer.clock.onTick.addEventListener((clock) => {
   const gmst = satellite.gstime(date);
   const ecf = satellite.eciToEcf(pv.position, gmst);
   const pos = new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
-  pointRefs[selected.index].position = pos;
+  selected.highlight.position = pos;
 
   const geo = satellite.eciToGeodetic(pv.position, gmst);
   $('info-alt').textContent = `${(geo.height).toFixed(0)} km`;
@@ -215,7 +222,9 @@ handler.setInputAction((click) => {
 
 function fillInfoPanel(sat) {
   const m = sat.meta;
-  $('info-regime').textContent = `${sat.regime} · NORAD catalog`;
+  $('info-regime').textContent = sat.kind === 'DEB'
+    ? `DEBRIS · ${sat.regime}`
+    : `${sat.regime} · NORAD catalog`;
   $('info-name').textContent = sat.name;
   $('info-norad').textContent = sat.norad;
   $('info-intl').textContent = m?.intlDes || '—';
@@ -265,13 +274,12 @@ $('info-track').addEventListener('click', () => {
 
 // ---------------------------------------------------------------- legend ----
 
-document.querySelectorAll('#legend input[data-regime]').forEach((box) => {
+document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
   box.addEventListener('change', () => {
-    regimeVisible[box.dataset.regime] = box.checked;
-    for (let i = 0; i < pointRefs.length; i++) {
-      if (catalog[i].regime === box.dataset.regime) {
-        pointRefs[i].show = box.checked;
-      }
+    const cat = box.dataset.cat;
+    catVisible[cat] = box.checked;
+    for (let i = 0; i < catalog.length; i++) {
+      if (catOf(catalog[i]) === cat) swarm.setVisible(i, box.checked);
     }
   });
 });
@@ -346,3 +354,12 @@ document.addEventListener('keydown', (e) => {
     searchBox.focus();
   }
 });
+
+// ----------------------------------------------------------------- debug ----
+
+window.__orbital = {
+  viewer,
+  selectByIndex,
+  get catalog() { return catalog; },
+  get swarm() { return swarm; },
+};

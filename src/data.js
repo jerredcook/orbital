@@ -4,7 +4,17 @@
 // Both endpoints send CORS headers, so this works straight from the browser.
 // Be polite: CelesTrak rate-limits aggressive clients, so responses are cached.
 
-const TLE_URL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
+const gp = (group) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
+
+// 'active' is everything operational; the debris groups are the three big
+// fragmentation events still tracked with public element sets.
+const TLE_GROUPS = [
+  { cacheKey: 'orbital.tle.active', url: gp('active'), kind: 'SAT' },
+  { cacheKey: 'orbital.tle.cosmos2251', url: gp('cosmos-2251-debris'), kind: 'DEB' },
+  { cacheKey: 'orbital.tle.iridium33', url: gp('iridium-33-debris'), kind: 'DEB' },
+  { cacheKey: 'orbital.tle.fengyun1c', url: gp('fengyun-1c-debris'), kind: 'DEB' },
+];
+
 const SATCAT_URL = 'https://celestrak.org/pub/satcat.csv';
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -110,11 +120,24 @@ export function classifyRegime(meta, meanMotion) {
 
 export async function loadCatalog(onStatus) {
   onStatus?.('fetching element sets…');
-  const tleText = await cachedFetch('orbital.tle.active', TLE_URL);
-  const tles = parseTLEs(tleText);
+  const texts = await Promise.all(
+    TLE_GROUPS.map((g) => cachedFetch(g.cacheKey, g.url)),
+  );
+
+  // Merge groups, first occurrence wins ('active' is first, so anything that
+  // somehow appears in both keeps its operational classification).
+  const seen = new Set();
+  const tles = [];
+  for (let g = 0; g < TLE_GROUPS.length; g++) {
+    for (const t of parseTLEs(texts[g])) {
+      if (seen.has(t.norad)) continue;
+      seen.add(t.norad);
+      tles.push({ ...t, kind: TLE_GROUPS[g].kind });
+    }
+  }
 
   onStatus?.(`parsing metadata for ${tles.length.toLocaleString()} objects…`);
-  const ids = new Set(tles.map((t) => t.norad));
+  const ids = seen;
   let satcat = new Map();
   try {
     const satcatCsv = await cachedFetch('orbital.satcat', SATCAT_URL);

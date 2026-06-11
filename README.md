@@ -1,7 +1,8 @@
 # ORBITAL — live satellite tracker
 
 A 3D real-time visualization of every active satellite in the public catalog
-(~14,000 objects), rendered on a CesiumJS globe with live SGP4 propagation.
+plus the three big fragmentation-event debris clouds (~18,000 objects),
+rendered on a CesiumJS globe with live SGP4 propagation.
 
 ## Quick start
 
@@ -37,6 +38,7 @@ satellite imagery, create a free Cesium Ion account and set
 index.html                  UI shell (top bar, legend, info panel, time bar)
 src/style.css               dark telemetry theme
 src/main.js                 Cesium scene, picking, selection, UI wiring
+src/swarm.js                custom GPU point-cloud primitive (one draw call)
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
@@ -56,15 +58,21 @@ Design decisions worth knowing before you extend it:
   current GMST — the classic closed ellipse, not the ground-relative
   spiral.  Swap the per-sample `gmst` if you prefer ground tracks.
 - **Regime classification** (LEO/MEO/GEO/HEO) is derived from SATCAT
-  period and apsis data, falling back to TLE mean motion.
+  period and apsis data, falling back to TLE mean motion.  Debris keeps
+  its regime for the info panel but renders as its own legend category.
+- **Rendering is one draw call.**  `swarm.js` is a hand-rolled Cesium
+  primitive: positions live in two float32 vertex buffers (high/low
+  encoded for relative-to-eye precision), per-point color alpha doubles
+  as the visibility flag, and picking uses a per-point pick-ID color
+  attribute.  Each worker tick is two `bufferSubData` uploads.  It uses
+  undocumented-but-exported Cesium renderer internals (`DrawCommand`,
+  `ShaderProgram`, …), so treat Cesium upgrades as API-break suspects.
 
 ## Roadmap (good Claude Code sessions)
 
-1. **Debris layer** — add CelesTrak groups (`cosmos-2251-debris`,
-   `iridium-33-debris`, `fengyun-1c-debris`, or the full `gp.php?GROUP=
-   active` → `satcat` filtered to DEB).  Beyond ~30k points, move points
-   into a single custom `Primitive` with per-instance color or a
-   `PointCloud` for GPU instancing.
+1. **More debris** — the full SATCAT DEB population via space-track.org
+   GP data (~25k more objects).  The swarm renderer won't blink; the
+   SGP4 worker may want batching by then.
 2. **3D models on zoom** — load a glTF of the ISS (NASA publishes one)
    and a generic bus-with-panels model; swap point → model when camera
    distance < ~100 km from the selected object.
