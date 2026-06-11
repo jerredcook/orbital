@@ -162,6 +162,8 @@ function selectByIndex(index) {
 
 function clearSelection() {
   if (!selected) return;
+  cancelScreening();
+  resetScreenUi();
   swarm.setSuppressed(-1);
   overlay.removeAll();
   viewer.entities.removeAll();
@@ -389,12 +391,30 @@ const tcaCache = new Map();    // "i:j" → { tcaMs, missM } (missM null = no re
 const tcaPending = new Set();  // keys requested but not yet answered
 
 tcaWorker.onmessage = (e) => {
-  if (e.data.type !== 'tca-results') return;
-  for (const r of e.data.results) {
-    tcaPending.delete(r.key);
-    tcaCache.set(r.key, r);
+  const msg = e.data;
+  if (msg.type === 'tca-results') {
+    for (const r of msg.results) {
+      tcaPending.delete(r.key);
+      tcaCache.set(r.key, r);
+    }
+    // The next worker tick (≤ 600 ms) re-renders the list with the new data.
+    return;
   }
-  // The next worker tick (≤ 600 ms) re-renders the list with the new data.
+  if (msg.type === 'screen-progress' && screening) {
+    screening.done = msg.done;
+    screening.found.push(...msg.found);
+    const pct = Math.round((msg.done / msg.total) * 100);
+    $('info-screen').textContent = `Screening ${msg.total.toLocaleString()} candidates… ${pct}%`;
+    if (msg.found.length) renderScreenResults();
+    return;
+  }
+  if (msg.type === 'screen-done' && screening) {
+    screening.active = false;
+    $('info-screen').textContent =
+      `${screening.found.length} within ${SCREEN_REPORT_KM} km · screen again`;
+    $('info-screen').classList.remove('active');
+    renderScreenResults();
+  }
 };
 
 function requestTca(pairs) {
@@ -425,6 +445,101 @@ function requestTca(pairs) {
     });
   }
 }
+
+// ---------------------------------------------------- catalog screening ----
+// On demand for the selected satellite: prefilter the catalog by altitude
+// band (an object whose perigee–apogee band can never overlap the target's
+// can never come close), then hand the survivors to the TCA worker for a
+// 24 h close-approach sweep.  Results stream in sorted by miss distance.
+
+const SCREEN_REPORT_KM = 25;
+const SCREEN_BAND_MARGIN_KM = 75;
+
+let screening = null;   // { targetIndex, found: [{i, tcaMs, missM}], done, active }
+
+// [perigee, apogee] altitude band in km — SATCAT when present, else derived
+// from the TLE's mean motion and eccentricity.
+function altBandOf(sat) {
+  const m = sat.meta;
+  if (m?.apogee != null && m?.perigee != null) return [m.perigee, m.apogee];
+  const ecc = parseFloat(`0.${sat.l2.slice(26, 33).trim()}`) || 0;
+  const revsPerDay = parseFloat(sat.l2.slice(52, 63));
+  if (!revsPerDay) return [0, Infinity];
+  const a = Math.cbrt(398600.4418 / ((revsPerDay * 2 * Math.PI / 86400) ** 2));
+  return [a * (1 - ecc) - 6371, a * (1 + ecc) - 6371];
+}
+
+function startScreening() {
+  if (!selected) return;
+  cancelScreening();
+  const target = catalog[selected.index];
+  const [tPer, tApo] = altBandOf(target);
+  const candidates = [];
+  for (let i = 0; i < catalog.length; i++) {
+    if (i === selected.index) continue;
+    const [per, apo] = altBandOf(catalog[i]);
+    if (per > tApo + SCREEN_BAND_MARGIN_KM || apo < tPer - SCREEN_BAND_MARGIN_KM) continue;
+    candidates.push({ i, l1: catalog[i].l1, l2: catalog[i].l2 });
+  }
+  screening = { targetIndex: selected.index, found: [], done: 0, active: true };
+  $('info-screen').textContent = `Screening ${candidates.length.toLocaleString()} candidates… 0%`;
+  $('info-screen').classList.add('active');
+  $('screen-results').innerHTML = '';
+  tcaWorker.postMessage({
+    type: 'screen',
+    targetL1: target.l1, targetL2: target.l2,
+    candidates,
+    startIso: JulianDate.toIso8601(viewer.clock.currentTime),
+    horizonHours: 24,
+    reportKm: SCREEN_REPORT_KM,
+  });
+}
+
+function cancelScreening() {
+  if (!screening) return;
+  if (screening.active) tcaWorker.postMessage({ type: 'screen-cancel' });
+  screening = null;
+}
+
+function resetScreenUi() {
+  $('info-screen').textContent = 'Screen close approaches · 24 h';
+  $('info-screen').classList.remove('active');
+  $('screen-results').innerHTML = '';
+}
+
+function renderScreenResults() {
+  if (!screening) return;
+  const listEl = $('screen-results');
+  listEl.innerHTML = '';
+  if (screening.found.length === 0) return;
+  screening.found.sort((a, b) => a.missM - b.missM);
+  const head = document.createElement('div');
+  head.className = 'screen-head';
+  head.textContent = `closest approaches · next 24 h`;
+  listEl.appendChild(head);
+  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
+  for (const r of screening.found.slice(0, 20)) {
+    const sat = catalog[r.i];
+    const dt = r.tcaMs - nowMs;
+    const when = dt < 90_000 ? 'now'
+      : dt < 3.6e6 ? `in ${Math.round(dt / 60_000)} min`
+      : `in ${(dt / 3.6e6).toFixed(1)} h`;
+    const row = document.createElement('div');
+    row.className = 'conj-row';
+    row.innerHTML =
+      `<div class="conj-main">` +
+      `<span class="cnames">${sat.name}</span>` +
+      `<span class="ckm">${(r.missM / 1000).toFixed(2)} km</span></div>` +
+      `<div class="conj-sub">${when}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
+    row.addEventListener('click', () => selectByIndex(r.i));
+    listEl.appendChild(row);
+  }
+}
+
+$('info-screen').addEventListener('click', () => {
+  if (screening?.active) { cancelScreening(); resetScreenUi(); return; }
+  startScreening();
+});
 
 function fmtTca(key, nowMs) {
   if (tcaPending.has(key)) return 'computing closest approach…';

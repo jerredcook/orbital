@@ -105,6 +105,13 @@ html, body {
 .conj-row .cnames { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #C9D4E3; }
 .conj-row .ckm { color: #FF6B7A; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .conj-row .conj-sub { color: #6B7A8F; font-size: 10px; padding-top: 1px; }
+
+#screen-results { margin-top: 10px; }
+#screen-results .screen-head {
+  font-family: ui-monospace, monospace; font-size: 10px;
+  letter-spacing: 0.15em; text-transform: uppercase; color: #6B7A8F;
+  padding-bottom: 4px;
+}
 .legend-foot {
   margin-top: 8px; font-family: ui-monospace, monospace;
   font-size: 11px; color: #6B7A8F;

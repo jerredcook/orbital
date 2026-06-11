@@ -32,6 +32,7 @@ satellite imagery, create a free Cesium Ion account and set
 | Deselect / close | `Esc` or click empty space |
 | Time warp | − / + buttons, NOW to return to real time |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
+| Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 
 ## Architecture
 
@@ -84,6 +85,18 @@ Design decisions worth knowing before you extend it:
   can miss the true minimum of a fast-crossing encounter (closest window
   ≪ 1 s); candidates come from the live view, which surfaces co-moving
   pairs, so the smooth-curve assumption holds in practice.
+- **Screening one target against the catalog** prefilters by altitude
+  band (perigee–apogee overlap ± 75 km — an object whose band can't
+  reach the target's can never come close), then sweeps survivors on a
+  120 s coarse grid against precomputed target positions, with a 15 s
+  fine scan wherever a pair dips under 950 km (the worst excursion a
+  120 s gap can hide at LEO crossing speeds) and ternary refinement
+  under 300 km.  Uses `satellite.sgp4` (minutes-since-epoch) directly
+  rather than `satellite.propagate` — skipping per-call Date/jday math
+  makes an ISS screen (~9k candidates, ~6.5M propagations) take about a
+  second.  Crossing geometries are caught, not just co-moving ones: the
+  staged gates were validated against an independent 1 s brute-force
+  search on a 51.6° × 120.4° inclination pair.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -96,10 +109,10 @@ Design decisions worth knowing before you extend it:
 3. **Auto-refresh** — re-fetch element sets on the cache TTL and diff the
    catalog: new NORAD IDs = launches, dropped IDs = decays.  Toast the
    changes ("3 objects added since yesterday").
-4. **Full-catalog screening** — the forecast only covers pairs that are
-   close *now*.  SOCRATES-style all-vs-all screening over 24 h needs an
-   orbit-geometry prefilter (apogee/perigee bands, then sieve) before
-   pairwise propagation becomes tractable.
+4. **All-vs-all screening** — per-target screening exists; the full
+   SOCRATES-style catalog × catalog sweep is ~18k targets × the same
+   pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
+   band filter) and probably batching across several workers.
 5. **Desktop wrap** — `npm create tauri-app`, point it at this Vite
    project; you get a native menu-bar app for ~10 MB.
 6. **Ground stations & passes** — satvis (github.com/Flowm/satvis) has a
