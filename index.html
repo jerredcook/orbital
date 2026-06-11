@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbital — live satellite tracker</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-mark">ORBITAL</span>
+      <span class="brand-sub">live catalog</span>
+    </div>
+    <div class="topbar-right">
+      <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" />
+      <div id="search-results" hidden></div>
+    </div>
+  </header>
+
+  <aside id="legend" aria-label="Display options">
+    <div class="legend-title">Orbit regimes</div>
+    <label class="legend-row"><input type="checkbox" data-regime="LEO" checked /><span class="swatch leo"></span>LEO <span class="count" id="count-LEO"></span></label>
+    <label class="legend-row"><input type="checkbox" data-regime="MEO" checked /><span class="swatch meo"></span>MEO <span class="count" id="count-MEO"></span></label>
+    <label class="legend-row"><input type="checkbox" data-regime="GEO" checked /><span class="swatch geo"></span>GEO <span class="count" id="count-GEO"></span></label>
+    <label class="legend-row"><input type="checkbox" data-regime="HEO" checked /><span class="swatch heo"></span>HEO <span class="count" id="count-HEO"></span></label>
+    <div class="legend-divider"></div>
+    <label class="legend-row"><input type="checkbox" id="toggle-orbit" checked />Orbit track on select</label>
+    <div class="legend-foot" id="status">loading catalog…</div>
+  </aside>
+
+  <aside id="infopanel" hidden aria-label="Satellite details">
+    <button id="info-close" aria-label="Close panel">×</button>
+    <div class="eyebrow" id="info-regime">—</div>
+    <h2 id="info-name">—</h2>
+    <dl class="readout">
+      <div><dt>NORAD ID</dt><dd id="info-norad">—</dd></div>
+      <div><dt>Int'l designator</dt><dd id="info-intl">—</dd></div>
+      <div><dt>Owner / operator</dt><dd id="info-owner">—</dd></div>
+      <div><dt>Launched</dt><dd id="info-launch">—</dd></div>
+      <div><dt>Launch site</dt><dd id="info-site">—</dd></div>
+      <div><dt>Time on orbit</dt><dd id="info-age">—</dd></div>
+      <div><dt>Period</dt><dd id="info-period">—</dd></div>
+      <div><dt>Inclination</dt><dd id="info-incl">—</dd></div>
+      <div><dt>Apogee × Perigee</dt><dd id="info-apsis">—</dd></div>
+      <div><dt>Altitude now</dt><dd id="info-alt">—</dd></div>
+      <div><dt>Speed now</dt><dd id="info-speed">—</dd></div>
+    </dl>
+    <button id="info-track" class="action">Follow this satellite</button>
+  </aside>
+
+  <footer id="timebar">
+    <button id="time-now" title="Jump to real time">NOW</button>
+    <button id="time-slower" title="Slow down">−</button>
+    <span id="time-rate">1×</span>
+    <button id="time-faster" title="Speed up">+</button>
+    <span id="time-clock">—</span>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
