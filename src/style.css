@@ -97,12 +97,14 @@ html, body {
 }
 #conj-list { max-height: 160px; overflow-y: auto; }
 .conj-row {
-  display: flex; justify-content: space-between; gap: 6px; padding: 3px 0;
+  padding: 3px 0;
   font-family: ui-monospace, monospace; font-size: 10.5px; cursor: pointer;
 }
+.conj-row .conj-main { display: flex; justify-content: space-between; gap: 6px; }
 .conj-row:hover .cnames { color: #FF6B7A; }
 .conj-row .cnames { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #C9D4E3; }
 .conj-row .ckm { color: #FF6B7A; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.conj-row .conj-sub { color: #6B7A8F; font-size: 10px; padding-top: 1px; }
 .legend-foot {
   margin-top: 8px; font-family: ui-monospace, monospace;
   font-size: 11px; color: #6B7A8F;

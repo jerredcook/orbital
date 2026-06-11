@@ -43,6 +43,7 @@ src/swarm.js                custom GPU point-cloud primitive (one draw call)
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
+src/tca.worker.js           closest-approach search for conjunction pairs
 ```
 
 Design decisions worth knowing before you extend it:
@@ -76,6 +77,13 @@ Design decisions worth knowing before you extend it:
   overlay polylines are pooled, never removed: `PolylineCollection.
   removeAll()` destroys polyline materials and crashes the render loop on
   the next add if you share or reuse them.
+- **Closest-approach forecasts run in a second worker** so a TCA batch
+  (~50 ms/pair: 30 s coarse grid over 24 h + ternary refinement) never
+  stalls the position ticks.  It receives only the two TLEs per pair.
+  Results cache per pair until their TCA passes.  Caveat: a 30 s grid
+  can miss the true minimum of a fast-crossing encounter (closest window
+  ≪ 1 s); candidates come from the live view, which surfaces co-moving
+  pairs, so the smooth-curve assumption holds in practice.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -88,10 +96,10 @@ Design decisions worth knowing before you extend it:
 3. **Auto-refresh** — re-fetch element sets on the cache TTL and diff the
    catalog: new NORAD IDs = launches, dropped IDs = decays.  Toast the
    changes ("3 objects added since yesterday").
-4. **Conjunction forecasting** — the live view shows pairs close *now*;
-   the real thing propagates forward to find the time of closest approach
-   and its miss distance (worker sweep over the next 24 h for the top
-   pairs).
+4. **Full-catalog screening** — the forecast only covers pairs that are
+   close *now*.  SOCRATES-style all-vs-all screening over 24 h needs an
+   orbit-geometry prefilter (apogee/perigee bands, then sieve) before
+   pairwise propagation becomes tractable.
 5. **Desktop wrap** — `npm create tauri-app`, point it at this Vite
    project; you get a native menu-bar app for ~10 MB.
 6. **Ground stations & passes** — satvis (github.com/Flowm/satvis) has a

@@ -339,12 +339,18 @@ function renderConjunctions(pairs) {
   const listEl = $('conj-list');
   listEl.innerHTML = '';
   $('conj-count').textContent = $('toggle-conj').checked ? String(n) : '—';
-  for (const [i, j, meters] of pairs.slice(0, 10)) {
+  const top = pairs.slice(0, 10);
+  if (top.length) requestTca(top);
+  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
+  for (const [i, j, meters] of top) {
     const row = document.createElement('div');
     row.className = 'conj-row';
+    const sub = fmtTca(`${i}:${j}`, nowMs);
     row.innerHTML =
+      `<div class="conj-main">` +
       `<span class="cnames">${catalog[i].name} × ${catalog[j].name}</span>` +
-      `<span class="ckm">${(meters / 1000).toFixed(1)} km</span>`;
+      `<span class="ckm">${(meters / 1000).toFixed(1)} km</span></div>` +
+      (sub ? `<div class="conj-sub">${sub}</div>` : '');
     row.addEventListener('click', () => flyToPair(i, j));
     listEl.appendChild(row);
   }
@@ -368,6 +374,71 @@ $('toggle-conj').addEventListener('change', () => {
   if (!$('toggle-conj').checked) renderConjunctions([]);
   // turning it on: the next worker tick (≤ 600 ms) delivers pairs
 });
+
+// --------------------------------------------------- conjunction forecast ----
+// For listed pairs, a second worker searches the next 24 h for the time of
+// closest approach and miss distance.  Results are cached per pair and shown
+// as a subline; the cache entry drops once its TCA has passed.
+
+const tcaWorker = new Worker(
+  new URL('./tca.worker.js', import.meta.url),
+  { type: 'module' },
+);
+
+const tcaCache = new Map();    // "i:j" → { tcaMs, missM } (missM null = no result)
+const tcaPending = new Set();  // keys requested but not yet answered
+
+tcaWorker.onmessage = (e) => {
+  if (e.data.type !== 'tca-results') return;
+  for (const r of e.data.results) {
+    tcaPending.delete(r.key);
+    tcaCache.set(r.key, r);
+  }
+  // The next worker tick (≤ 600 ms) re-renders the list with the new data.
+};
+
+function requestTca(pairs) {
+  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
+  const batch = [];
+  for (const [i, j] of pairs) {
+    const key = `${i}:${j}`;
+    const cached = tcaCache.get(key);
+    if (cached && cached.tcaMs !== null && cached.tcaMs < nowMs - 60_000) {
+      tcaCache.delete(key);          // TCA has passed — recompute
+    } else if (cached || tcaPending.has(key)) {
+      continue;
+    }
+    tcaPending.add(key);
+    batch.push({
+      key,
+      l1a: catalog[i].l1, l2a: catalog[i].l2,
+      l1b: catalog[j].l1, l2b: catalog[j].l2,
+    });
+  }
+  if (tcaCache.size > 500) tcaCache.clear();
+  if (batch.length) {
+    tcaWorker.postMessage({
+      type: 'tca',
+      startIso: JulianDate.toIso8601(viewer.clock.currentTime),
+      horizonHours: 24,
+      pairs: batch,
+    });
+  }
+}
+
+function fmtTca(key, nowMs) {
+  if (tcaPending.has(key)) return 'computing closest approach…';
+  const c = tcaCache.get(key);
+  if (!c || c.tcaMs === null) return '';
+  const dt = c.tcaMs - nowMs;
+  if (dt < -60_000) return '';
+  const km = (c.missM / 1000).toFixed(2);
+  if (dt < 90_000) return `closest approach ≈ now · ${km} km`;
+  const when = dt < 3.6e6
+    ? `${Math.round(dt / 60_000)} min`
+    : `${(dt / 3.6e6).toFixed(1)} h`;
+  return `min ${km} km in ${when}`;
+}
 
 // ------------------------------------------------------------------ time ----
 
