@@ -4,6 +4,7 @@ import {
   Viewer, ImageryLayer, TileMapServiceImageryProvider, EllipsoidTerrainProvider,
   buildModuleUrl, Cartesian3, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
+  PolylineCollection, Material,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
@@ -22,6 +23,7 @@ const CAT_COLORS = {
   DEB: Color.fromCssColorString('#8B93A1'),
 };
 const SELECT_COLOR = Color.fromCssColorString('#FFB454');
+const CONJ_COLOR = Color.fromCssColorString('#FF4D5E');
 
 const viewer = new Viewer('cesiumContainer', {
   baseLayer: ImageryLayer.fromProviderAsync(
@@ -46,12 +48,20 @@ viewer.clock.multiplier = 1;
 // little collection only ever holds the enlarged selection highlight.
 const overlay = viewer.scene.primitives.add(new PointPrimitiveCollection());
 
+// Conjunction overlays: connector lines and endpoint markers, updated on
+// every worker tick while the conjunction toggle is on (≤ 100 pairs).
+// Pooled rather than rebuilt — PolylineCollection.removeAll() destroys each
+// polyline's Material, so re-adding every tick crashes the render loop.
+const conjLines = viewer.scene.primitives.add(new PolylineCollection());
+const conjMarkers = viewer.scene.primitives.add(new PointPrimitiveCollection());
+
 // ---------------------------------------------------------------- state ----
 
 let catalog = [];          // [{ name, l1, l2, norad, kind, meta, regime }]
 let swarm = null;          // SatSwarm, one point per catalog index
 let selected = null;       // { index, satrec, highlight }
 let following = false;
+let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
 const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
 
@@ -74,7 +84,9 @@ worker.onmessage = (e) => {
   }
   if (msg.type === 'positions') {
     workerBusy = false;
+    lastBuf = msg.buf;
     swarm?.updatePositions(msg.buf);
+    renderConjunctions(msg.pairs ?? []);
   }
 };
 
@@ -86,6 +98,7 @@ setInterval(() => {
   worker.postMessage({
     type: 'propagate',
     isoTime: JulianDate.toIso8601(viewer.clock.currentTime),
+    conjKm: $('toggle-conj').checked ? Number($('conj-range').value) : 0,
   });
 }, 600);
 
@@ -287,6 +300,73 @@ document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
 $('toggle-orbit').addEventListener('change', () => {
   viewer.entities.removeAll();
   if (selected && $('toggle-orbit').checked) drawOrbitTrack(selected.satrec);
+});
+
+// ----------------------------------------------------------- conjunctions ----
+
+const bufPos = (i) => new Cartesian3(lastBuf[i * 3], lastBuf[i * 3 + 1], lastBuf[i * 3 + 2]);
+
+// Update the conjunction overlays and legend list from one worker tick's
+// pairs.  Positions come from the same buffer the swarm just drew, so the
+// markers sit exactly on their dots.
+function renderConjunctions(pairs) {
+  const n = pairs.length;
+  while (conjLines.length < n) {
+    conjLines.add({
+      positions: [], width: 2, show: false,
+      material: Material.fromType('Color', { color: CONJ_COLOR.withAlpha(0.8) }),
+    });
+  }
+  while (conjMarkers.length < n * 2) {
+    conjMarkers.add({ pixelSize: 5, color: CONJ_COLOR, show: false });
+  }
+  for (let k = 0; k < conjLines.length; k++) {
+    const line = conjLines.get(k);
+    if (k < n && lastBuf) {
+      const [i, j] = pairs[k];
+      line.positions = [bufPos(i), bufPos(j)];
+      line.show = true;
+      const ma = conjMarkers.get(k * 2), mb = conjMarkers.get(k * 2 + 1);
+      ma.position = bufPos(i); ma.id = i; ma.show = true;
+      mb.position = bufPos(j); mb.id = j; mb.show = true;
+    } else {
+      line.show = false;
+      conjMarkers.get(k * 2).show = false;
+      conjMarkers.get(k * 2 + 1).show = false;
+    }
+  }
+
+  const listEl = $('conj-list');
+  listEl.innerHTML = '';
+  $('conj-count').textContent = $('toggle-conj').checked ? String(n) : '—';
+  for (const [i, j, meters] of pairs.slice(0, 10)) {
+    const row = document.createElement('div');
+    row.className = 'conj-row';
+    row.innerHTML =
+      `<span class="cnames">${catalog[i].name} × ${catalog[j].name}</span>` +
+      `<span class="ckm">${(meters / 1000).toFixed(1)} km</span>`;
+    row.addEventListener('click', () => flyToPair(i, j));
+    listEl.appendChild(row);
+  }
+}
+
+function flyToPair(i, j) {
+  if (!lastBuf) return;
+  const a = bufPos(i), b = bufPos(j);
+  const mid = Cartesian3.midpoint(a, b, new Cartesian3());
+  const range = Math.max(Cartesian3.distance(a, b) * 6, 100_000);
+  const destination = Cartesian3.multiplyByScalar(
+    Cartesian3.normalize(mid, new Cartesian3()),
+    Cartesian3.magnitude(mid) + range,
+    new Cartesian3(),
+  );
+  viewer.camera.flyTo({ destination, duration: 1.6 });
+  selectByIndex(i);
+}
+
+$('toggle-conj').addEventListener('change', () => {
+  if (!$('toggle-conj').checked) renderConjunctions([]);
+  // turning it on: the next worker tick (≤ 600 ms) delivers pairs
 });
 
 // ------------------------------------------------------------------ time ----

@@ -87,8 +87,22 @@ html, body {
 .swatch.geo { background: #FFD166; }
 .swatch.heo { background: #FF8C66; }
 .swatch.deb { background: #8B93A1; }
+.swatch.conj { background: #FF4D5E; }
 .count { margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: #6B7A8F; font-variant-numeric: tabular-nums; }
 .legend-divider { height: 1px; background: #1E2A3A; margin: 8px 0; }
+.conj-range-row { font-size: 12px; color: #6B7A8F; padding-left: 24px; }
+#conj-range {
+  background: #0D131D; color: #C9D4E3; border: 1px solid #1E2A3A; border-radius: 3px;
+  font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 4px;
+}
+#conj-list { max-height: 160px; overflow-y: auto; }
+.conj-row {
+  display: flex; justify-content: space-between; gap: 6px; padding: 3px 0;
+  font-family: ui-monospace, monospace; font-size: 10.5px; cursor: pointer;
+}
+.conj-row:hover .cnames { color: #FF6B7A; }
+.conj-row .cnames { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #C9D4E3; }
+.conj-row .ckm { color: #FF6B7A; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .legend-foot {
   margin-top: 8px; font-family: ui-monospace, monospace;
   font-size: 11px; color: #6B7A8F;

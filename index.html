@@ -28,6 +28,14 @@
     <label class="legend-row"><input type="checkbox" data-cat="HEO" checked /><span class="swatch heo"></span>HEO <span class="count" id="count-HEO"></span></label>
     <label class="legend-row"><input type="checkbox" data-cat="DEB" checked /><span class="swatch deb"></span>Debris <span class="count" id="count-DEB"></span></label>
     <div class="legend-divider"></div>
+    <label class="legend-row"><input type="checkbox" id="toggle-conj" /><span class="swatch conj"></span>Conjunctions <span class="count" id="conj-count">—</span></label>
+    <label class="legend-row conj-range-row">pairs within <select id="conj-range">
+      <option value="5">5 km</option>
+      <option value="10" selected>10 km</option>
+      <option value="25">25 km</option>
+    </select></label>
+    <div id="conj-list"></div>
+    <div class="legend-divider"></div>
     <label class="legend-row"><input type="checkbox" id="toggle-orbit" checked />Orbit track on select</label>
     <div class="legend-foot" id="status">loading catalog…</div>
   </aside>

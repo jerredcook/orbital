@@ -31,6 +31,7 @@ satellite imagery, create a free Cesium Ion account and set
 | Search | `/` or click the search box (name or NORAD ID) |
 | Deselect / close | `Esc` or click empty space |
 | Time warp | − / + buttons, NOW to return to real time |
+| Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 
 ## Architecture
 
@@ -67,6 +68,14 @@ Design decisions worth knowing before you extend it:
   attribute.  Each worker tick is two `bufferSubData` uploads.  It uses
   undocumented-but-exported Cesium renderer internals (`DrawCommand`,
   `ShaderProgram`, …), so treat Cesium upgrades as API-break suspects.
+- **Conjunctions are a spatial hash in the worker** — uniform grid with
+  cell size = threshold, each object checks its 27 neighbor cells, exact
+  distance test on candidates, O(n + pairs) per tick.  Pairs closer than
+  250 m are dropped as docked/same-complex (ISS and CSS modules each have
+  their own NORAD IDs and would otherwise pin the list at 0.0 km).  The
+  overlay polylines are pooled, never removed: `PolylineCollection.
+  removeAll()` destroys polyline materials and crashes the render loop on
+  the next add if you share or reuse them.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -79,7 +88,10 @@ Design decisions worth knowing before you extend it:
 3. **Auto-refresh** — re-fetch element sets on the cache TTL and diff the
    catalog: new NORAD IDs = launches, dropped IDs = decays.  Toast the
    changes ("3 objects added since yesterday").
-4. **Conjunction view** — highlight pairs within N km (the fun one).
+4. **Conjunction forecasting** — the live view shows pairs close *now*;
+   the real thing propagates forward to find the time of closest approach
+   and its miss distance (worker sweep over the next 24 h for the top
+   pairs).
 5. **Desktop wrap** — `npm create tauri-app`, point it at this Vite
    project; you get a native menu-bar app for ~10 MB.
 6. **Ground stations & passes** — satvis (github.com/Flowm/satvis) has a
