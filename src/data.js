@@ -43,8 +43,15 @@ async function cachedFetch(key, url) {
     }
   } catch { /* cache miss or corrupt — fall through */ }
 
+  // Bound the request: a rate-limited CelesTrak doesn't always answer with a
+  // quick 403 — it can just hang the connection, which without a timeout would
+  // leave the catalog stuck on "fetching…" forever and never reach the stale
+  // fallback below.  Give a cold load room to pull ~4 MB, but bail fast when we
+  // already have yesterday's elements to fall back on.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), stale !== null ? 8000 : 25000);
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
     const body = await res.text();
     try {
@@ -52,13 +59,15 @@ async function cachedFetch(key, url) {
     } catch { /* quota exceeded — fine, just skip caching */ }
     return body;
   } catch (err) {
-    // CelesTrak rate-limits (HTTP 403) clients that re-fetch the big files
-    // too often.  Yesterday's elements beat no elements.
+    // CelesTrak rate-limits (HTTP 403, or a stalled connection) clients that
+    // re-fetch the big files too often.  Yesterday's elements beat no elements.
     if (stale !== null) {
       console.warn(`${url} failed — serving stale cache`, err);
       return stale;
     }
     throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
