@@ -23,6 +23,50 @@ html, body {
 #cesiumContainer { position: absolute; inset: 0; }
 .cesium-viewer-bottom { display: none; } /* hide default credits strip; re-enable if you prefer */
 
+/* ---------- moon view ---------- */
+/* A second full-screen globe (the Moon) layered over Earth; shown only in
+   moon-mode, with the Earth scene's render loop idled while it's up. */
+#moonContainer { position: absolute; inset: 0; z-index: 5; background: #05070C; }
+#moonContainer[hidden] { display: none; }
+
+#moon-toggle {
+  z-index: 10; pointer-events: auto;
+  padding: 8px 14px;
+  background: rgba(13,19,29,0.9); color: #C9D4E3;
+  border: 1px solid #1E2A3A; border-radius: 4px;
+  font-family: ui-monospace, monospace; font-size: 12px;
+  letter-spacing: 0.08em; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+#moon-toggle:hover { border-color: #FFB454; color: #E8EFF8; }
+#moon-toggle.active { border-color: #FFB454; color: #FFB454; }
+
+#moon-exit {
+  position: absolute; top: 12px; left: 16px; z-index: 11;
+  padding: 8px 14px;
+  background: rgba(13,19,29,0.9); color: #C9D4E3;
+  border: 1px solid #1E2A3A; border-radius: 4px;
+  font-family: ui-monospace, monospace; font-size: 12px;
+  letter-spacing: 0.08em; cursor: pointer;
+}
+#moon-exit:hover { border-color: #FFB454; color: #E8EFF8; }
+
+#moon-attr {
+  position: absolute; bottom: 8px; left: 16px; z-index: 11;
+  display: none;
+  font-family: ui-monospace, monospace; font-size: 10px;
+  letter-spacing: 0.04em; color: #6B7A8F;
+  text-shadow: 0 1px 2px #05070C;
+  pointer-events: none;
+}
+body.moon-mode #moon-attr { display: block; }
+
+/* In moon-mode the Earth-only panels are irrelevant — hide them. */
+body.moon-mode #legend,
+body.moon-mode #infopanel,
+body.moon-mode #timebar,
+body.moon-mode .topbar-right { display: none; }
+
 /* ---------- top bar ---------- */
 #topbar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;

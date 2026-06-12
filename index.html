@@ -8,12 +8,16 @@
 </head>
 <body>
   <div id="cesiumContainer"></div>
+  <div id="moonContainer" hidden></div>
+  <button id="moon-exit" hidden>← Back to Earth</button>
+  <div id="moon-attr">NASA/USGS LRO WAC Global Mosaic · NASA Solar System Treks</div>
 
   <header id="topbar">
     <div class="brand">
       <span class="brand-mark">ORBITAL</span>
       <span class="brand-sub">live catalog</span>
     </div>
+    <button id="moon-toggle" title="Fly to the Moon">◐ Moon</button>
     <div class="topbar-right">
       <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" />
       <div id="search-results" hidden></div>
