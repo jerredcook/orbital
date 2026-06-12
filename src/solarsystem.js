@@ -33,8 +33,10 @@ import {
 } from './scale.js';
 
 const $ = (id) => document.getElementById(id);
-const TEX = (file) => `/textures/planets/${file}`;
-const DAY_MS = 86_400_000;
+// Asset paths are base-relative so they resolve under the GitHub Pages subpath
+// (/orbital/) as well as at the dev-server root.
+const BASE = import.meta.env.BASE_URL;
+const TEX = (file) => `${BASE}textures/planets/${file}`;
 
 let viewer = null;          // created lazily on first open
 let visible = false;
@@ -155,7 +157,7 @@ function addBody(name) {
         // render in this build.  Pixel-sized (sizeInMeters billboards also don't
         // render here), grown toward the camera via scaleByDistance so it haloes
         // the Sun at every zoom.
-        image: '/textures/sun-glow.png',
+        image: `${BASE}textures/sun-glow.png`,
         width: 130,
         height: 130,
         scaleByDistance: new NearFarScalar(5e8, 5.0, 2.0e10, 1.6),

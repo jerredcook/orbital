@@ -298,14 +298,18 @@ const REAL_MODELS = new Map([
   [50463, { file: 'jwst', scale: 0.74 }],      // not in 'active' today
 ]);
 
+// Base-relative so model URLs resolve under the GitHub Pages subpath (/orbital/)
+// as well as at the dev-server root.
+const MODELS = `${import.meta.env.BASE_URL}models/`;
+
 function modelFor(sat) {
   const real = REAL_MODELS.get(sat.norad);
-  if (real) return { uri: `/models/${real.file}.glb`, scale: real.scale };
-  if (/^TDRS \d/.test(sat.name)) return { uri: '/models/tdrs.glb', scale: 19.6 };
-  if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return { uri: '/models/debris.glb', scale: 1 };
-  if (/\bR\/B\b/.test(sat.name)) return { uri: '/models/rocketbody.glb', scale: 1 };
-  if (sat.name.startsWith('STARLINK')) return { uri: '/models/starlink.glb', scale: 1 };
-  return { uri: '/models/generic-sat.glb', scale: 1 };
+  if (real) return { uri: `${MODELS}${real.file}.glb`, scale: real.scale };
+  if (/^TDRS \d/.test(sat.name)) return { uri: `${MODELS}tdrs.glb`, scale: 19.6 };
+  if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return { uri: `${MODELS}debris.glb`, scale: 1 };
+  if (/\bR\/B\b/.test(sat.name)) return { uri: `${MODELS}rocketbody.glb`, scale: 1 };
+  if (sat.name.startsWith('STARLINK')) return { uri: `${MODELS}starlink.glb`, scale: 1 };
+  return { uri: `${MODELS}generic-sat.glb`, scale: 1 };
 }
 
 // Orientation from the propagated state: +X along velocity, +Z zenith.
