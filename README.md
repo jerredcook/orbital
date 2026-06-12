@@ -195,10 +195,18 @@ Data freshness and resilience:
   overnight.  A >20% catalog size jump is treated as a partial load or
   its recovery and rebaselined silently rather than toasted.
 - **CelesTrak rate-limits.**  Re-fetch the big files too often and you
-  get HTTP 403 for a couple of hours (ask me how I know).  Expired
-  cache entries are kept and served as a fallback when the fetch fails,
-  a group that fails entirely is skipped rather than failing the boot,
-  and refresh attempts are spaced ≥ 20 minutes apart.
+  get HTTP 403 — or a stalled connection — for a couple of hours (ask me
+  how I know).  Defenses, weakest to strongest: every fetch is bounded by
+  a timeout (so a hung CelesTrak can't wedge the load); expired cache
+  entries are kept and served when a fetch fails; a **bundled offline
+  snapshot** (`public/fallback/active.tle`, ~17k objects from a CelesTrak
+  mirror via `tools/fetch-fallback-tle.mjs`) backs the main group so the
+  sky is never empty even on a cold load with CelesTrak down; and a
+  localStorage **circuit breaker** skips live CelesTrak calls for 10 min
+  after a failure, so reloads during an outage drop straight to the
+  fallback in ~1 s instead of eating a timeout per request.  A group that
+  fails entirely is skipped rather than failing the boot, and refresh
+  attempts are spaced ≥ 20 minutes apart.
 
 Design notes for the 3D close-up view:
 

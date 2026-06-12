@@ -6,10 +6,15 @@
 
 const gp = (group) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
 
+// A snapshot bundled with the app (tools/fetch-fallback-tle.mjs).  Last-resort
+// source for the main catalog when CelesTrak is unreachable AND there's no warm
+// cache — so the sky is never empty.  Base-relative for the GitHub Pages subpath.
+const FALLBACK_ACTIVE = `${import.meta.env.BASE_URL}fallback/active.tle`;
+
 // 'active' is everything operational; the debris groups are the three big
 // fragmentation events still tracked with public element sets.
 const TLE_GROUPS = [
-  { cacheKey: 'orbital.tle.active', url: gp('active'), kind: 'SAT' },
+  { cacheKey: 'orbital.tle.active', url: gp('active'), kind: 'SAT', fallback: FALLBACK_ACTIVE },
   { cacheKey: 'orbital.tle.cosmos2251', url: gp('cosmos-2251-debris'), kind: 'DEB' },
   { cacheKey: 'orbital.tle.iridium33', url: gp('iridium-33-debris'), kind: 'DEB' },
   { cacheKey: 'orbital.tle.fengyun1c', url: gp('fengyun-1c-debris'), kind: 'DEB' },
@@ -32,7 +37,24 @@ export function cacheExpiresInMs() {
   return Math.max(0, soonest);
 }
 
-async function cachedFetch(key, url) {
+// Circuit breaker: once a CelesTrak request fails/times out, skip live fetches to
+// it for a cooldown so the rest of this load — and subsequent reloads — drop
+// straight to cache/fallback instead of eating a 15 s timeout per request.  The
+// flag lives in localStorage so a reload during an outage is near-instant; it
+// expires on its own, and a successful fetch clears it immediately.
+const CELESTRAK_COOLDOWN_MS = 10 * 60 * 1000;
+const isCelestrak = (url) => url.includes('celestrak');
+function celestrakDown() {
+  try { return Number(localStorage.getItem('orbital.celestrak.down') || 0) > Date.now(); } catch { return false; }
+}
+function markCelestrak(down) {
+  try {
+    if (down) localStorage.setItem('orbital.celestrak.down', String(Date.now() + CELESTRAK_COOLDOWN_MS));
+    else localStorage.removeItem('orbital.celestrak.down');
+  } catch { /* ignore */ }
+}
+
+async function cachedFetch(key, url, fallbackUrl) {
   let stale = null;
   try {
     const hit = localStorage.getItem(key);
@@ -49,21 +71,38 @@ async function cachedFetch(key, url) {
   // fallback below.  Give a cold load room to pull ~4 MB, but bail fast when we
   // already have yesterday's elements to fall back on.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), stale !== null ? 8000 : 25000);
+  const timer = setTimeout(() => controller.abort(), stale !== null ? 8000 : 15000);
   try {
+    // Skip the live fetch entirely if CelesTrak is in its post-failure cooldown.
+    if (isCelestrak(url) && celestrakDown()) throw new Error('celestrak-cooldown');
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
     const body = await res.text();
+    if (isCelestrak(url)) markCelestrak(false);   // it's back — clear the breaker
     try {
       localStorage.setItem(key, JSON.stringify({ t: Date.now(), body }));
     } catch { /* quota exceeded — fine, just skip caching */ }
     return body;
   } catch (err) {
+    // Trip the breaker on a real failure (not on a cooldown-skip, which mustn't
+    // keep extending it — let it expire so we retry CelesTrak later).
+    if (isCelestrak(url) && err.message !== 'celestrak-cooldown') markCelestrak(true);
     // CelesTrak rate-limits (HTTP 403, or a stalled connection) clients that
-    // re-fetch the big files too often.  Yesterday's elements beat no elements.
+    // re-fetch the big files too often.  Yesterday's elements beat no elements…
     if (stale !== null) {
       console.warn(`${url} failed — serving stale cache`, err);
       return stale;
+    }
+    // …and a bundled snapshot beats an empty sky.  Same-origin, so it's reliable
+    // even when CelesTrak is down.  Not cached, so the next load still tries live.
+    if (fallbackUrl) {
+      try {
+        const fb = await fetch(fallbackUrl);
+        if (fb.ok) {
+          console.warn(`${url} failed — using bundled fallback ${fallbackUrl}`, err);
+          return await fb.text();
+        }
+      } catch { /* fall through to throw */ }
     }
     throw err;
   } finally {
@@ -160,7 +199,7 @@ export async function loadCatalog(onStatus) {
   const texts = await Promise.all(
     TLE_GROUPS.map(async (g) => {
       try {
-        return await cachedFetch(g.cacheKey, g.url);
+        return await cachedFetch(g.cacheKey, g.url, g.fallback);
       } catch (err) {
         console.warn(`element-set group unavailable: ${g.url}`, err);
         return '';
