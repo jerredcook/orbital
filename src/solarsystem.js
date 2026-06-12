@@ -22,7 +22,8 @@ import {
   DirectionalLight, ScreenSpaceEventHandler, ScreenSpaceEventType, NearFarScalar,
   Cartesian2, LabelStyle, VerticalOrigin, HorizontalOrigin, BoundingSphere,
   HeadingPitchRange, ArcType, Primitive, GeometryInstance, EllipsoidGeometry,
-  VertexFormat, MaterialAppearance, Material, SceneTransforms, Math as CMath,
+  VertexFormat, MaterialAppearance, Material, Matrix3, SceneTransforms,
+  Math as CMath,
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
@@ -37,6 +38,16 @@ const $ = (id) => document.getElementById(id);
 // (/orbital/) as well as at the dev-server root.
 const BASE = import.meta.env.BASE_URL;
 const TEX = (file) => `${BASE}textures/planets/${file}`;
+const SKY_TEX = `${BASE}textures/starmap.jpg`;
+
+// Obliquity of the ecliptic — the star map is in equatorial coordinates, so we
+// tilt it by this to sit correctly relative to the planets' (ecliptic) plane.
+const OBLIQUITY = 23.43928 * Math.PI / 180;
+// The celestial sphere sits well outside the planets; the camera's zoom-out is
+// capped just inside it so you approach the stars but never fly through them.
+// Capped in absolute terms so true scale (where the system is ~4.6e12 m across)
+// doesn't push the sphere out to ~5e13 m, where the depth range gets unstable.
+const skyRadius = () => Math.min(systemExtent() * 10, 3.0e13);
 
 let viewer = null;          // created lazily on first open
 let visible = false;
@@ -44,6 +55,7 @@ let earthClock = null;      // the shared source-of-truth clock (Earth viewer's)
 const entities = {};        // body name -> marker/label Entity
 const spheres = {};         // body name -> textured sphere Primitive
 let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
+let skyPrimitive = null;    // the NASA star-map celestial sphere
 let selectedName = null;
 
 const ALL_BODIES = ['Sun', ...PLANETS];
@@ -216,6 +228,50 @@ function rebuildOrbits() {
   }
 }
 
+// The night sky: NASA's Deep Star Map 2020 (real Tycho + Gaia star positions and
+// colours, the Milky Way, the Magellanic Clouds) wrapped on a huge sphere
+// centred on the Sun and tilted by the obliquity so it sits correctly relative
+// to the planets' ecliptic plane.  It's a *finite* sphere, not an infinite
+// skybox, so the imagery gains detail as you zoom out toward it — and the
+// camera's zoom-out is capped just inside it (see createViewer / the toggle).
+function buildSky() {
+  const r = skyRadius();
+  // Drop the previous sphere up front (not inside onload): on a scale toggle the
+  // camera flies to the new framing immediately, and a stale-radius sphere left
+  // in the scene during that fly is what intermittently wedged the render loop.
+  // The generic skybox shows through for the moment until the new one loads.
+  if (skyPrimitive) { viewer.scene.primitives.remove(skyPrimitive); skyPrimitive = null; }
+  // Preload so the 8k texture is decoded before the opaque, scene-enclosing
+  // sphere appears — otherwise it flashes white over everything for a frame.
+  const img = new Image();
+  img.onload = () => {
+    if (!viewer) return;
+    const tilt = Matrix4.fromRotationTranslation(
+      Matrix3.fromRotationX(OBLIQUITY), Cartesian3.ZERO, new Matrix4());
+    const sky = new Primitive({
+      geometryInstances: new GeometryInstance({
+        geometry: new EllipsoidGeometry({
+          radii: new Cartesian3(r, r, r),
+          vertexFormat: VertexFormat.POSITION_AND_ST,
+          slicePartitions: 64, stackPartitions: 64,
+        }),
+        modelMatrix: tilt,
+      }),
+      appearance: new MaterialAppearance({
+        material: Material.fromType('Image', { image: SKY_TEX }),
+        flat: true, translucent: false,
+        // Cull nothing, so the *inside* of the sphere is what we see; keep depth
+        // testing so the (nearer) planets and orbit rings draw in front of it.
+        renderState: { cull: { enabled: false }, depthTest: { enabled: true }, depthMask: true },
+      }),
+      asynchronous: false,
+    });
+    if (skyPrimitive) viewer.scene.primitives.remove(skyPrimitive);
+    skyPrimitive = viewer.scene.primitives.add(sky);
+  };
+  img.src = SKY_TEX;
+}
+
 // ------------------------------------------------------------ info & select ----
 
 const fmt = (n, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
@@ -315,7 +371,7 @@ function createViewer() {
   const ctrl = v.scene.screenSpaceCameraController;
   ctrl.enableCollisionDetection = false;
   ctrl.minimumZoomDistance = 1e4;
-  ctrl.maximumZoomDistance = systemExtent() * 8;
+  ctrl.maximumZoomDistance = skyRadius() * 0.92;   // stop just inside the stars
 
   viewer = v;
   earthClock = pendingClock;          // the Earth viewer's clock, captured in init()
@@ -323,6 +379,7 @@ function createViewer() {
   addBody('Sun');
   for (const name of PLANETS) addBody(name);
   rebuildOrbits();
+  buildSky();
   frameWholeSystem();
 
   // Keep the headlight aimed where the camera looks, and hand-tick the shared
@@ -398,7 +455,8 @@ export function initSystemView(earthViewer, moonView) {
     if (viewer) {
       applyScaleToBodies();
       rebuildOrbits();
-      viewer.scene.screenSpaceCameraController.maximumZoomDistance = systemExtent() * 8;
+      buildSky();
+      viewer.scene.screenSpaceCameraController.maximumZoomDistance = skyRadius() * 0.92;
       frameWholeSystem(1.2);
     }
   });

@@ -127,7 +127,10 @@ Design decisions worth knowing before you extend it:
   `flyToBoundingSphere`'s `HeadingPitchRange` is singular at the geocentre, so
   the opening camera is aimed at the origin explicitly.  The shared Earth clock
   drives the planets, hand-ticked each frame because its own render loop is idle
-  while this view is up.
+  while this view is up.  The stars are a real NASA all-sky map on a *finite*
+  celestial sphere (not an infinite skybox), so the imagery gains detail as you
+  zoom out toward it; the camera's zoom-out is capped just inside the sphere so
+  you approach the stars without flying through them.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -221,5 +224,10 @@ Design notes for the 3D close-up view:
   by `tools/fetch-textures.mjs`.  Planet positions are computed locally from
   JPL's low-precision Keplerian elements (no service, no key); see
   `src/ephemeris.js`.
+- Night sky: NASA SVS [Deep Star Map 2020](https://svs.gsfc.nasa.gov/4851)
+  (Tycho-2 + Gaia DR2, with the Milky Way and Magellanic Clouds), the 8k EXR
+  tone-mapped to `public/textures/starmap.jpg`.  Real star positions and
+  colours, wrapped on a celestial sphere tilted by the obliquity so it sits
+  correctly against the planets' ecliptic plane.
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).
