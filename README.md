@@ -106,9 +106,11 @@ Design decisions worth knowing before you extend it:
 1. **More debris** — the full SATCAT DEB population via space-track.org
    GP data (~25k more objects).  The swarm renderer won't blink; the
    SGP4 worker may want batching by then.
-2. **More real models** — the mapping in `modelUriFor` is NORAD-ID and
-   name-pattern based; NASA/ESA publish more spacecraft glTFs (Aqua,
-   Terra, JWST…) that can drop straight into `public/models/`.
+2. **More real models** — 17 spacecraft have real models now; ESA
+   publishes Sentinel/Galileo models (Sketchfab, CC-BY-NC-SA) and the
+   mapping in `modelFor` takes one line per spacecraft.  TESS and JWST
+   models are already in `public/models/`, waiting for their element
+   sets to appear in the catalog.
 3. **Auto-refresh** — re-fetch element sets on the cache TTL and diff the
    catalog: new NORAD IDs = launches, dropped IDs = decays.  Toast the
    changes ("3 objects added since yesterday").
@@ -120,10 +122,17 @@ Design decisions worth knowing before you extend it:
 Design notes for the 3D close-up view:
 
 - **Selected satellite renders as a 3D model inside 150 km** (`Follow`,
-  then scroll in).  ISS and Hubble use NASA's published glTFs; everything
-  else gets a class-appropriate generic from `tools/make-models.mjs`
-  (bus-with-wings, Starlink flat-panel, spent stage, debris shard) picked
-  by NORAD ID / name pattern in `modelUriFor`.
+  then scroll in).  Real published models cover ISS, Hubble, Terra, Aqua,
+  Aura, ICESat-2, Landsat 8/9, Sentinel-6A/B, OCO-2, Suomi NPP, Swift,
+  Fermi, Chandra, GRACE-FO, and the TDRS fleet (NASA solar system site +
+  github.com/nasa/NASA-3D-Resources); everything else gets a
+  class-appropriate generic from `tools/make-models.mjs` (bus-with-wings,
+  Starlink flat-panel, spent stage, debris shard) picked by NORAD ID /
+  name pattern in `modelFor`.  Each real model carries a scale factor —
+  the published GLBs' units are wildly inconsistent (native Terra is
+  26 km long, native TDRS is 0.9 m).  `tools/fix-models.mjs` strips
+  texture bindings that reference missing UV sets, which otherwise kill
+  Cesium's shader compile (Terra, Hubble shipped that way).
 - The model entity's position/orientation are `CallbackProperty`s that
   propagate SGP4 at exact render time.  Don't switch them to imperative
   per-tick updates: Cesium's tracked-camera update runs before clock-tick
@@ -139,7 +148,8 @@ Design notes for the 3D close-up view:
 
 - Element sets and SATCAT: [CelesTrak](https://celestrak.org) (Dr. T.S.
   Kelso).  Please respect their bandwidth — keep the cache TTL ≥ 2 h.
-- ISS and Hubble 3D models: courtesy NASA (solarsystem.nasa.gov 3D
-  resources).  Other spacecraft models are generated, not real designs.
+- Spacecraft 3D models: courtesy NASA (solarsystem.nasa.gov 3D resources
+  and github.com/nasa/NASA-3D-Resources).  Spacecraft without a published
+  model get a generated class-generic, not a real design.
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).

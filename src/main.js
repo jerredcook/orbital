@@ -142,13 +142,46 @@ boot();
 
 const MODEL_SWAP_M = 150_000;
 
-function modelUriFor(sat) {
-  if (sat.norad === 25544) return '/models/iss.glb';
-  if (sat.norad === 20580) return '/models/hubble.glb';
-  if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return '/models/debris.glb';
-  if (/\bR\/B\b/.test(sat.name)) return '/models/rocketbody.glb';
-  if (sat.name.startsWith('STARLINK')) return '/models/starlink.glb';
-  return '/models/generic-sat.glb';
+// Spacecraft with real published models (NASA solarsystem.nasa.gov and
+// github.com/nasa/NASA-3D-Resources), keyed by NORAD ID — exact IDs because
+// catalog names are full of traps (SAOCOM contains "OCO", TERRASAR-X
+// contains "TERRA").  GRACE-FO reuses the GRACE bus; Landsat 9 is a
+// near-copy of Landsat 8; Sentinel-6B matches 6A.
+// Scale maps each model's true rendered extent (accessor bounds pushed
+// through the node hierarchy — see the audit in tools/) to the spacecraft's
+// real deployed size in meters.  The published GLBs are wildly inconsistent:
+// Terra renders 26 km long, TDRS 0.9 m, while ISS (112 m), Chandra (19.5 m)
+// and Sentinel-6 (5.1 m) are already true to life.
+const REAL_MODELS = new Map([
+  [25544, { file: 'iss', scale: 1 }],
+  [20580, { file: 'hubble', scale: 1 }],
+  [25994, { file: 'terra', scale: 0.00035 }],
+  [27424, { file: 'aqua', scale: 0.0385 }],
+  [28376, { file: 'aura', scale: 0.34 }],
+  [43613, { file: 'icesat2', scale: 1 }],
+  [39084, { file: 'landsat8', scale: 1 }],
+  [49260, { file: 'landsat8', scale: 1 }],
+  [46984, { file: 'sentinel6', scale: 1 }],
+  [66514, { file: 'sentinel6', scale: 1 }],
+  [40059, { file: 'oco2', scale: 0.23 }],
+  [37849, { file: 'suominpp', scale: 1 }],
+  [28485, { file: 'swift', scale: 0.143 }],
+  [33053, { file: 'fermi', scale: 0.24 }],     // FGRST (GLAST)
+  [25867, { file: 'chandra', scale: 1 }],      // CXO
+  [43476, { file: 'grace', scale: 1 }],
+  [43477, { file: 'grace', scale: 1 }],
+  [43435, { file: 'tess', scale: 0.11 }],      // not in 'active' today
+  [50463, { file: 'jwst', scale: 0.74 }],      // not in 'active' today
+]);
+
+function modelFor(sat) {
+  const real = REAL_MODELS.get(sat.norad);
+  if (real) return { uri: `/models/${real.file}.glb`, scale: real.scale };
+  if (/^TDRS \d/.test(sat.name)) return { uri: '/models/tdrs.glb', scale: 19.6 };
+  if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return { uri: '/models/debris.glb', scale: 1 };
+  if (/\bR\/B\b/.test(sat.name)) return { uri: '/models/rocketbody.glb', scale: 1 };
+  if (sat.name.startsWith('STARLINK')) return { uri: '/models/starlink.glb', scale: 1 };
+  return { uri: '/models/generic-sat.glb', scale: 1 };
 }
 
 // Orientation from the propagated state: +X along velocity, +Z zenith.
@@ -216,7 +249,7 @@ function selectByIndex(index) {
       return Quaternion.clone(q, result);
     }, false),
     model: {
-      uri: modelUriFor(sat),
+      ...modelFor(sat),
       minimumPixelSize: 72,
       distanceDisplayCondition: new DistanceDisplayCondition(0, MODEL_SWAP_M),
     },
