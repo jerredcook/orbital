@@ -12,6 +12,7 @@ import * as satellite from 'satellite.js';
 import { loadCatalog, cacheExpiresInMs } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
+import { initMoonView } from './moon.js';
 
 // ---------------------------------------------------------------- scene ----
 
@@ -52,6 +53,10 @@ viewer.scene.globe.enableLighting = true;
 viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
 viewer.clock.shouldAnimate = true;
 viewer.clock.multiplier = 1;
+
+// The "◐ Moon" toggle flies to a separate lunar globe (LRO imagery on the
+// Moon ellipsoid) you can zoom into; see src/moon.js.
+const moonView = initMoonView(viewer);
 
 // The whole catalog renders through one GPU point-cloud primitive; this
 // little collection only ever holds the enlarged selection highlight.
@@ -855,6 +860,7 @@ document.addEventListener('keydown', (e) => {
 
 window.__orbital = {
   viewer,
+  moonView,
   selectByIndex,
   refreshCatalog,
   get catalog() { return catalog; },

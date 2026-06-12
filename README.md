@@ -37,6 +37,7 @@ top of `src/main.js`.)
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
+| Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
 
 ## Architecture
 
@@ -45,6 +46,7 @@ index.html                  UI shell (top bar, legend, info panel, time bar)
 src/style.css               dark telemetry theme
 src/main.js                 Cesium scene, picking, selection, UI wiring
 src/swarm.js                custom GPU point-cloud primitive (one draw call)
+src/moon.js                 standalone lunar globe (Moon ellipsoid + LRO imagery)
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
@@ -173,5 +175,14 @@ Design notes for the 3D close-up view:
 - Globe imagery: Esri World Imagery (© Esri — Maxar, Earthstar
   Geographics, and the GIS User Community), streamed from
   server.arcgisonline.com with attribution displayed in-app.
+- Lunar imagery: NASA/USGS LRO WAC Global Mosaic (303 ppd, ~100 m/px),
+  streamed keylessly from NASA's Solar System Treks (trek.nasa.gov).
+  The Moon is a *second* Viewer on the `Ellipsoid.MOON` globe — and the
+  ellipsoid must be passed to the Viewer (`ellipsoid: Ellipsoid.MOON`),
+  not just its `Globe`: `scene.ellipsoid` is what the camera controller
+  collides against, so a Moon globe with an Earth `scene.ellipsoid`
+  renders the right sphere but fences the camera off 6,378 km out and
+  you can never reach the surface.  Earth's WGS84 math is untouched
+  because the two scenes hold their own ellipsoids.
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).
