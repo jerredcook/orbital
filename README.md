@@ -15,10 +15,13 @@ Open the printed localhost URL.  First load fetches two datasets from
 CelesTrak (the active-satellite element sets and the SATCAT metadata
 catalog, ~4 MB total) and caches them in localStorage for two hours.
 
-No API keys or accounts are required.  The globe uses Cesium's bundled
-offline Natural Earth II imagery.  If you later want photographic
-satellite imagery, create a free Cesium Ion account and set
-`Ion.defaultAccessToken` in `src/main.js`.
+No API keys or accounts are required.  The globe streams Esri World
+Imagery — high-resolution satellite photography, street-level in
+populated areas — keylessly, with on-screen attribution.  Zoom from the
+full constellation view all the way down to ~80 m above your own
+street.  (If you ever add a Cesium Ion token you can swap in Bing
+Aerial + World Terrain for 3D relief; see the provider block at the
+top of `src/main.js`.)
 
 ## Controls
 
@@ -167,5 +170,8 @@ Design notes for the 3D close-up view:
 - Spacecraft 3D models: courtesy NASA (solarsystem.nasa.gov 3D resources
   and github.com/nasa/NASA-3D-Resources).  Spacecraft without a published
   model get a generated class-generic, not a real design.
+- Globe imagery: Esri World Imagery (© Esri — Maxar, Earthstar
+  Geographics, and the GIS User Community), streamed from
+  server.arcgisonline.com with attribution displayed in-app.
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).

@@ -1,8 +1,8 @@
 // main.js — scene setup, render loop, and UI wiring.
 
 import {
-  Viewer, ImageryLayer, TileMapServiceImageryProvider, EllipsoidTerrainProvider,
-  buildModuleUrl, Cartesian3, Color, PointPrimitiveCollection, JulianDate,
+  Viewer, ImageryLayer, UrlTemplateImageryProvider, EllipsoidTerrainProvider,
+  Credit, Cartesian3, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
   PolylineCollection, Material, DistanceDisplayCondition, Matrix3, Quaternion,
   CallbackProperty,
@@ -26,12 +26,20 @@ const CAT_COLORS = {
 const SELECT_COLOR = Color.fromCssColorString('#FFB454');
 const CONJ_COLOR = Color.fromCssColorString('#FF4D5E');
 
+// Esri World Imagery: global high-resolution satellite imagery, street-level
+// (~0.3 m/px) in populated areas, served keylessly with attribution.  Swap in
+// Cesium Ion's Bing Aerial + World Terrain here if you ever add an Ion token.
+const ESRI_IMAGERY = new UrlTemplateImageryProvider({
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  maximumLevel: 19,
+  credit: new Credit('Imagery © Esri — Maxar, Earthstar Geographics, and the GIS User Community'),
+});
+
+// How close the camera may get to the globe when not inspecting a satellite.
+const MIN_ZOOM_GROUND_M = 80;
+
 const viewer = new Viewer('cesiumContainer', {
-  baseLayer: ImageryLayer.fromProviderAsync(
-    TileMapServiceImageryProvider.fromUrl(
-      buildModuleUrl('Assets/Textures/NaturalEarthII'),
-    ),
-  ),
+  baseLayer: new ImageryLayer(ESRI_IMAGERY),
   terrainProvider: new EllipsoidTerrainProvider(),
   baseLayerPicker: false, geocoder: false, homeButton: false,
   sceneModePicker: false, navigationHelpButton: false, animation: false,
@@ -41,7 +49,7 @@ const viewer = new Viewer('cesiumContainer', {
 
 viewer.scene.moon = new Moon();
 viewer.scene.globe.enableLighting = true;
-viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
+viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
 viewer.clock.shouldAnimate = true;
 viewer.clock.multiplier = 1;
 
@@ -374,7 +382,7 @@ function clearSelection() {
   overlay.removeAll();
   viewer.entities.removeAll();
   viewer.trackedEntity = undefined;
-  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
@@ -493,7 +501,7 @@ function engageFollow() {
 
 function releaseFollow() {
   viewer.trackedEntity = undefined;
-  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
