@@ -192,29 +192,40 @@ function buildRing() {
   }));
 }
 
-// Major moons per planet: [name, real orbit radius (m), sidereal period (days),
-// display factor].  In readable mode a moon orbits its planet at
-// factor × the planet's *rendered* radius, so the moons sit just outside the
-// (exaggerated) disc in a legible, correctly-ordered spread; in true scale they
-// sit at their real distance (mostly invisible, as in reality).
+// Major moons per planet, with real mean orbital elements (JPL):
+//   [name, real orbit radius (m), sidereal period (days), display factor,
+//    inclination (deg), ascending node (deg)].
+// In readable mode a moon orbits at factor × the planet's *rendered* radius, so
+// the moons sit just outside the exaggerated disc in a legible, correctly-ordered
+// spread; in true scale they sit at their real distance (mostly invisible, as in
+// reality).  Real inclinations tilt each orbit, so a moon system reads as a 3D
+// family of paths rather than a flat ring (Iapetus, and retrograde Triton at
+// i≈157°, stand well out of plane).  Eccentricities are ≲0.03 and invisible at
+// this scale, so the orbits are taken circular.
 const MOONS = {
-  Earth:   [['Moon', 3.844e8, 27.32, 3.4]],
-  Mars:    [['Phobos', 9.38e6, 0.319, 1.5], ['Deimos', 2.346e7, 1.263, 2.1]],
-  Jupiter: [['Io', 4.217e8, 1.769, 1.9], ['Europa', 6.711e8, 3.551, 2.5],
-            ['Ganymede', 1.070e9, 7.155, 3.3], ['Callisto', 1.883e9, 16.69, 4.4]],
-  Saturn:  [['Enceladus', 2.38e8, 1.370, 2.9], ['Rhea', 5.27e8, 4.518, 3.4],
-            ['Titan', 1.222e9, 15.95, 4.2], ['Iapetus', 3.561e9, 79.32, 5.4]],
-  Uranus:  [['Miranda', 1.299e8, 1.413, 1.7], ['Titania', 4.358e8, 8.706, 2.6],
-            ['Oberon', 5.835e8, 13.46, 3.2]],
-  Neptune: [['Triton', 3.548e8, 5.877, 2.4]],
+  Earth:   [['Moon', 3.844e8, 27.32, 3.4, 5.14, 125]],
+  Mars:    [['Phobos', 9.378e6, 0.319, 1.6, 1.08, 80], ['Deimos', 2.346e7, 1.263, 2.3, 1.79, 80]],
+  Jupiter: [['Amalthea', 1.815e8, 0.498, 1.6, 0.37, 0], ['Io', 4.217e8, 1.769, 2.1, 0.04, 0],
+            ['Europa', 6.711e8, 3.551, 2.7, 0.47, 180], ['Ganymede', 1.070e9, 7.155, 3.5, 0.20, 60],
+            ['Callisto', 1.883e9, 16.69, 4.6, 0.19, 300]],
+  Saturn:  [['Mimas', 1.855e8, 0.942, 1.7, 1.57, 0], ['Enceladus', 2.380e8, 1.370, 2.1, 0.01, 60],
+            ['Tethys', 2.947e8, 1.888, 2.5, 1.09, 120], ['Dione', 3.774e8, 2.737, 2.9, 0.02, 180],
+            ['Rhea', 5.270e8, 4.518, 3.4, 0.33, 240], ['Titan', 1.222e9, 15.95, 4.4, 0.35, 300],
+            ['Iapetus', 3.561e9, 79.32, 5.7, 15.5, 80]],
+  Uranus:  [['Miranda', 1.299e8, 1.413, 1.7, 4.34, 100], ['Ariel', 1.909e8, 2.520, 2.2, 0.26, 160],
+            ['Umbriel', 2.660e8, 4.144, 2.7, 0.21, 220], ['Titania', 4.358e8, 8.706, 3.3, 0.34, 280],
+            ['Oberon', 5.835e8, 13.46, 3.9, 0.06, 340]],
+  Neptune: [['Proteus', 1.176e8, 1.122, 1.7, 0.52, 60], ['Triton', 3.548e8, 5.877, 2.7, 157, 180]],
 };
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 
 // One moon as a marker+label entity whose CallbackProperty position is the host
-// planet's position plus a circular orbit offset (in the ecliptic plane).
+// planet's position plus a circular but inclined orbit offset.
 function addMoon(planet, moon, idx) {
-  const [name, realR, periodDays, factor] = moon;
+  const [name, realR, periodDays, factor, inclDeg, nodeDeg] = moon;
   const phase = idx * 1.7;            // de-phase moons so they don't line up
+  const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
+  const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
   viewer.entities.add({
     name,
     position: new CallbackProperty((time, result) => {
@@ -223,9 +234,10 @@ function addMoon(planet, moon, idx) {
       const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
       const r = isTrueScale() ? realR : factor * bodyRadius(BODIES[planet].radius);
       const th = (days / periodDays) * 2 * Math.PI + phase;
-      result.x = _moonHost.x + r * Math.cos(th);
-      result.y = _moonHost.y + r * Math.sin(th);
-      result.z = _moonHost.z;
+      const ct = Math.cos(th), st = Math.sin(th);
+      result.x = _moonHost.x + r * (cO * ct - sO * ci * st);
+      result.y = _moonHost.y + r * (sO * ct + cO * ci * st);
+      result.z = _moonHost.z + r * (si * st);
       return result;
     }, false),
     point: { pixelSize: 3.5, color: MOON_COLOR, outlineColor: Color.BLACK.withAlpha(0.5), outlineWidth: 1 },

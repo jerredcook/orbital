@@ -138,11 +138,14 @@ Design decisions worth knowing before you extend it:
 - **Belt, moons, rings** ride on the same scale map.  The asteroid belt
   ([src/belt.js](src/belt.js)) reuses the satellite swarm primitive
   (`new SatSwarm(n, { boundingRadius })`) — 14k orbits Kepler-solved on a
-  throttled tick and run through `scenePosition`, one draw call.  Moons are
-  marker+label entities whose `CallbackProperty` position is the host planet's
-  position plus a circular offset — sized to the planet's *rendered* radius in
-  readable mode (so they clear the exaggerated disc) and to their real distance
-  in true scale.  Saturn's rings are a hand-built double-sided annulus geometry
+  throttled tick and run through `scenePosition`, one draw call.  Moons (Luna,
+  the Galileans + Amalthea, seven of Saturn's, five Uranian, Triton + Proteus)
+  carry real JPL mean elements — period and *inclination*, so each orbit tilts
+  realistically (Iapetus and retrograde Triton stand out of plane).  Each is a
+  marker+label entity whose `CallbackProperty` position is the host planet's
+  position plus an inclined circular offset — sized to the planet's *rendered*
+  radius in readable mode (so they clear the exaggerated disc) and to their real
+  distance in true scale.  Saturn's rings are a hand-built double-sided annulus geometry
   (UV.s = inner→outer) with the alpha ring texture, transformed each frame to
   Saturn's position and tilt.
 - **Descend to a planet** ([src/bodyglobe.js](src/bodyglobe.js)) reuses the
@@ -171,12 +174,15 @@ Design decisions worth knowing before you extend it:
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
    band filter) and probably batching across several workers.
-5. **More worlds and detail** — the overview, asteroid belt, major moons,
-   Saturn's rings, an accurate NASA star sky, and descend-to-surface globes for
-   every planet all ship now.  Worth doing next: real moons for the gas giants
-   from JPL; asteroid families and the Jupiter Trojans; higher-res / regional
-   imagery (Mars CTX/HiRISE) on the surface globes; and terrain relief
-   (`CesiumTerrainProvider`) where DEMs exist.
+5. **More worlds and detail** — the overview, asteroid belt, major moons (with
+   real JPL elements and inclinations), Saturn's rings, an accurate NASA star
+   sky, and descend-to-surface globes for every planet all ship now.  Worth doing
+   next: **3D terrain relief** on the surface globes — `CustomHeightmapTerrainProvider`
+   is the hook, but it needs a global MOLA/LOLA elevation grid, which (unlike the
+   imagery) Treks doesn't expose as open tiles; sourcing/hosting a downsampled DEM
+   (or adding a Cesium Ion token, which has Mars terrain ready-made) is the
+   blocker.  Also: asteroid families and the Jupiter Trojans; higher-res /
+   regional imagery (Mars CTX/HiRISE) on the surface globes.
 
 Data freshness and resilience:
 
