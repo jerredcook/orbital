@@ -72,8 +72,12 @@ void main() {
 `;
 
 export class SatSwarm {
-  constructor(count) {
+  // opts.boundingRadius — the draw command's cull sphere (m).  The default fits
+  // the Earth catalog (GEO + every HEO apogee); the heliocentric asteroid belt
+  // passes a far larger one so it isn't culled at AU scale.
+  constructor(count, opts = {}) {
     this._count = count;
+    this._boundingRadius = opts.boundingRadius ?? 6.0e8;
     this.show = true;
 
     this._high = new Float32Array(count * 3);
@@ -220,8 +224,7 @@ export class SatSwarm {
       primitiveType: PrimitiveType.POINTS,
       pass: Pass.OPAQUE,
       modelMatrix: Matrix4.IDENTITY,
-      // Generous: covers GEO and every HEO apogee in the public catalog.
-      boundingVolume: new BoundingSphere(Cartesian3.ZERO, 6.0e8),
+      boundingVolume: new BoundingSphere(Cartesian3.ZERO, this._boundingRadius),
       owner: this,
       count: n,
       pickId: 'v_pickColor',

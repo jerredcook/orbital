@@ -38,7 +38,8 @@ top of `src/main.js`.)
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
-| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun and all eight planets on their real orbits; click a body to fly to it, toggle **True scale**, and from Earth drop straight into the satellite tracker or the Moon; `Esc` / exit returns |
+| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
+| See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 
 ## Architecture
 
@@ -48,9 +49,10 @@ src/style.css               dark telemetry theme
 src/main.js                 Cesium scene, picking, selection, UI wiring
 src/swarm.js                custom GPU point-cloud primitive (one draw call)
 src/moon.js                 standalone lunar globe (Moon ellipsoid + LRO imagery)
-src/solarsystem.js          heliocentric view (globe off): Sun + 8 planets, orbits
+src/solarsystem.js          heliocentric view: Sun, planets, rings, moons, sky
 src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
 src/scale.js                readable ⟷ true-scale mapping for the system view
+src/belt.js                 asteroid belt: real + procedural, Kepler-propagated swarm
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
@@ -131,6 +133,16 @@ Design decisions worth knowing before you extend it:
   celestial sphere (not an infinite skybox), so the imagery gains detail as you
   zoom out toward it; the camera's zoom-out is capped just inside the sphere so
   you approach the stars without flying through them.
+- **Belt, moons, rings** ride on the same scale map.  The asteroid belt
+  ([src/belt.js](src/belt.js)) reuses the satellite swarm primitive
+  (`new SatSwarm(n, { boundingRadius })`) — 14k orbits Kepler-solved on a
+  throttled tick and run through `scenePosition`, one draw call.  Moons are
+  marker+label entities whose `CallbackProperty` position is the host planet's
+  position plus a circular offset — sized to the planet's *rendered* radius in
+  readable mode (so they clear the exaggerated disc) and to their real distance
+  in true scale.  Saturn's rings are a hand-built double-sided annulus geometry
+  (UV.s = inner→outer) with the alpha ring texture, transformed each frame to
+  Saturn's position and tilt.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -149,15 +161,12 @@ Design decisions worth knowing before you extend it:
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
    band filter) and probably batching across several workers.
-5. **Solar System, phase 2** — the heliocentric overview ships now (Sun +
-   8 planets on real orbits).  Next: the asteroid belt as a Kepler-propagated
-   point swarm (real elements for the largest few thousand from JPL/MPC, plus
-   procedural fill for density) — generalise `src/swarm.js` first (its 6.0e8 m
-   bounding radius and the 2e6/6e7 point-size constants are Earth-tuned), then
-   major moons orbiting each planet (Kepler elements relative to their primary).
-6. **Solar System, phase 3** — per-planet high-res surface globes you can zoom
-   to, like the Moon (Mars via NASA Treks tiles, etc.), reached by "entering" a
-   planet from the system view the way Earth already hands off to the tracker.
+5. **Solar System, phase 3** — the overview, asteroid belt, major moons, Saturn's
+   rings, and an accurate NASA star sky all ship now.  Next: per-planet high-res
+   surface globes you can zoom to, like the Moon (Mars via NASA Treks tiles,
+   etc.), reached by "entering" a planet from the system view the way Earth
+   already hands off to the tracker.  Also worth doing: real moons for the gas
+   giants from JPL, and asteroid belt families/Trojans.
 
 Data freshness and resilience:
 
@@ -224,6 +233,11 @@ Design notes for the 3D close-up view:
   by `tools/fetch-textures.mjs`.  Planet positions are computed locally from
   JPL's low-precision Keplerian elements (no service, no key); see
   `src/ephemeris.js`.
+- Asteroid belt: ~3,200 real largest main-belt asteroids (H < 12.5) with
+  osculating elements from NASA/JPL's
+  [Small-Body Database](https://ssd-api.jpl.nasa.gov/) (fetched by
+  `tools/fetch-asteroids.mjs` → `public/asteroids.json`), plus procedural fill to
+  ~14k for density.  Saturn's ring map: Solar System Scope (CC BY 4.0).
 - Night sky: NASA SVS [Deep Star Map 2020](https://svs.gsfc.nasa.gov/4851)
   (Tycho-2 + Gaia DR2, with the Milky Way and Magellanic Clouds), the 8k EXR
   tone-mapped to `public/textures/starmap.jpg`.  Real star positions and

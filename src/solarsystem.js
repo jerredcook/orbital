@@ -23,6 +23,7 @@ import {
   Cartesian2, LabelStyle, VerticalOrigin, HorizontalOrigin, BoundingSphere,
   HeadingPitchRange, ArcType, Primitive, GeometryInstance, EllipsoidGeometry,
   VertexFormat, MaterialAppearance, Material, Matrix3, SceneTransforms,
+  Geometry, GeometryAttribute, ComponentDatatype, PrimitiveType, BlendingState,
   Math as CMath,
 } from 'cesium';
 import {
@@ -32,6 +33,7 @@ import {
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
+import { createBelt } from './belt.js';
 
 const $ = (id) => document.getElementById(id);
 // Asset paths are base-relative so they resolve under the GitHub Pages subpath
@@ -56,6 +58,8 @@ const entities = {};        // body name -> marker/label Entity
 const spheres = {};         // body name -> textured sphere Primitive
 let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
 let skyPrimitive = null;    // the NASA star-map celestial sphere
+let ringPrimitive = null;   // Saturn's rings
+let belt = null;            // the asteroid-belt swarm controller
 let selectedName = null;
 
 const ALL_BODIES = ['Sun', ...PLANETS];
@@ -63,6 +67,7 @@ const ALL_BODIES = ['Sun', ...PLANETS];
 // Scratch objects reused every frame to keep the per-frame allocation count low.
 const _real = new Cartesian3();
 const _pos = new Cartesian3();
+const _moonHost = new Cartesian3();
 const _quat = new Quaternion();
 const _qSpin = new Quaternion();
 const _qTilt = new Quaternion();
@@ -123,6 +128,119 @@ function buildSphere(name) {
   });
   viewer.scene.primitives.add(primitive);
   spheres[name] = primitive;
+}
+
+// A flat annulus in the local XY plane, UV.s running 0→1 from the inner to the
+// outer edge so the ring texture's radial profile (a 2048×125 strip, alpha for
+// the Cassini division and gaps) maps across the ring width.
+function ringGeometry(ri, ro, seg = 256) {
+  const pos = new Float64Array((seg + 1) * 2 * 3);
+  const st = new Float32Array((seg + 1) * 2 * 2);
+  const idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const a = (i / seg) * 2 * Math.PI, c = Math.cos(a), s = Math.sin(a), v = i * 2;
+    pos[v * 3] = ri * c; pos[v * 3 + 1] = ri * s; pos[v * 3 + 2] = 0;
+    pos[(v + 1) * 3] = ro * c; pos[(v + 1) * 3 + 1] = ro * s; pos[(v + 1) * 3 + 2] = 0;
+    st[v * 2] = 0; st[v * 2 + 1] = 0.5;
+    st[(v + 1) * 2] = 1; st[(v + 1) * 2 + 1] = 0.5;
+  }
+  for (let i = 0; i < seg; i++) {
+    const k = i * 2;
+    idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+  }
+  return new Geometry({
+    attributes: {
+      position: new GeometryAttribute({
+        componentDatatype: ComponentDatatype.DOUBLE, componentsPerAttribute: 3, values: pos,
+      }),
+      st: new GeometryAttribute({
+        componentDatatype: ComponentDatatype.FLOAT, componentsPerAttribute: 2, values: st,
+      }),
+    },
+    indices: new Uint16Array(idx),
+    primitiveType: PrimitiveType.TRIANGLES,
+    boundingSphere: new BoundingSphere(Cartesian3.ZERO, ro),
+  });
+}
+
+// Saturn's rings: a double-sided, alpha-blended annulus sized to the current
+// (scale-dependent) Saturn radius.  Its transform is written each frame from
+// Saturn's position and tilt (see updateSpheres) — the rings lie in Saturn's
+// equatorial plane, which the body's tilt quaternion already encodes.
+function buildRing() {
+  if (ringPrimitive) { viewer.scene.primitives.remove(ringPrimitive); ringPrimitive = null; }
+  const sr = bodyRadius(BODIES.Saturn.radius);
+  ringPrimitive = viewer.scene.primitives.add(new Primitive({
+    geometryInstances: new GeometryInstance({ geometry: ringGeometry(sr * 1.18, sr * 2.35) }),
+    appearance: new MaterialAppearance({
+      material: Material.fromType('Image', { image: TEX('saturn-ring.png') }),
+      flat: true, translucent: true,
+      renderState: {
+        cull: { enabled: false },          // visible from above and below
+        depthTest: { enabled: true },
+        depthMask: false,                  // translucent — don't occlude
+        blending: BlendingState.ALPHA_BLEND,
+      },
+    }),
+    asynchronous: false,
+  }));
+}
+
+// Major moons per planet: [name, real orbit radius (m), sidereal period (days),
+// display factor].  In readable mode a moon orbits its planet at
+// factor × the planet's *rendered* radius, so the moons sit just outside the
+// (exaggerated) disc in a legible, correctly-ordered spread; in true scale they
+// sit at their real distance (mostly invisible, as in reality).
+const MOONS = {
+  Earth:   [['Moon', 3.844e8, 27.32, 3.4]],
+  Mars:    [['Phobos', 9.38e6, 0.319, 1.5], ['Deimos', 2.346e7, 1.263, 2.1]],
+  Jupiter: [['Io', 4.217e8, 1.769, 1.9], ['Europa', 6.711e8, 3.551, 2.5],
+            ['Ganymede', 1.070e9, 7.155, 3.3], ['Callisto', 1.883e9, 16.69, 4.4]],
+  Saturn:  [['Enceladus', 2.38e8, 1.370, 2.9], ['Rhea', 5.27e8, 4.518, 3.4],
+            ['Titan', 1.222e9, 15.95, 4.2], ['Iapetus', 3.561e9, 79.32, 5.4]],
+  Uranus:  [['Miranda', 1.299e8, 1.413, 1.7], ['Titania', 4.358e8, 8.706, 2.6],
+            ['Oberon', 5.835e8, 13.46, 3.2]],
+  Neptune: [['Triton', 3.548e8, 5.877, 2.4]],
+};
+const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
+
+// One moon as a marker+label entity whose CallbackProperty position is the host
+// planet's position plus a circular orbit offset (in the ecliptic plane).
+function addMoon(planet, moon, idx) {
+  const [name, realR, periodDays, factor] = moon;
+  const phase = idx * 1.7;            // de-phase moons so they don't line up
+  viewer.entities.add({
+    name,
+    position: new CallbackProperty((time, result) => {
+      result = result || new Cartesian3();
+      scenePosOf(planet, _moonHost);
+      const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
+      const r = isTrueScale() ? realR : factor * bodyRadius(BODIES[planet].radius);
+      const th = (days / periodDays) * 2 * Math.PI + phase;
+      result.x = _moonHost.x + r * Math.cos(th);
+      result.y = _moonHost.y + r * Math.sin(th);
+      result.z = _moonHost.z;
+      return result;
+    }, false),
+    point: { pixelSize: 3.5, color: MOON_COLOR, outlineColor: Color.BLACK.withAlpha(0.5), outlineWidth: 1 },
+    label: {
+      text: name,
+      font: '500 11px Inter, system-ui, sans-serif',
+      fillColor: MOON_COLOR,
+      style: LabelStyle.FILL,
+      verticalOrigin: VerticalOrigin.BOTTOM,
+      pixelOffset: new Cartesian2(0, -7),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      // Only legible once you've flown in close to the planet.
+      translucencyByDistance: new NearFarScalar(6e8, 1.0, 3e9, 0.0),
+    },
+  });
+}
+
+function buildMoons() {
+  for (const planet of Object.keys(MOONS)) {
+    MOONS[planet].forEach((moon, i) => addMoon(planet, moon, i));
+  }
 }
 
 function addBody(name) {
@@ -186,6 +304,11 @@ function updateSpheres() {
     scenePosOf(name, _pos);
     quatOf(name, _quat);
     Matrix4.fromTranslationQuaternionRotationScale(_pos, _quat, _one, spheres[name].modelMatrix);
+  }
+  if (ringPrimitive) {
+    scenePosOf('Saturn', _pos);
+    quatOf('Saturn', _quat);           // tilt (and an invisible spin) of Saturn
+    Matrix4.fromTranslationQuaternionRotationScale(_pos, _quat, _one, ringPrimitive.modelMatrix);
   }
 }
 
@@ -307,12 +430,22 @@ function selectBody(name) {
   $('sys-year').textContent = f.year;
   $('sys-earth-actions').hidden = name !== 'Earth';
   $('system-panel').hidden = false;
-  // Frame the body: a bounding sphere around its current position at a few radii.
+  // Frame the body.  For a planet with moons, pull back far enough to take in
+  // the outermost moon's orbit and look down at a steeper angle, so the moons
+  // ring the planet instead of hiding edge-on behind it.
   const r = bodyRadius(BODIES[name].radius);
+  const moons = MOONS[name];
+  let range = r * 4.5;
+  let pitch = -14;
+  if (moons) {
+    const outer = Math.max(...moons.map((m) => (isTrueScale() ? m[1] : m[3] * r)));
+    range = Math.max(range, outer * 1.9);
+    pitch = -34;
+  }
   scenePosOf(name, _pos);
   viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, r), {
     duration: 1.5,
-    offset: new HeadingPitchRange(0, CMath.toRadians(-12), r * 4.5),
+    offset: new HeadingPitchRange(0, CMath.toRadians(pitch), range),
   });
 }
 
@@ -330,7 +463,7 @@ function deselect() {
 // (0,0,0) — so its pitch/heading come out garbage and the Sun lands off-screen.
 function frameWholeSystem(duration = 0) {
   const D = systemExtent() * 2.0;
-  const elev = CMath.toRadians(38);
+  const elev = CMath.toRadians(50);   // a high 3/4 angle so the belt ring reads
   const C = new Cartesian3(0, -D * Math.cos(elev), D * Math.sin(elev));
   const dir = Cartesian3.normalize(Cartesian3.negate(C, new Cartesian3()), new Cartesian3());
   const up = Cartesian3.subtract(
@@ -378,8 +511,11 @@ function createViewer() {
 
   addBody('Sun');
   for (const name of PLANETS) addBody(name);
+  buildMoons();
+  buildRing();
   rebuildOrbits();
   buildSky();
+  createBelt(v, earthClock).then((b) => { belt = b; });
   frameWholeSystem();
 
   // Keep the headlight aimed where the camera looks, and hand-tick the shared
@@ -387,6 +523,7 @@ function createViewer() {
   v.scene.preRender.addEventListener(() => {
     if (earthClock && earthClock.shouldAnimate) earthClock.tick();
     updateSpheres();
+    if (belt) belt.tick(performance.now());
     Cartesian3.clone(v.camera.directionWC, _dir);
     v.scene.light.direction = _dir;
   });
@@ -454,8 +591,10 @@ export function initSystemView(earthViewer, moonView) {
     setTrueScale(e.target.checked);
     if (viewer) {
       applyScaleToBodies();
+      buildRing();
       rebuildOrbits();
       buildSky();
+      if (belt) belt.tick(performance.now(), true);    // re-place at the new scale
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = skyRadius() * 0.92;
       frameWholeSystem(1.2);
     }
