@@ -62,6 +62,7 @@ let catalog = [];          // [{ name, l1, l2, norad, kind, meta, regime }]
 let swarm = null;          // SatSwarm, one point per catalog index
 let selected = null;       // { index, satrec, highlight }
 let following = false;
+let autoFollowHoldUntil = 0;   // suppress auto-follow during camera flights
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
 const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
@@ -416,6 +417,14 @@ viewer.clock.onTick.addEventListener((clock) => {
   const pos = new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
   selected.highlight.position = pos;
 
+  // Inside model range a free camera loses a 7.6 km/s satellite in seconds —
+  // lock on automatically so zooming in "just works".  Release is manual
+  // (Stop following / Esc / deselect).
+  if (!following && Date.now() > autoFollowHoldUntil
+      && Cartesian3.distance(viewer.camera.positionWC, pos) < MODEL_SWAP_M * 0.85) {
+    engageFollow();
+  }
+
   const geo = satellite.eciToGeodetic(pv.position, gmst);
   $('info-alt').textContent = `${(geo.height).toFixed(0)} km`;
   const v = pv.velocity;
@@ -471,23 +480,29 @@ $('info-close').addEventListener('click', () => {
   $('infopanel').hidden = true;
 });
 
-$('info-track').addEventListener('click', () => {
-  if (!selected) return;
-  if (following) {
-    viewer.trackedEntity = undefined;
-    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
-    following = false;
-    $('info-track').classList.remove('active');
-    $('info-track').textContent = 'Follow this satellite';
-    return;
-  }
-  // Track the model entity itself, and let the camera get close enough to
-  // actually see the spacecraft.
+// Track the model entity itself, and let the camera get close enough to
+// actually see the spacecraft.
+function engageFollow() {
+  if (!selected || following) return;
   viewer.trackedEntity = selected.modelEntity;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = 20;
   following = true;
   $('info-track').classList.add('active');
   $('info-track').textContent = 'Stop following';
+}
+
+function releaseFollow() {
+  viewer.trackedEntity = undefined;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50_000;
+  following = false;
+  $('info-track').classList.remove('active');
+  $('info-track').textContent = 'Follow this satellite';
+}
+
+$('info-track').addEventListener('click', () => {
+  if (!selected) return;
+  if (following) releaseFollow();
+  else engageFollow();
 });
 
 // ---------------------------------------------------------------- legend ----
@@ -574,6 +589,7 @@ function flyToPair(i, j) {
     Cartesian3.magnitude(mid) + range,
     new Cartesian3(),
   );
+  autoFollowHoldUntil = Date.now() + 3000;   // don't let auto-follow cancel the flight
   viewer.camera.flyTo({ destination, duration: 1.6 });
   selectByIndex(i);
 }
