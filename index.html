@@ -12,11 +12,32 @@
   <button id="moon-exit" hidden>← Back to Earth</button>
   <div id="moon-attr">NASA/USGS LRO WAC Global Mosaic · NASA Solar System Treks</div>
 
+  <div id="systemContainer" hidden></div>
+  <button id="system-exit" hidden>✕ Exit solar system</button>
+  <label id="system-scale" hidden><input type="checkbox" /> True scale</label>
+  <div id="system-attr">Planet maps © Solar System Scope (CC BY 4.0) · positions: JPL Keplerian elements</div>
+
+  <aside id="system-panel" hidden aria-label="Body details">
+    <div class="eyebrow" id="sys-type">—</div>
+    <h2 id="sys-name">—</h2>
+    <dl class="readout">
+      <div><dt>Distance from Sun</dt><dd id="sys-dist">—</dd></div>
+      <div><dt>Diameter</dt><dd id="sys-diam">—</dd></div>
+      <div><dt>Day</dt><dd id="sys-day">—</dd></div>
+      <div><dt>Year</dt><dd id="sys-year">—</dd></div>
+    </dl>
+    <div id="sys-earth-actions" hidden>
+      <button id="sys-enter-earth" class="action">Enter Earth — satellite tracker ▸</button>
+      <button id="sys-goto-moon" class="action">Go to the Moon ▸</button>
+    </div>
+  </aside>
+
   <header id="topbar">
     <div class="brand">
       <span class="brand-mark">ORBITAL</span>
       <span class="brand-sub">live catalog</span>
     </div>
+    <button id="system-toggle" title="Fly out to the whole solar system">☉ System</button>
     <button id="moon-toggle" title="Fly to the Moon">◐ Moon</button>
     <div class="topbar-right">
       <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" />

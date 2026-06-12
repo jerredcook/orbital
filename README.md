@@ -38,6 +38,7 @@ top of `src/main.js`.)
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
+| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun and all eight planets on their real orbits; click a body to fly to it, toggle **True scale**, and from Earth drop straight into the satellite tracker or the Moon; `Esc` / exit returns |
 
 ## Architecture
 
@@ -47,6 +48,9 @@ src/style.css               dark telemetry theme
 src/main.js                 Cesium scene, picking, selection, UI wiring
 src/swarm.js                custom GPU point-cloud primitive (one draw call)
 src/moon.js                 standalone lunar globe (Moon ellipsoid + LRO imagery)
+src/solarsystem.js          heliocentric view (globe off): Sun + 8 planets, orbits
+src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
+src/scale.js                readable ⟷ true-scale mapping for the system view
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
@@ -105,6 +109,25 @@ Design decisions worth knowing before you extend it:
   second.  Crossing geometries are caught, not just co-moving ones: the
   staged gates were validated against an independent 1 s brute-force
   search on a 51.6° × 120.4° inclination pair.
+- **Solar System view** (`src/solarsystem.js`) is a third Cesium Viewer with
+  the globe switched off (`globe: false`) — there's no body to stand on out in
+  heliocentric space.  Planet positions come from JPL low-precision Keplerian
+  elements (`src/ephemeris.js`, validated: Earth's heliocentric longitude lands
+  within a degree of reality), and *everything* — positions and radii — passes
+  through one switchable readable⟷true scale mapping (`src/scale.js`).  Hard-won
+  Cesium gotchas, all the way down: (1) orbit polylines **must** set
+  `arcType: NONE` — the default GEODESIC densifies each segment along Earth's
+  ellipsoid and OOM-crashes the renderer with billion-metre arcs; (2) entity
+  ellipsoids silently drop **image** materials (they render flat white — no
+  texture coordinates), so planets are `Primitive` + `EllipsoidGeometry`
+  (POSITION_NORMAL_AND_ST) + `MaterialAppearance`, moved each frame by writing
+  `modelMatrix`; (3) billboards only render from a real image **URL** here —
+  `<canvas>`/data-URL images and `sizeInMeters` billboards silently don't draw
+  (the Sun glow is a PNG file, pixel-sized with `scaleByDistance`); (4)
+  `flyToBoundingSphere`'s `HeadingPitchRange` is singular at the geocentre, so
+  the opening camera is aimed at the origin explicitly.  The shared Earth clock
+  drives the planets, hand-ticked each frame because its own render loop is idle
+  while this view is up.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -123,6 +146,15 @@ Design decisions worth knowing before you extend it:
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
    band filter) and probably batching across several workers.
+5. **Solar System, phase 2** — the heliocentric overview ships now (Sun +
+   8 planets on real orbits).  Next: the asteroid belt as a Kepler-propagated
+   point swarm (real elements for the largest few thousand from JPL/MPC, plus
+   procedural fill for density) — generalise `src/swarm.js` first (its 6.0e8 m
+   bounding radius and the 2e6/6e7 point-size constants are Earth-tuned), then
+   major moons orbiting each planet (Kepler elements relative to their primary).
+6. **Solar System, phase 3** — per-planet high-res surface globes you can zoom
+   to, like the Moon (Mars via NASA Treks tiles, etc.), reached by "entering" a
+   planet from the system view the way Earth already hands off to the tracker.
 
 Data freshness and resilience:
 
@@ -184,5 +216,10 @@ Design notes for the 3D close-up view:
   renders the right sphere but fences the camera off 6,378 km out and
   you can never reach the surface.  Earth's WGS84 math is untouched
   because the two scenes hold their own ellipsoids.
+- Planet & Sun surface maps: [Solar System Scope](https://www.solarsystemscope.com/textures/)
+  equirectangular textures (CC BY 4.0), fetched into `public/textures/planets/`
+  by `tools/fetch-textures.mjs`.  Planet positions are computed locally from
+  JPL's low-precision Keplerian elements (no service, no key); see
+  `src/ephemeris.js`.
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).

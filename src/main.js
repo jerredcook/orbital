@@ -13,6 +13,7 @@ import { loadCatalog, cacheExpiresInMs } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
+import { initSystemView } from './solarsystem.js';
 
 // ---------------------------------------------------------------- scene ----
 
@@ -57,6 +58,11 @@ viewer.clock.multiplier = 1;
 // The "◐ Moon" toggle flies to a separate lunar globe (LRO imagery on the
 // Moon ellipsoid) you can zoom into; see src/moon.js.
 const moonView = initMoonView(viewer);
+
+// The "☉ System" toggle flies out to a heliocentric solar-system view (globe
+// off, planets on real Keplerian orbits); see src/solarsystem.js.  It can hand
+// off into the Moon globe, so it gets a reference to the Moon view.
+const systemView = initSystemView(viewer, moonView);
 
 // The whole catalog renders through one GPU point-cloud primitive; this
 // little collection only ever holds the enlarged selection highlight.
@@ -861,6 +867,7 @@ document.addEventListener('keydown', (e) => {
 window.__orbital = {
   viewer,
   moonView,
+  systemView,
   selectByIndex,
   refreshCatalog,
   get catalog() { return catalog; },
