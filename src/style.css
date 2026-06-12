@@ -161,6 +161,27 @@ html, body {
 .action:hover { background: rgba(255,180,84,0.12); }
 .action.active { background: #FFB454; color: #05070C; }
 
+/* ---------- toasts ---------- */
+#toasts {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 64px;
+  z-index: 20; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.toast {
+  background: rgba(13,19,29,0.95); border: 1px solid #FFB454; border-radius: 6px;
+  padding: 10px 14px; max-width: 580px;
+  font-family: ui-monospace, monospace; font-size: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  transition: opacity 0.7s;
+}
+.toast.out { opacity: 0; }
+.toast .t-head {
+  color: #FFB454; font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.toast .t-add { color: #7BE3A0; }
+.toast .t-del { color: #FF6B7A; }
+
 /* ---------- time bar ---------- */
 #timebar {
   position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);

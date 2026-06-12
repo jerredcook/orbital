@@ -111,13 +111,29 @@ Design decisions worth knowing before you extend it:
    mapping in `modelFor` takes one line per spacecraft.  TESS and JWST
    models are already in `public/models/`, waiting for their element
    sets to appear in the catalog.
-3. **Auto-refresh** — re-fetch element sets on the cache TTL and diff the
-   catalog: new NORAD IDs = launches, dropped IDs = decays.  Toast the
-   changes ("3 objects added since yesterday").
+3. **Smarter refresh cadence** — auto-refresh exists (see below); a
+   nicety would be scheduling fetches off CelesTrak's own update times
+   instead of a fixed TTL.
 4. **All-vs-all screening** — per-target screening exists; the full
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
    band filter) and probably batching across several workers.
+
+Data freshness and resilience:
+
+- **Auto-refresh.**  Every 5 minutes the app checks whether the 2 h
+  element-set cache has lapsed; if so it re-fetches, diffs the NORAD ID
+  set against a persisted snapshot, hot-swaps the catalog in place
+  (swarm rebuild + worker re-init), and toasts what changed — new IDs
+  are launches, dropped IDs are decays/delistings.  The snapshot
+  survives sessions, so tomorrow's first load reports what changed
+  overnight.  A >20% catalog size jump is treated as a partial load or
+  its recovery and rebaselined silently rather than toasted.
+- **CelesTrak rate-limits.**  Re-fetch the big files too often and you
+  get HTTP 403 for a couple of hours (ask me how I know).  Expired
+  cache entries are kept and served as a fallback when the fetch fails,
+  a group that fails entirely is skipped rather than failing the boot,
+  and refresh attempts are spaced ≥ 20 minutes apart.
 
 Design notes for the 3D close-up view:
 

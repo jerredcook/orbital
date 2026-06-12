@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog } from './data.js';
+import { loadCatalog, cacheExpiresInMs } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 
@@ -105,21 +105,23 @@ setInterval(() => {
 
 // ----------------------------------------------------------------- boot ----
 
-async function boot() {
-  try {
-    catalog = await loadCatalog(status);
-  } catch (err) {
-    status('catalog fetch failed — see console');
-    console.error(err);
-    return;
-  }
+// Swap in a (new) catalog: rebuild the swarm, re-init the worker, reset
+// everything index-based.  Called at boot and again on auto-refresh.
+function applyCatalog(list) {
+  clearSelection();
+  $('infopanel').hidden = true;
+  tcaCache.clear();
+  tcaPending.clear();
+  if (swarm) viewer.scene.primitives.remove(swarm);   // destroys GL resources
 
+  catalog = list;
   swarm = new SatSwarm(catalog.length);
   const counts = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
   for (let i = 0; i < catalog.length; i++) {
     const cat = catOf(catalog[i]);
     counts[cat]++;
     swarm.setStyle(i, CAT_COLORS[cat], cat === 'DEB' ? 1.7 : 2.2);
+    if (!catVisible[cat]) swarm.setVisible(i, false);
   }
   viewer.scene.primitives.add(swarm);
   for (const c of Object.keys(counts)) {
@@ -131,7 +133,109 @@ async function boot() {
     tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })),
   });
 }
+
+async function boot() {
+  try {
+    const list = await loadCatalog(status);
+    diffAndToast(list);
+    applyCatalog(list);
+  } catch (err) {
+    status('catalog fetch failed — see console');
+    console.error(err);
+  }
+}
 boot();
+
+// ----------------------------------------------------------- auto-refresh ----
+// When the 2 h element-set cache lapses, re-fetch and hot-swap the catalog.
+// New NORAD IDs are launches (or newly cataloged objects), dropped IDs are
+// decays/delistings; both get a toast.  The ID snapshot persists across
+// sessions, so tomorrow's first load reports what changed overnight.
+
+const ID_SNAPSHOT_KEY = 'orbital.known-ids';
+let prevNames = new Map();   // norad → name from the previous catalog (in-memory)
+
+function diffAndToast(list) {
+  let prev = null;
+  try { prev = JSON.parse(localStorage.getItem(ID_SNAPSHOT_KEY)); } catch { /* none */ }
+  const nowIds = new Set(list.map((s) => s.norad));
+  if (prev?.ids?.length) {
+    // A >20% size jump means a partial load (source down) or its recovery,
+    // not launches/decays — rebaseline silently instead of toasting 15k
+    // "new" objects.
+    const ratio = list.length / prev.ids.length;
+    if (ratio >= 0.8 && ratio <= 1.25) {
+      const prevIds = new Set(prev.ids);
+      const added = list.filter((s) => !prevIds.has(s.norad));
+      const removed = prev.ids
+        .filter((id) => !nowIds.has(id))
+        .map((id) => prevNames.get(id) ?? `#${id}`);
+      if (added.length || removed.length) {
+        toastCatalogDiff(added.map((s) => s.name), removed, prev.t);
+      }
+    } else {
+      console.warn(`catalog size jumped ${prev.ids.length} → ${list.length}; rebaselining without diff`);
+    }
+  }
+  try {
+    localStorage.setItem(ID_SNAPSHOT_KEY, JSON.stringify({ t: Date.now(), ids: [...nowIds] }));
+  } catch { /* quota — skip */ }
+  prevNames = new Map(list.map((s) => [s.norad, s.name]));
+}
+
+function toastCatalogDiff(addedNames, removedNames, sinceMs) {
+  const fmtList = (names) => names.slice(0, 4).join(', ')
+    + (names.length > 4 ? ` +${names.length - 4} more` : '');
+  const h = (Date.now() - sinceMs) / 3.6e6;
+  const ago = h < 1.5 ? `${Math.round(h * 60)} min` : `${h.toFixed(1)} h`;
+  const parts = [`<div class="t-head">catalog updated · vs ${ago} ago</div>`];
+  if (addedNames.length) {
+    parts.push(`<div class="t-add">▲ ${addedNames.length} new on orbit: ${fmtList(addedNames)}</div>`);
+  }
+  if (removedNames.length) {
+    parts.push(`<div class="t-del">▼ ${removedNames.length} gone (decayed/delisted): ${fmtList(removedNames)}</div>`);
+  }
+  toast(parts.join(''));
+}
+
+function toast(html, ms = 15_000) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = html;
+  $('toasts').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 700);
+  }, ms);
+}
+
+let lastRefreshAttempt = 0;
+
+async function refreshCatalog() {
+  lastRefreshAttempt = Date.now();
+  try {
+    const list = await loadCatalog(status);
+    const unchanged = list.length === catalog.length
+      && list.every((s, i) => s.norad === catalog[i].norad);
+    if (unchanged) {
+      status(`${catalog.length.toLocaleString()} objects on orbit`);
+      return;
+    }
+    diffAndToast(list);
+    applyCatalog(list);
+  } catch (err) {
+    console.warn('catalog refresh failed — keeping current data', err);
+  }
+}
+
+// Stale-cache fallback means a refresh attempt re-parses the whole catalog
+// even when the source is down, so space the attempts out.
+setInterval(() => {
+  if (!catalog.length) return;
+  if (cacheExpiresInMs() > 0) return;
+  if (Date.now() - lastRefreshAttempt < 20 * 60 * 1000) return;
+  refreshCatalog();
+}, 5 * 60 * 1000);
 
 // ------------------------------------------------------------- selection ----
 
@@ -728,6 +832,7 @@ document.addEventListener('keydown', (e) => {
 window.__orbital = {
   viewer,
   selectByIndex,
+  refreshCatalog,
   get catalog() { return catalog; },
   get swarm() { return swarm; },
   get selected() { return selected; },

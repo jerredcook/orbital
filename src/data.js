@@ -16,24 +16,50 @@ const TLE_GROUPS = [
 ];
 
 const SATCAT_URL = 'https://celestrak.org/pub/satcat.csv';
-const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+export const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+/** Milliseconds until the oldest cached element set expires (0 = stale now). */
+export function cacheExpiresInMs() {
+  let soonest = Infinity;
+  for (const g of TLE_GROUPS) {
+    try {
+      const hit = localStorage.getItem(g.cacheKey);
+      if (!hit) return 0;
+      const { t } = JSON.parse(hit);
+      soonest = Math.min(soonest, t + CACHE_TTL_MS - Date.now());
+    } catch { return 0; }
+  }
+  return Math.max(0, soonest);
+}
 
 async function cachedFetch(key, url) {
+  let stale = null;
   try {
     const hit = localStorage.getItem(key);
     if (hit) {
       const { t, body } = JSON.parse(hit);
       if (Date.now() - t < CACHE_TTL_MS) return body;
+      stale = body;   // expired — keep as fallback if the refetch fails
     }
   } catch { /* cache miss or corrupt — fall through */ }
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
-  const body = await res.text();
   try {
-    localStorage.setItem(key, JSON.stringify({ t: Date.now(), body }));
-  } catch { /* quota exceeded — fine, just skip caching */ }
-  return body;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
+    const body = await res.text();
+    try {
+      localStorage.setItem(key, JSON.stringify({ t: Date.now(), body }));
+    } catch { /* quota exceeded — fine, just skip caching */ }
+    return body;
+  } catch (err) {
+    // CelesTrak rate-limits (HTTP 403) clients that re-fetch the big files
+    // too often.  Yesterday's elements beat no elements.
+    if (stale !== null) {
+      console.warn(`${url} failed — serving stale cache`, err);
+      return stale;
+    }
+    throw err;
+  }
 }
 
 /** Parse a 3-line-element text blob into [{ name, l1, l2, norad }]. */
@@ -120,9 +146,19 @@ export function classifyRegime(meta, meanMotion) {
 
 export async function loadCatalog(onStatus) {
   onStatus?.('fetching element sets…');
+  // A group that fails entirely (no cache, fetch refused) is skipped rather
+  // than failing the whole load — a partial catalog still renders.
   const texts = await Promise.all(
-    TLE_GROUPS.map((g) => cachedFetch(g.cacheKey, g.url)),
+    TLE_GROUPS.map(async (g) => {
+      try {
+        return await cachedFetch(g.cacheKey, g.url);
+      } catch (err) {
+        console.warn(`element-set group unavailable: ${g.url}`, err);
+        return '';
+      }
+    }),
   );
+  if (texts.every((t) => !t)) throw new Error('no element sets available');
 
   // Merge groups, first occurrence wins ('active' is first, so anything that
   // somehow appears in both keeps its operational classification).
