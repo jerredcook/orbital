@@ -13,6 +13,9 @@
   <div id="moon-attr">NASA/USGS LRO WAC Global Mosaic · NASA Solar System Treks</div>
 
   <div id="systemContainer" hidden></div>
+  <div id="bodyContainer" hidden></div>
+  <button id="body-exit" hidden>← Back to the system</button>
+  <div id="body-attr">NASA Solar System Treks</div>
   <button id="system-exit" hidden>✕ Exit solar system</button>
   <label id="system-scale" hidden><input type="checkbox" /> True scale</label>
   <div id="system-attr">Planet maps © Solar System Scope (CC BY 4.0) · positions: JPL Keplerian elements</div>
@@ -30,6 +33,7 @@
       <button id="sys-enter-earth" class="action">Enter Earth — satellite tracker ▸</button>
       <button id="sys-goto-moon" class="action">Go to the Moon ▸</button>
     </div>
+    <button id="sys-enter-planet" class="action" hidden>Descend to the surface ▸</button>
   </aside>
 
   <header id="topbar">

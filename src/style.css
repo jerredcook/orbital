@@ -133,6 +133,37 @@ body.system-mode #infopanel,
 body.system-mode #moon-toggle,
 body.system-mode .topbar-right { display: none; }
 
+/* ---------- per-planet surface globe ---------- */
+/* A globe scoped to a planet's own ellipsoid, layered above the system view
+   (which idles beneath) when you "descend" to a planet. */
+#bodyContainer { position: absolute; inset: 0; z-index: 6; background: #02040A; }
+#bodyContainer[hidden] { display: none; }
+
+#body-exit {
+  position: absolute; top: 12px; left: 16px; z-index: 12;
+  padding: 8px 14px;
+  background: rgba(13,19,29,0.9); color: #C9D4E3;
+  border: 1px solid #1E2A3A; border-radius: 4px;
+  font-family: ui-monospace, monospace; font-size: 12px;
+  letter-spacing: 0.08em; cursor: pointer;
+}
+#body-exit:hover { border-color: #FFB454; color: #E8EFF8; }
+
+#body-attr {
+  position: absolute; bottom: 8px; left: 16px; z-index: 12;
+  display: none;
+  font-family: ui-monospace, monospace; font-size: 10px;
+  letter-spacing: 0.04em; color: #6B7A8F;
+  text-shadow: 0 1px 2px #02040A;
+  pointer-events: none;
+}
+body.body-mode #body-attr { display: block; }
+
+/* While on a planet globe, the system-view chrome underneath must hide. */
+body.body-mode #system-panel,
+body.body-mode #system-exit,
+body.body-mode #system-scale { display: none; }
+
 /* ---------- top bar ---------- */
 #topbar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;

@@ -34,6 +34,10 @@ import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
 import { createBelt } from './belt.js';
+import { initBodyGlobes } from './bodyglobe.js';
+
+// Planets with a solid surface to descend onto (the rest show their cloud tops).
+const ROCKY = new Set(['Mercury', 'Venus', 'Mars']);
 
 const $ = (id) => document.getElementById(id);
 // Asset paths are base-relative so they resolve under the GitHub Pages subpath
@@ -60,6 +64,8 @@ let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
 let skyPrimitive = null;    // the NASA star-map celestial sphere
 let ringPrimitive = null;   // Saturn's rings
 let belt = null;            // the asteroid-belt swarm controller
+let bodyGlobes = null;      // the per-planet surface-globe controller
+let inBodyGlobe = false;    // true while a planet globe is open over the system
 let selectedName = null;
 
 const ALL_BODIES = ['Sun', ...PLANETS];
@@ -429,6 +435,13 @@ function selectBody(name) {
   $('sys-day').textContent = f.day;
   $('sys-year').textContent = f.year;
   $('sys-earth-actions').hidden = name !== 'Earth';
+  // Every planet but Earth can be entered as its own navigable globe.
+  const enterBtn = $('sys-enter-planet');
+  const enterable = name !== 'Sun' && name !== 'Earth';
+  enterBtn.hidden = !enterable;
+  if (enterable) {
+    enterBtn.textContent = ROCKY.has(name) ? 'Descend to the surface ▸' : 'Explore the globe ▸';
+  }
   $('system-panel').hidden = false;
   // Frame the body.  For a planet with moons, pull back far enough to take in
   // the outermost moon's orbit and look down at a steeper angle, so the moons
@@ -452,6 +465,20 @@ function selectBody(name) {
 function deselect() {
   selectedName = null;
   $('system-panel').hidden = true;
+}
+
+// Drop from the system view onto a planet's own globe (bodyglobe.js).  The system
+// scene idles underneath and is restored when the globe is exited.
+function enterPlanet(name) {
+  if (!bodyGlobes) return;
+  inBodyGlobe = true;
+  viewer.useDefaultRenderLoop = false;
+  document.body.classList.add('body-mode');   // hides the system chrome (CSS)
+  bodyGlobes.show(name, () => {
+    inBodyGlobe = false;
+    document.body.classList.remove('body-mode');
+    viewer.useDefaultRenderLoop = true;
+  });
 }
 
 // --------------------------------------------------------------- viewer ----
@@ -605,7 +632,13 @@ export function initSystemView(earthViewer, moonView) {
   $('sys-enter-earth').addEventListener('click', () => hide(earthViewer));
   $('sys-goto-moon').addEventListener('click', () => { hide(earthViewer); moonView.show(); });
 
+  // Every other planet → descend onto its own globe (Mars/Mercury via Treks
+  // imagery, the rest via their local map).
+  bodyGlobes = initBodyGlobes();
+  $('sys-enter-planet').addEventListener('click', () => { if (selectedName) enterPlanet(selectedName); });
+
   document.addEventListener('keydown', (e) => {
+    if (inBodyGlobe) return;   // the body globe handles its own Esc (and exits to here)
     if (e.key === 'Escape' && visible) {
       e.stopPropagation();   // don't also clear the hidden Earth selection
       if (selectedName) deselect();

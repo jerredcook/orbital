@@ -40,6 +40,7 @@ top of `src/main.js`.)
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
+| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); `← Back` / `Esc` returns to the system |
 
 ## Architecture
 
@@ -50,6 +51,7 @@ src/main.js                 Cesium scene, picking, selection, UI wiring
 src/swarm.js                custom GPU point-cloud primitive (one draw call)
 src/moon.js                 standalone lunar globe (Moon ellipsoid + LRO imagery)
 src/solarsystem.js          heliocentric view: Sun, planets, rings, moons, sky
+src/bodyglobe.js            descend to a planet's surface globe (Treks / local map)
 src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
 src/scale.js                readable ⟷ true-scale mapping for the system view
 src/belt.js                 asteroid belt: real + procedural, Kepler-propagated swarm
@@ -143,6 +145,14 @@ Design decisions worth knowing before you extend it:
   in true scale.  Saturn's rings are a hand-built double-sided annulus geometry
   (UV.s = inner→outer) with the alpha ring texture, transformed each frame to
   Saturn's position and tilt.
+- **Descend to a planet** ([src/bodyglobe.js](src/bodyglobe.js)) reuses the
+  moon.js pattern — a Cesium globe scoped to the planet's own `Ellipsoid` (passed
+  to the *Viewer*, so the camera controller collides against the right surface),
+  clad in NASA Treks tiles (Mars/Mercury) or the local map as a single tile.  One
+  globe lives at a time on a shared container — switching planets destroys and
+  rebuilds it — to keep the WebGL-context count low.  The system scene idles
+  beneath and is restored on exit; a guard flag keeps the system view's Esc from
+  firing while a planet globe owns it.
 
 ## Roadmap (good Claude Code sessions)
 
@@ -161,12 +171,12 @@ Design decisions worth knowing before you extend it:
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
    band filter) and probably batching across several workers.
-5. **Solar System, phase 3** — the overview, asteroid belt, major moons, Saturn's
-   rings, and an accurate NASA star sky all ship now.  Next: per-planet high-res
-   surface globes you can zoom to, like the Moon (Mars via NASA Treks tiles,
-   etc.), reached by "entering" a planet from the system view the way Earth
-   already hands off to the tracker.  Also worth doing: real moons for the gas
-   giants from JPL, and asteroid belt families/Trojans.
+5. **More worlds and detail** — the overview, asteroid belt, major moons,
+   Saturn's rings, an accurate NASA star sky, and descend-to-surface globes for
+   every planet all ship now.  Worth doing next: real moons for the gas giants
+   from JPL; asteroid families and the Jupiter Trojans; higher-res / regional
+   imagery (Mars CTX/HiRISE) on the surface globes; and terrain relief
+   (`CesiumTerrainProvider`) where DEMs exist.
 
 Data freshness and resilience:
 
@@ -233,6 +243,10 @@ Design notes for the 3D close-up view:
   by `tools/fetch-textures.mjs`.  Planet positions are computed locally from
   JPL's low-precision Keplerian elements (no service, no key); see
   `src/ephemeris.js`.
+- Planet surface globes: NASA Solar System Treks tile pyramids — Mars (Viking
+  MDIM2.1 color) and Mercury (MESSENGER MDIS) — zoomable to the surface, the
+  same source and tiling as the Moon; Venus and the gas giants use their local
+  equirectangular map as a single-tile globe.
 - Asteroid belt: ~3,200 real largest main-belt asteroids (H < 12.5) with
   osculating elements from NASA/JPL's
   [Small-Body Database](https://ssd-api.jpl.nasa.gov/) (fetched by
