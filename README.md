@@ -41,7 +41,8 @@ top of `src/main.js`.)
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
-| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); `← Back` / `Esc` returns to the system |
+| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
+| Landing sites | Mars rovers & landers (Viking → Perseverance, Zhurong), the Moon's Apollo + Luna/Lunokhod/Surveyor/Chang'e/Chandrayaan sites, and Venus's Venera landers — visible on the surface globes, near-side only as you rotate |
 | Planetary spacecraft | Fly to a planet to see its robotic orbiters alongside its moons, colored by status (a legend, top-right, explains them): **bright cyan** = operating, **dim slate** = derelict (dead but still in orbit), and craft that **deorbited fade out** (orange) and are gone. The **Spacecraft timeline** (bottom-left) plays/scrubs from 1971 by arrival year — with the deorbit fades animating live — and flashes its own era banners |
 
 ## Architecture
@@ -54,6 +55,7 @@ src/swarm.js                custom GPU point-cloud primitive (one draw call)
 src/moon.js                 standalone lunar globe (Moon ellipsoid + LRO imagery)
 src/solarsystem.js          heliocentric view: Sun, planets, rings, moons, sky
 src/bodyglobe.js            descend to a planet's surface globe (Treks / local map)
+src/surface.js              landing-site markers pinned on the surface globes
 src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
 src/scale.js                readable ⟷ true-scale mapping for the system view
 src/belt.js                 asteroid belt: real + procedural, Kepler-propagated swarm

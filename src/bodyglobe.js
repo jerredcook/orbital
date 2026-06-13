@@ -19,6 +19,7 @@ import {
   Credit, Cartesian3,
 } from 'cesium';
 import { BODIES } from './ephemeris.js';
+import { SURFACE, addSurfaceMarkers } from './surface.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
@@ -82,6 +83,7 @@ function makeViewer(name) {
   const ctrl = v.scene.screenSpaceCameraController;
   ctrl.minimumZoomDistance = treks ? 150 : R * 0.03;   // descend to the surface on Treks bodies
   ctrl.maximumZoomDistance = R * 5;
+  addSurfaceMarkers(v, ellipsoid, SURFACE[name]);   // landing sites, where we have them
   v.camera.setView({ destination: Cartesian3.fromDegrees(0, 0, R * 1.4, ellipsoid) });
   return v;
 }
@@ -90,6 +92,7 @@ function show(name, onExit) {
   if (viewer && activeName !== name) { viewer.destroy(); viewer = null; }
   if (!viewer) { viewer = makeViewer(name); activeName = name; }
   onExitCb = onExit;
+  if (window.__orbital) window.__orbital.bodyViewer = viewer;   // debug
   visible = true;
   $('bodyContainer').hidden = false;
   $('body-exit').hidden = false;

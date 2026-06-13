@@ -13,6 +13,7 @@ import {
   Viewer, Globe, GeographicProjection, Ellipsoid, ImageryLayer,
   UrlTemplateImageryProvider, EllipsoidTerrainProvider, Credit, Cartesian3,
 } from 'cesium';
+import { SURFACE, addSurfaceMarkers } from './surface.js';
 
 // LRO Wide Angle Camera global mosaic, 303 px/deg (~100 m/px), served
 // keylessly by NASA's Solar System Treks as a plain geographic tile pyramid
@@ -60,6 +61,9 @@ function createMoonViewer() {
   const ctrl = v.scene.screenSpaceCameraController;
   ctrl.minimumZoomDistance = 100;
   ctrl.maximumZoomDistance = 12_000_000;
+
+  // Landing sites: Apollo, Luna/Lunokhod, Surveyor, Chang'e, Chandrayaan-3.
+  addSurfaceMarkers(v, Ellipsoid.MOON, SURFACE.Moon);
 
   // Open looking at the full disk from ~4,000 km up over (0°, 0°).
   v.camera.setView({
