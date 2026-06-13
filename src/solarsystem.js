@@ -33,7 +33,7 @@ import {
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
-import { createBelt } from './belt.js';
+import { createBelt, createTrojans } from './belt.js';
 import { initBodyGlobes } from './bodyglobe.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
@@ -64,6 +64,7 @@ let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
 let skyPrimitive = null;    // the NASA star-map celestial sphere
 let ringPrimitive = null;   // Saturn's rings
 let belt = null;            // the asteroid-belt swarm controller
+let trojans = null;         // Jupiter L4/L5 Trojan swarm controller
 let bodyGlobes = null;      // the per-planet surface-globe controller
 let inBodyGlobe = false;    // true while a planet globe is open over the system
 let selectedName = null;
@@ -670,6 +671,7 @@ function createViewer() {
   rebuildOrbits();
   buildSky();
   createBelt(v, earthClock).then((b) => { belt = b; });
+  createTrojans(v, earthClock).then((t) => { trojans = t; });
   frameWholeSystem();
 
   // Keep the headlight aimed where the camera looks, and hand-tick the shared
@@ -678,6 +680,7 @@ function createViewer() {
     if (earthClock && earthClock.shouldAnimate) earthClock.tick();
     updateSpheres();
     if (belt) belt.tick(performance.now());
+    if (trojans) trojans.tick(performance.now());
     Cartesian3.clone(v.camera.directionWC, _dir);
     v.scene.light.direction = _dir;
   });
@@ -825,6 +828,7 @@ export function initSystemView(earthViewer, moonView) {
       rebuildOrbits();
       buildSky();
       if (belt) belt.tick(performance.now(), true);    // re-place at the new scale
+      if (trojans) trojans.tick(performance.now(), true);
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = skyRadius() * 0.92;
       frameWholeSystem(1.2);
     }

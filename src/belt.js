@@ -21,7 +21,9 @@ const DEG = Math.PI / 180;
 const J2000_JD = 2451545.0;
 const TOTAL = 14000;                 // real subset + procedural fill
 const COLOR = Color.fromCssColorString('#CDB78F');
+const TROJAN_COLOR = Color.fromCssColorString('#8FB0A8');   // cooler tint: a distinct population
 const POINT_SIZE = 2.0;
+const BOUNDING_RADIUS = 1.0e12;      // covers belt (~3 AU) and Trojans (~5.2 AU) in both scale modes
 
 // Kirkwood gaps (mean-motion resonances with Jupiter), in AU — procedural
 // asteroids are rejected near these so the gaps actually show.
@@ -63,16 +65,14 @@ function bake(elements, epochJD) {
   return { n, a, e, M0, nDay, c, epochJD };
 }
 
-export async function createBelt(viewer, earthClock) {
-  let real = { epoch: J2000_JD, elements: [] };
-  try { real = await (await fetch(`${BASE}asteroids.json`)).json(); } catch { /* procedural only */ }
+// Build a Kepler-propagated point-cloud from a baked element set: one GL draw
+// call, re-solved on a throttled wall-clock tick.  Shared by the main belt and
+// the Jupiter Trojans — only the element source, colour and count differ.
+function createKeplerSwarm(viewer, earthClock, { elements, epoch, color }) {
+  const ast = bake(elements, epoch);
 
-  const elements = real.elements.slice();
-  while (elements.length < TOTAL) elements.push(proceduralElement());
-  const ast = bake(elements, real.epoch);
-
-  const swarm = new SatSwarm(ast.n, { boundingRadius: 1.0e12 });
-  for (let k = 0; k < ast.n; k++) swarm.setStyle(k, COLOR, POINT_SIZE);
+  const swarm = new SatSwarm(ast.n, { boundingRadius: BOUNDING_RADIUS });
+  for (let k = 0; k < ast.n; k++) swarm.setStyle(k, color, POINT_SIZE);
   viewer.scene.primitives.add(swarm);
 
   const buf = new Float64Array(ast.n * 3);
@@ -104,11 +104,34 @@ export async function createBelt(viewer, earthClock) {
   return {
     get count() { return ast.n; },
     set show(v) { swarm.show = v; },
-    // Throttled to ~8 Hz of wall time — the belt drifts slowly even under heavy
-    // time-warp at this zoom, and 14k Kepler solves a frame is wasteful.
+    // Throttled to ~8 Hz of wall time — the swarm drifts slowly even under heavy
+    // time-warp at this zoom, and tens of thousands of Kepler solves a frame is
+    // wasteful.
     tick(nowMs, force) {
       if (force || lastWall < 0 || nowMs - lastWall > 120) { lastWall = nowMs; recompute(); }
     },
     destroy() { viewer.scene.primitives.remove(swarm); },
   };
+}
+
+// The main belt: ~3,200 real largest main-belt asteroids plus procedural fill
+// to TOTAL, drawn from the belt's real a/e/i statistics with the Kirkwood gaps.
+export async function createBelt(viewer, earthClock) {
+  let real = { epoch: J2000_JD, elements: [] };
+  try { real = await (await fetch(`${BASE}asteroids.json`)).json(); } catch { /* procedural only */ }
+
+  const elements = real.elements.slice();
+  while (elements.length < TOTAL) elements.push(proceduralElement());
+  return createKeplerSwarm(viewer, earthClock, { elements, epoch: real.epoch, color: COLOR });
+}
+
+// Jupiter's Trojans: the real largest members of the L4 (leading) and L5
+// (trailing) clouds.  Their osculating elements already place them ~±60° from
+// Jupiter and share its period, so the two clumps form and co-move on their own
+// — all real, no procedural fill (see tools/fetch-trojans.mjs).
+export async function createTrojans(viewer, earthClock) {
+  let real = { epoch: J2000_JD, elements: [] };
+  try { real = await (await fetch(`${BASE}trojans.json`)).json(); } catch { return null; }
+  if (!real.elements.length) return null;
+  return createKeplerSwarm(viewer, earthClock, { elements: real.elements, epoch: real.epoch, color: TROJAN_COLOR });
 }

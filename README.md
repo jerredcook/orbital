@@ -39,7 +39,7 @@ top of `src/main.js`.)
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
-| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
+| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
 | Landing sites | Mars rovers & landers (Viking → Perseverance, Zhurong), the Moon's Apollo + Luna/Lunokhod/Surveyor/Chang'e/Chandrayaan sites, and Venus's Venera landers — visible on the surface globes, near-side only as you rotate |
@@ -58,7 +58,7 @@ src/bodyglobe.js            descend to a planet's surface globe (Treks / local m
 src/surface.js              landing-site markers pinned on the surface globes
 src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
 src/scale.js                readable ⟷ true-scale mapping for the system view
-src/belt.js                 asteroid belt: real + procedural, Kepler-propagated swarm
+src/belt.js                 asteroid belt + Jupiter Trojans: Kepler-propagated swarms
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
@@ -142,7 +142,13 @@ Design decisions worth knowing before you extend it:
 - **Belt, moons, rings** ride on the same scale map.  The asteroid belt
   ([src/belt.js](src/belt.js)) reuses the satellite swarm primitive
   (`new SatSwarm(n, { boundingRadius })`) — 14k orbits Kepler-solved on a
-  throttled tick and run through `scenePosition`, one draw call.  Moons (Luna,
+  throttled tick and run through `scenePosition`, one draw call.  The same
+  module also renders **Jupiter's Trojans**: ~2,700 of the real largest members
+  on a second swarm (cooler tint), no procedural fill — their osculating
+  elements already librate ~±60° from Jupiter and share its period, so the two
+  clouds (L4 leading, L5 trailing, ~1.5:1 like the real camps) form and co-move
+  on their own.  Both belt and Trojans run through one generic
+  `createKeplerSwarm` core.  Moons (Luna,
   the Galileans + Amalthea, seven of Saturn's, five Uranian, Triton + Proteus)
   carry real JPL mean elements — period and *inclination*, so each orbit tilts
   realistically (Iapetus and retrograde Triton stand out of plane).  Each is a
@@ -194,8 +200,10 @@ Design decisions worth knowing before you extend it:
    is the hook, but it needs a global MOLA/LOLA elevation grid, which (unlike the
    imagery) Treks doesn't expose as open tiles; sourcing/hosting a downsampled DEM
    (or adding a Cesium Ion token, which has Mars terrain ready-made) is the
-   blocker.  Also: asteroid families and the Jupiter Trojans; higher-res /
-   regional imagery (Mars CTX/HiRISE) on the surface globes.
+   blocker.  The Jupiter Trojans now ship (the L4/L5 clouds flanking Jupiter);
+   still open: main-belt asteroid families (Themis, Eos, Koronis…) tinted as
+   their own clusters, and higher-res / regional imagery (Mars CTX/HiRISE) on
+   the surface globes.
 
 Data freshness and resilience:
 
@@ -280,7 +288,9 @@ Design notes for the 3D close-up view:
   osculating elements from NASA/JPL's
   [Small-Body Database](https://ssd-api.jpl.nasa.gov/) (fetched by
   `tools/fetch-asteroids.mjs` → `public/asteroids.json`), plus procedural fill to
-  ~14k for density.  Saturn's ring map: Solar System Scope (CC BY 4.0).
+  ~14k for density.  Jupiter Trojans: ~2,700 real largest members (H < 13.5)
+  from the same database (`tools/fetch-trojans.mjs` → `public/trojans.json`), all
+  real — no fill.  Saturn's ring map: Solar System Scope (CC BY 4.0).
 - Night sky: NASA SVS [Deep Star Map 2020](https://svs.gsfc.nasa.gov/4851)
   (Tycho-2 + Gaia DR2, with the Milky Way and Magellanic Clouds), the 8k EXR
   tone-mapped to `public/textures/starmap.jpg`.  Real star positions and
