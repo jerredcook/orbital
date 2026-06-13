@@ -23,7 +23,7 @@
     <div id="ptl-controls" hidden>
       <button id="ptl-play" title="Play / pause">▶</button>
       <span id="ptl-label">—</span>
-      <input id="ptl-year" type="range" min="2000" max="2026" step="1" value="2026" />
+      <input id="ptl-year" type="range" min="1970" max="2026" step="1" value="2026" />
     </div>
   </div>
   <div id="system-attr">Planet maps © Solar System Scope (CC BY 4.0) · positions: JPL Keplerian elements</div>
@@ -77,6 +77,12 @@
     <div id="timeline-controls" hidden>
       <div class="tl-head"><button id="tl-play" title="Play / pause">▶</button><span id="tl-label">1957</span></div>
       <input id="tl-year" type="range" min="1957" max="2026" step="1" value="1957" />
+      <div class="tl-speed-row">speed <select id="tl-speed">
+        <option value="2">fast</option>
+        <option value="1" selected>normal</option>
+        <option value="0.4">slow</option>
+        <option value="0.15">crawl</option>
+      </select></div>
     </div>
     <div class="legend-divider"></div>
     <label class="legend-row"><input type="checkbox" id="toggle-orbit" checked />Orbit track on select</label>

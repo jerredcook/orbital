@@ -609,12 +609,12 @@ let tlPlaying = false;
 let tlRaf = 0;
 let tlAnchorMs = 0;
 let tlAnchorYear = TIMELINE_START;
-const TIMELINE_SECONDS = 42;                   // full Sputnik→today sweep duration
+let tlYearsPerSec = 1;                          // playback speed; the dropdown sets it
 
 function tlStep(nowMs) {
   if (!tlPlaying) return;
-  const perYear = (TIMELINE_SECONDS * 1000) / (timelineMax - TIMELINE_START);
-  const year = Math.min(timelineMax, Math.floor(tlAnchorYear + (nowMs - tlAnchorMs) / perYear));
+  const year = Math.min(timelineMax,
+    Math.floor(tlAnchorYear + (nowMs - tlAnchorMs) / 1000 * tlYearsPerSec));
   if (year !== timelineYear) setTimelineYear(year);
   if (year >= timelineMax) { stopTimelinePlay(); return; }
   tlRaf = requestAnimationFrame(tlStep);
@@ -651,6 +651,10 @@ $('toggle-timeline').addEventListener('change', (e) => {
   }
 });
 $('tl-play').addEventListener('click', () => (tlPlaying ? stopTimelinePlay() : startTimelinePlay()));
+$('tl-speed').addEventListener('change', (e) => {
+  tlYearsPerSec = parseFloat(e.target.value);
+  if (tlPlaying) { tlAnchorYear = timelineYear; tlAnchorMs = performance.now(); }   // re-anchor at new speed
+});
 $('tl-year').addEventListener('input', (e) => {
   stopTimelinePlay();
   setTimelineYear(parseInt(e.target.value, 10));

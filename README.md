@@ -34,7 +34,7 @@ top of `src/main.js`.)
 | Search | `/` or click the search box (name or NORAD ID) |
 | Deselect / close | `Esc` or click empty space |
 | Time warp | − / + buttons, NOW to return to real time |
-| Launch timeline | legend toggle — scrub or ▶-play from 1957 to today and watch the tracked population accumulate by launch year (read from each TLE's international designator, so it works offline) |
+| Launch timeline | legend toggle — scrub or ▶-play from 1957 to today (with a speed selector for the dense modern years) and watch the tracked population accumulate by launch year; era banners flash the milestones |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
@@ -42,7 +42,7 @@ top of `src/main.js`.)
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); `← Back` / `Esc` returns to the system |
-| Planetary spacecraft | Fly to a planet to see its robotic orbiters (Mars's fleet, Akatsuki, Juno, BepiColombo…) in cyan alongside its moons; the **Spacecraft timeline** (bottom-left) plays/scrubs them in by the year they reached orbit |
+| Planetary spacecraft | Fly to a planet to see its robotic orbiters in cyan alongside its moons — current missions bright, historic ones (Mariner 9, Viking, Pioneer Venus, Magellan, Galileo, Cassini…) dimmer; the **Spacecraft timeline** (bottom-left) plays/scrubs them in from 1971 by arrival year, with its own era banners |
 
 ## Architecture
 

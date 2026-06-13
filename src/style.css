@@ -269,6 +269,11 @@ body.body-mode #probe-timeline { display: none; }
   letter-spacing: 0.04em;
 }
 #tl-year { width: 100%; accent-color: #FFB454; cursor: pointer; }
+.tl-speed-row { font-size: 11px; color: #6B7A8F; margin-top: 4px; letter-spacing: 0.04em; }
+#tl-speed {
+  background: #0D131D; color: #C9D4E3; border: 1px solid #1E2A3A; border-radius: 3px;
+  font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 4px; cursor: pointer;
+}
 
 /* era milestone flash — centered near the top, fades in and out */
 #tl-era {

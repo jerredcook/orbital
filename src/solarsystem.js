@@ -205,17 +205,20 @@ function buildRing() {
 const MOONS = {
   Earth:   [['Moon', 3.844e8, 27.32, 3.4, 5.14, 125]],
   Mars:    [['Phobos', 9.378e6, 0.319, 1.6, 1.08, 80], ['Deimos', 2.346e7, 1.263, 2.3, 1.79, 80]],
-  Jupiter: [['Amalthea', 1.815e8, 0.498, 1.6, 0.37, 0], ['Io', 4.217e8, 1.769, 2.1, 0.04, 0],
-            ['Europa', 6.711e8, 3.551, 2.7, 0.47, 180], ['Ganymede', 1.070e9, 7.155, 3.5, 0.20, 60],
-            ['Callisto', 1.883e9, 16.69, 4.6, 0.19, 300]],
+  Jupiter: [['Amalthea', 1.815e8, 0.498, 1.6, 0.37, 0], ['Thebe', 2.218e8, 0.675, 1.8, 1.08, 90],
+            ['Io', 4.217e8, 1.769, 2.1, 0.04, 0], ['Europa', 6.711e8, 3.551, 2.7, 0.47, 180],
+            ['Ganymede', 1.070e9, 7.155, 3.5, 0.20, 60], ['Callisto', 1.883e9, 16.69, 4.6, 0.19, 300],
+            ['Himalia', 1.146e10, 250.6, 5.2, 27.5, 30]],
   Saturn:  [['Mimas', 1.855e8, 0.942, 1.7, 1.57, 0], ['Enceladus', 2.380e8, 1.370, 2.1, 0.01, 60],
             ['Tethys', 2.947e8, 1.888, 2.5, 1.09, 120], ['Dione', 3.774e8, 2.737, 2.9, 0.02, 180],
             ['Rhea', 5.270e8, 4.518, 3.4, 0.33, 240], ['Titan', 1.222e9, 15.95, 4.4, 0.35, 300],
-            ['Iapetus', 3.561e9, 79.32, 5.7, 15.5, 80]],
-  Uranus:  [['Miranda', 1.299e8, 1.413, 1.7, 4.34, 100], ['Ariel', 1.909e8, 2.520, 2.2, 0.26, 160],
-            ['Umbriel', 2.660e8, 4.144, 2.7, 0.21, 220], ['Titania', 4.358e8, 8.706, 3.3, 0.34, 280],
-            ['Oberon', 5.835e8, 13.46, 3.9, 0.06, 340]],
-  Neptune: [['Proteus', 1.176e8, 1.122, 1.7, 0.52, 60], ['Triton', 3.548e8, 5.877, 2.7, 157, 180]],
+            ['Hyperion', 1.481e9, 21.28, 5.0, 0.43, 200], ['Iapetus', 3.561e9, 79.32, 5.7, 15.5, 80],
+            ['Phoebe', 1.295e10, 550.3, 6.2, 175.2, 120]],
+  Uranus:  [['Puck', 8.6e7, 0.762, 1.45, 0.32, 60], ['Miranda', 1.299e8, 1.413, 1.8, 4.34, 100],
+            ['Ariel', 1.909e8, 2.520, 2.3, 0.26, 160], ['Umbriel', 2.660e8, 4.144, 2.8, 0.21, 220],
+            ['Titania', 4.358e8, 8.706, 3.4, 0.34, 280], ['Oberon', 5.835e8, 13.46, 4.0, 0.06, 340]],
+  Neptune: [['Larissa', 7.35e7, 0.555, 1.5, 0.20, 0], ['Proteus', 1.176e8, 1.122, 1.9, 0.52, 60],
+            ['Triton', 3.548e8, 5.877, 2.9, 157, 180], ['Nereid', 5.513e9, 360.1, 4.8, 7.09, 320]],
 };
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 
@@ -266,21 +269,28 @@ function buildMoons() {
 // tech cyan, and gateable by year via the spacecraft timeline so you can watch
 // the robotic fleet arrive.  Orbits are schematic (real altitudes are ~1–1.5
 // planet radii); the point is to see what's there and when it got there.
+// [name, display factor, period (days), inclination°, node°, arrival year, historic?].
+// `historic` craft (mission ended) render dimmer; the rest are still operating.
 const PROBES = {
   Mercury: [['BepiColombo', 1.4, 0.10, 88, 0, 2026]],
-  Venus:   [['Akatsuki', 2.6, 10.5, 9, 0, 2015]],
-  Mars:    [['Mars Odyssey', 1.30, 0.082, 93, 0, 2001], ['Mars Express', 1.7, 0.30, 86, 60, 2003],
-            ['MRO', 1.45, 0.075, 93, 130, 2006], ['MAVEN', 2.0, 0.19, 75, 200, 2014],
-            ['Mangalyaan', 2.8, 3.2, 150, 250, 2014], ['ExoMars TGO', 1.55, 0.083, 74, 310, 2016],
-            ['Hope', 3.0, 2.3, 25, 30, 2021], ['Tianwen-1', 2.3, 0.30, 87, 160, 2021]],
-  Jupiter: [['Juno', 3.0, 53, 90, 0, 2016]],
+  Venus:   [['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, true], ['Magellan', 1.6, 0.157, 86, 90, 1990, true],
+            ['Akatsuki', 2.6, 10.5, 9, 0, 2015]],
+  Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, true], ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, true],
+            ['Mars Odyssey', 1.30, 0.082, 93, 0, 2001], ['Mars Express', 1.7, 0.30, 86, 60, 2003],
+            ['MRO', 1.45, 0.075, 93, 130, 2006], ['MAVEN', 2.1, 0.19, 75, 200, 2014],
+            ['Mangalyaan', 2.9, 3.2, 150, 250, 2014, true], ['ExoMars TGO', 1.6, 0.083, 74, 310, 2016],
+            ['Hope', 3.1, 2.3, 25, 30, 2021], ['Tianwen-1', 2.4, 0.30, 87, 160, 2021]],
+  Jupiter: [['Galileo', 2.2, 7, 5, 200, 1995, true], ['Juno', 3.0, 53, 90, 0, 2016]],
+  Saturn:  [['Cassini', 2.6, 16, 20, 0, 2004, true]],
 };
 const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');
+const PROBE_COLOR_PAST = Color.fromCssColorString('#86A6B2');   // dimmer — mission ended
 let probeList = [];          // { entity, year }
 let probeYear = null;        // null = show all (timeline off)
 
 function addProbe(planet, probe, idx) {
-  const [name, factor, periodDays, inclDeg, nodeDeg, year] = probe;
+  const [name, factor, periodDays, inclDeg, nodeDeg, year, historic] = probe;
+  const color = historic ? PROBE_COLOR_PAST : PROBE_COLOR;
   const phase = idx * 2.1;
   const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
@@ -298,11 +308,11 @@ function addProbe(planet, probe, idx) {
       result.z = _moonHost.z + r * (si * st);
       return result;
     }, false),
-    point: { pixelSize: 4, color: PROBE_COLOR, outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1 },
+    point: { pixelSize: historic ? 3 : 4, color, outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1 },
     label: {
       text: name,
       font: '500 11px Inter, system-ui, sans-serif',
-      fillColor: PROBE_COLOR,
+      fillColor: color,
       style: LabelStyle.FILL,
       verticalOrigin: VerticalOrigin.BOTTOM,
       pixelOffset: new Cartesian2(0, -7),
@@ -667,6 +677,7 @@ function hide(earthViewer) {
   $('system-exit').hidden = true;
   $('system-scale').hidden = true;
   $('probe-timeline').hidden = true;
+  $('tl-era').hidden = true;
   probeStopPlay();
   document.body.classList.remove('system-mode');
   $('system-toggle').classList.remove('active');
@@ -681,20 +692,47 @@ let pendingClock = null;
 // --------------------------------------------------------- spacecraft timeline ----
 // Gate the manmade orbiters by the year they reached their planet, so you can
 // watch the robotic fleet arrive (2001 →).  Mirrors the Earth launch timeline.
-const PROBE_TL_START = 2000;
+const PROBE_TL_START = 1970;                    // back to the first planetary orbiter
 const probeMaxYear = () => new Date().getUTCFullYear();
 let probePlaying = false, probeRaf = 0, probeAnchorMs = 0, probeAnchorYear = PROBE_TL_START;
 
+// Milestones flashed (in the shared #tl-era banner) as the spacecraft play-head
+// crosses them.
+const PROBE_ERAS = [
+  [1971, 'Mariner 9 — first orbit of another planet'],
+  [1978, 'Pioneer Venus maps the clouds'],
+  [1990, 'Magellan radar-maps Venus'],
+  [1995, 'Galileo arrives at Jupiter'],
+  [2001, 'Mars Odyssey — still working today'],
+  [2004, 'Cassini reaches Saturn'],
+  [2014, 'A fleet reaches Mars — MAVEN, Mangalyaan'],
+  [2016, 'Juno arrives at Jupiter'],
+  [2021, 'Hope & Tianwen-1 at Mars'],
+  [2026, 'BepiColombo reaches Mercury'],
+];
+let sysEraTimer = 0;
+function flashSystemEra(text) {
+  const el = $('tl-era');
+  el.textContent = text; el.hidden = false;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(sysEraTimer);
+  sysEraTimer = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
 function setProbeYear(y) {
+  const prev = probeYear;
   probeYear = y;
   $('ptl-year').value = String(y);
   $('ptl-label').textContent = String(y);
+  let era = null;
+  for (const [yr, text] of PROBE_ERAS) if (yr === y || (prev !== null && yr > prev && yr <= y)) era = text;
+  if (era) flashSystemEra(era);
   refreshProbes();
 }
 function probeStep(now) {
   if (!probePlaying) return;
   const max = probeMaxYear();
-  const perYear = (12 * 1000) / Math.max(1, max - PROBE_TL_START);   // ~12 s sweep
+  const perYear = (20 * 1000) / Math.max(1, max - PROBE_TL_START);   // ~20 s sweep
   const y = Math.min(max, Math.floor(probeAnchorYear + (now - probeAnchorMs) / perYear));
   if (y !== probeYear) setProbeYear(y);
   if (y >= max) { probeStopPlay(); return; }
@@ -745,7 +783,7 @@ export function initSystemView(earthViewer, moonView) {
   $('ptl-year').max = String(probeMaxYear());
   $('ptl-toggle').addEventListener('change', (e) => {
     if (e.target.checked) { $('ptl-controls').hidden = false; setProbeYear(PROBE_TL_START); }
-    else { probeStopPlay(); $('ptl-controls').hidden = true; probeYear = null; refreshProbes(); }
+    else { probeStopPlay(); $('ptl-controls').hidden = true; $('tl-era').hidden = true; probeYear = null; refreshProbes(); }
   });
   $('ptl-play').addEventListener('click', () => (probePlaying ? probeStopPlay() : probeStartPlay()));
   $('ptl-year').addEventListener('input', (e) => { probeStopPlay(); setProbeYear(parseInt(e.target.value, 10)); });
