@@ -269,28 +269,36 @@ function buildMoons() {
 // tech cyan, and gateable by year via the spacecraft timeline so you can watch
 // the robotic fleet arrive.  Orbits are schematic (real altitudes are ~1–1.5
 // planet radii); the point is to see what's there and when it got there.
-// [name, display factor, period (days), inclination°, node°, arrival year, historic?].
-// `historic` craft (mission ended) render dimmer; the rest are still operating.
+// [name, display factor, period (days), inclination°, node°, arrival year,
+//  end year (null = still operating), deorbited? (true = left orbit at `end`,
+//  so it fades out and is gone; false = derelict, still orbiting but dead)].
 const PROBES = {
-  Mercury: [['BepiColombo', 1.4, 0.10, 88, 0, 2026]],
-  Venus:   [['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, true], ['Magellan', 1.6, 0.157, 86, 90, 1990, true],
-            ['Akatsuki', 2.6, 10.5, 9, 0, 2015]],
-  Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, true], ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, true],
-            ['Mars Odyssey', 1.30, 0.082, 93, 0, 2001], ['Mars Express', 1.7, 0.30, 86, 60, 2003],
-            ['MRO', 1.45, 0.075, 93, 130, 2006], ['MAVEN', 2.1, 0.19, 75, 200, 2014],
-            ['Mangalyaan', 2.9, 3.2, 150, 250, 2014, true], ['ExoMars TGO', 1.6, 0.083, 74, 310, 2016],
-            ['Hope', 3.1, 2.3, 25, 30, 2021], ['Tianwen-1', 2.4, 0.30, 87, 160, 2021]],
-  Jupiter: [['Galileo', 2.2, 7, 5, 200, 1995, true], ['Juno', 3.0, 53, 90, 0, 2016]],
-  Saturn:  [['Cassini', 2.6, 16, 20, 0, 2004, true]],
+  Mercury: [['BepiColombo', 1.4, 0.10, 88, 0, 2026, null, false]],
+  Venus:   [['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, 1992, true],
+            ['Magellan', 1.6, 0.157, 86, 90, 1990, 1994, true],
+            ['Akatsuki', 2.6, 10.5, 9, 0, 2015, 2024, false]],
+  Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, 2022, true],
+            ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, 2019, true],
+            ['Mars Odyssey', 1.30, 0.082, 93, 0, 2001, null, false],
+            ['Mars Express', 1.7, 0.30, 86, 60, 2003, null, false],
+            ['MRO', 1.45, 0.075, 93, 130, 2006, null, false],
+            ['MAVEN', 2.1, 0.19, 75, 200, 2014, null, false],
+            ['Mangalyaan', 2.9, 3.2, 150, 250, 2014, 2022, false],
+            ['ExoMars TGO', 1.6, 0.083, 74, 310, 2016, null, false],
+            ['Hope', 3.1, 2.3, 25, 30, 2021, null, false],
+            ['Tianwen-1', 2.4, 0.30, 87, 160, 2021, null, false]],
+  Jupiter: [['Galileo', 2.2, 7, 5, 200, 1995, 2003, true], ['Juno', 3.0, 53, 90, 0, 2016, null, false]],
+  Saturn:  [['Cassini', 2.6, 16, 20, 0, 2004, 2017, true]],
 };
-const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');
-const PROBE_COLOR_PAST = Color.fromCssColorString('#86A6B2');   // dimmer — mission ended
+const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');           // active
+const PROBE_COLOR_DERELICT = Color.fromCssColorString('#8AA7B2');  // dead but still orbiting
+const PROBE_COLOR_GONE = Color.fromCssColorString('#FF9A5A');      // reentering — fading out
+const PROBE_FADE_YEARS = 1.5;                                      // fade span after a deorbit
 let probeList = [];          // { entity, year }
 let probeYear = null;        // null = show all (timeline off)
 
 function addProbe(planet, probe, idx) {
-  const [name, factor, periodDays, inclDeg, nodeDeg, year, historic] = probe;
-  const color = historic ? PROBE_COLOR_PAST : PROBE_COLOR;
+  const [name, factor, periodDays, inclDeg, nodeDeg, arrival, end, deorbited] = probe;
   const phase = idx * 2.1;
   const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
@@ -308,11 +316,11 @@ function addProbe(planet, probe, idx) {
       result.z = _moonHost.z + r * (si * st);
       return result;
     }, false),
-    point: { pixelSize: historic ? 3 : 4, color, outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1 },
+    point: { pixelSize: 4, color: PROBE_COLOR, outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1 },
     label: {
       text: name,
       font: '500 11px Inter, system-ui, sans-serif',
-      fillColor: color,
+      fillColor: PROBE_COLOR,
       style: LabelStyle.FILL,
       verticalOrigin: VerticalOrigin.BOTTOM,
       pixelOffset: new Cartesian2(0, -7),
@@ -320,7 +328,7 @@ function addProbe(planet, probe, idx) {
       translucencyByDistance: new NearFarScalar(6e8, 1.0, 3e9, 0.0),
     },
   });
-  probeList.push({ entity, year });
+  probeList.push({ entity, arrival, end, deorbited });
 }
 
 function buildProbes() {
@@ -328,8 +336,35 @@ function buildProbes() {
   for (const planet of Object.keys(PROBES)) PROBES[planet].forEach((pr, i) => addProbe(planet, pr, i));
 }
 
-function refreshProbes() {
-  for (const p of probeList) p.entity.show = (probeYear === null || p.year <= probeYear);
+const nowYear = () => { const d = new Date(); return d.getUTCFullYear() + (d.getUTCMonth() + 0.5) / 12; };
+
+// Appearance of a craft at (possibly fractional) year Y: null = not shown.
+//   before arrival          → hidden
+//   operating               → bright cyan
+//   deorbited (after end)    → orange, fading to nothing over PROBE_FADE_YEARS
+//   derelict (after end)     → dim slate, smaller (dead but still up there)
+function probeAppearance(pr, Y) {
+  if (Y < pr.arrival) return null;
+  if (pr.end == null || Y < pr.end) return { color: PROBE_COLOR, size: 4, alpha: 1 };
+  if (pr.deorbited) {
+    const a = 1 - (Y - pr.end) / PROBE_FADE_YEARS;
+    return a > 0 ? { color: PROBE_COLOR_GONE, size: 4, alpha: a } : null;
+  }
+  return { color: PROBE_COLOR_DERELICT, size: 3, alpha: 0.6 };
+}
+
+// Y defaults to the live timeline year, or today's date when the timeline is off
+// (so the default view shows each craft's real present-day status).
+function refreshProbes(yArg) {
+  const Y = yArg != null ? yArg : (probeYear != null ? probeYear : nowYear());
+  for (const p of probeList) {
+    const ap = probeAppearance(p, Y);
+    if (!ap) { p.entity.show = false; continue; }
+    p.entity.show = true;
+    p.entity.point.color = ap.color.withAlpha(ap.alpha);
+    p.entity.point.pixelSize = ap.size;
+    p.entity.label.fillColor = ap.color.withAlpha(Math.max(0.45, ap.alpha));
+  }
 }
 
 function addBody(name) {
@@ -623,6 +658,7 @@ function createViewer() {
   for (const name of PLANETS) addBody(name);
   buildMoons();
   buildProbes();
+  refreshProbes();          // apply each craft's present-day status (active / derelict / gone)
   buildRing();
   rebuildOrbits();
   buildSky();
@@ -719,22 +755,26 @@ function flashSystemEra(text) {
   sysEraTimer = setTimeout(() => el.classList.remove('show'), 4500);
 }
 
-function setProbeYear(y) {
-  const prev = probeYear;
+let prevProbeInt = null;
+function setProbeYear(y) {                        // y may be fractional during play
   probeYear = y;
-  $('ptl-year').value = String(y);
-  $('ptl-label').textContent = String(y);
-  let era = null;
-  for (const [yr, text] of PROBE_ERAS) if (yr === y || (prev !== null && yr > prev && yr <= y)) era = text;
-  if (era) flashSystemEra(era);
-  refreshProbes();
+  const iy = Math.floor(y);
+  $('ptl-year').value = String(iy);
+  $('ptl-label').textContent = String(iy);
+  if (iy !== prevProbeInt) {                      // era flash on integer-year crossings
+    let era = null;
+    for (const [yr, text] of PROBE_ERAS) if (yr === iy || (prevProbeInt !== null && yr > prevProbeInt && yr <= iy)) era = text;
+    if (era) flashSystemEra(era);
+    prevProbeInt = iy;
+  }
+  refreshProbes(y);
 }
 function probeStep(now) {
   if (!probePlaying) return;
   const max = probeMaxYear();
   const perYear = (20 * 1000) / Math.max(1, max - PROBE_TL_START);   // ~20 s sweep
-  const y = Math.min(max, Math.floor(probeAnchorYear + (now - probeAnchorMs) / perYear));
-  if (y !== probeYear) setProbeYear(y);
+  const y = Math.min(max, probeAnchorYear + (now - probeAnchorMs) / perYear);
+  setProbeYear(y);                                // fractional → smooth deorbit fades
   if (y >= max) { probeStopPlay(); return; }
   probeRaf = requestAnimationFrame(probeStep);
 }
@@ -783,7 +823,7 @@ export function initSystemView(earthViewer, moonView) {
   $('ptl-year').max = String(probeMaxYear());
   $('ptl-toggle').addEventListener('change', (e) => {
     if (e.target.checked) { $('ptl-controls').hidden = false; setProbeYear(PROBE_TL_START); }
-    else { probeStopPlay(); $('ptl-controls').hidden = true; $('tl-era').hidden = true; probeYear = null; refreshProbes(); }
+    else { probeStopPlay(); $('ptl-controls').hidden = true; $('tl-era').hidden = true; probeYear = null; prevProbeInt = null; refreshProbes(); }
   });
   $('ptl-play').addEventListener('click', () => (probePlaying ? probeStopPlay() : probeStartPlay()));
   $('ptl-year').addEventListener('input', (e) => { probeStopPlay(); setProbeYear(parseInt(e.target.value, 10)); });

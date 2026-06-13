@@ -42,7 +42,7 @@ top of `src/main.js`.)
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); `← Back` / `Esc` returns to the system |
-| Planetary spacecraft | Fly to a planet to see its robotic orbiters in cyan alongside its moons — current missions bright, historic ones (Mariner 9, Viking, Pioneer Venus, Magellan, Galileo, Cassini…) dimmer; the **Spacecraft timeline** (bottom-left) plays/scrubs them in from 1971 by arrival year, with its own era banners |
+| Planetary spacecraft | Fly to a planet to see its robotic orbiters alongside its moons, colored by status: **bright cyan** = operating, **dim slate** = derelict (dead but still in orbit), and craft that **deorbited fade out** (orange) and are gone. The **Spacecraft timeline** (bottom-left) plays/scrubs from 1971 by arrival year — with the deorbit fades animating live — and flashes its own era banners |
 
 ## Architecture
 
@@ -148,10 +148,15 @@ Design decisions worth knowing before you extend it:
   position plus an inclined circular offset — sized to the planet's *rendered*
   radius in readable mode (so they clear the exaggerated disc) and to their real
   distance in true scale.  **Manmade orbiters** (Mars's fleet, Akatsuki, Juno,
-  BepiColombo) ride the same machinery in tech cyan, gateable by the year they
-  reached orbit via the spacecraft timeline; their orbits are schematic (real
-  altitudes are ~1–1.5 planet radii) — the point is what's there and when it
-  arrived.  Saturn's rings are a hand-built double-sided annulus geometry
+  BepiColombo, plus historic Mariner 9 / Viking / Magellan / Galileo / Cassini)
+  ride the same machinery, each carrying arrival + end years and a deorbit flag.
+  `probeAppearance(year)` maps that to a look — operating (cyan), derelict (dim),
+  or deorbiting (orange, alpha fading over ~1.5 yr) — driven by the *fractional*
+  timeline year so the fades animate during playback; with the timeline off it
+  uses today's date, so the default view shows each craft's real present status.
+  Their orbits are schematic (real altitudes are ~1–1.5 planet radii) — the point
+  is what's there, when it arrived, and whether it's still alive.  Saturn's rings
+  are a hand-built double-sided annulus geometry
   (UV.s = inner→outer) with the alpha ring texture, transformed each frame to
   Saturn's position and tilt.
 - **Descend to a planet** ([src/bodyglobe.js](src/bodyglobe.js)) reuses the
