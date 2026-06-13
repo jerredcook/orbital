@@ -471,6 +471,64 @@ function writeGlb(path, builder) {
   writeGlb(join(OUT, 'rocketbody.glb'), b);
 }
 
+// Navigation satellite (Galileo / GPS / BeiDou, MEO): a compact MLI bus with
+// twin long solar wings and — the giveaway, no comms dish — a nadir L-band
+// antenna farm, a backplane studded with helical element cans aimed at the
+// ground, plus a zenith radiator and apogee-motor nozzle.
+{
+  const b = new Builder();
+  b.box(M['mli-foil'], [0, 0, 0], [1.3, 1.2, 2.7]);                 // bus body
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    b.box(M.alu, [sx * 0.62, 0, sz * 1.33], [0.05, 1.22, 0.05]);    // edge rails
+  }
+  b.box(M.radiator, [0, 0.62, 0], [1.05, 0.04, 2.4]);               // +Y zenith radiator
+  b.box(M['dark-metal'], [0, -0.64, 0], [1.05, 0.08, 2.3]);         // -Y antenna backplane
+  for (let i = -2; i <= 2; i++) for (let j = -1; j <= 1; j++) {
+    b.cylinder(M.alu, [j * 0.36, -0.7, i * 0.46], 0.075, 0.075, -0.18, 0, 12); // helix can
+  }
+  for (const side of [-1, 1]) {                                     // twin wings along ±Z
+    b.box(M.alu, [0, 0, side * 1.6], [0.07, 0.07, 0.5]);            // yoke boom
+    for (let s = 0; s < 2; s++) {
+      const z = side * (2.6 + s * 2.7);
+      b.solarPanel([0, 0, z], [1.7, 2.6]);
+      b.box(M.alu, [0, 0, z - side * 1.35], [0.06, 0.06, 0.08]);    // hinge
+    }
+  }
+  b.cylinder(M.scorched, [0, 0.66, 0], 0.12, 0.18, 0, 0.22, 20);    // apogee motor
+  writeGlb(join(OUT, 'navsat.glb'), b);
+}
+
+// Earth-observation / SAR bus (Sentinel-1/2/3): MLI body, a single solar wing
+// on +Z, and the signature long flat C-band SAR antenna spanning ±X, its
+// panels facing the ground; a nadir instrument box and a small zenith
+// data-relay dish round it out.
+{
+  const b = new Builder();
+  b.box(M['mli-foil'], [0, 0, 0], [1.4, 1.3, 2.6]);                 // body
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    b.box(M.alu, [sx * 0.67, 0, sz * 1.28], [0.05, 1.32, 0.05]);    // edge rails
+  }
+  b.box(M.radiator, [0, 0, -1.32], [1.2, 1.1, 0.04]);               // -Z radiator
+  for (const sx of [-1, 1]) {                                       // SAR antenna along ±X
+    b.box(M.alu, [sx * 0.7, 0, 0], [0.1, 0.1, 0.4]);                // root hinge
+    for (let s = 0; s < 2; s++) {
+      const x = sx * (1.55 + s * 2.7);
+      b.box(M['dark-metal'], [x, -0.45, 0], [2.6, 0.05, 0.92]);     // SAR panel
+      b.box(M.alu, [x, -0.45, 0.5], [2.6, 0.06, 0.04]);             // edge frame
+      b.box(M.alu, [x, -0.45, -0.5], [2.6, 0.06, 0.04]);
+    }
+  }
+  b.box(M.alu, [0, 0, 1.5], [0.07, 0.07, 0.5]);                     // wing yoke
+  for (let s = 0; s < 3; s++) {                                     // single solar wing +Z
+    const z = 2.4 + s * 1.5;
+    b.solarPanel([0, 0, z], [1.6, 1.4]);
+    b.box(M.alu, [0, 0, z - 0.75], [0.06, 0.06, 0.08]);            // hinge
+  }
+  b.box(M['dark-metal'], [0, -0.72, 0.7], [0.5, 0.22, 0.5]);        // nadir instrument
+  b.cylinder(M.radiator, [0.4, 0.78, -0.5], 0.34, 0.2, 0, 0.22, 24); // zenith relay dish
+  writeGlb(join(OUT, 'sar.glb'), b);
+}
+
 // Debris: two jagged shards, foil + structure metal.
 {
   const b = new Builder();

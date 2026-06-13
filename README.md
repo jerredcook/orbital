@@ -229,8 +229,10 @@ Design notes for the 3D close-up view:
   Fermi, Chandra, GRACE-FO, and the TDRS fleet (NASA solar system site +
   github.com/nasa/NASA-3D-Resources); everything else gets a
   class-appropriate generic from `tools/make-models.mjs` (bus-with-wings,
-  Starlink flat-panel, spent stage, debris shard) picked by NORAD ID /
-  name pattern in `modelFor`.  Each real model carries a scale factor —
+  Starlink flat-panel, a nav-sat with a nadir antenna farm and no dish for
+  the Galileo/GPS/BeiDou constellations, an EO/SAR bus with the long
+  side-mounted antenna for the Sentinels, spent stage, debris shard) picked
+  by NORAD ID / name pattern in `modelFor`.  Each real model carries a scale factor —
   the published GLBs' units are wildly inconsistent (native Terra is
   26 km long, native TDRS is 0.9 m).  `tools/fix-models.mjs` strips
   texture bindings that reference missing UV sets, which otherwise kill

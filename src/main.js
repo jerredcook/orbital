@@ -311,6 +311,13 @@ function modelFor(sat) {
   if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return { uri: `${MODELS}debris.glb`, scale: 1 };
   if (/\bR\/B\b/.test(sat.name)) return { uri: `${MODELS}rocketbody.glb`, scale: 1 };
   if (sat.name.startsWith('STARLINK')) return { uri: `${MODELS}starlink.glb`, scale: 1 };
+  // Nav constellations (Galileo keyed off the GALILEO token, not GSAT — that
+  // also names ISRO's comms birds; GPS BIIx/BIII and NAVSTAR are the same GPS).
+  if (/GALILEO|NAVSTAR|BEIDOU/.test(sat.name) || /^GPS\b/.test(sat.name)) {
+    return { uri: `${MODELS}navsat.glb`, scale: 1 };
+  }
+  // Sentinel EO/SAR (1/2/3/5P); Sentinel-6 has a real model and is caught above.
+  if (/^SENTINEL-[1235]/.test(sat.name)) return { uri: `${MODELS}sar.glb`, scale: 1 };
   return { uri: `${MODELS}generic-sat.glb`, scale: 1 };
 }
 
