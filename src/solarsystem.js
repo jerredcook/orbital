@@ -345,12 +345,12 @@ const nowYear = () => { const d = new Date(); return d.getUTCFullYear() + (d.get
 //   derelict (after end)     → dim slate, smaller (dead but still up there)
 function probeAppearance(pr, Y) {
   if (Y < pr.arrival) return null;
-  if (pr.end == null || Y < pr.end) return { color: PROBE_COLOR, size: 4, alpha: 1 };
+  if (pr.end == null || Y < pr.end) return { color: PROBE_COLOR, size: 5, alpha: 1 };
   if (pr.deorbited) {
     const a = 1 - (Y - pr.end) / PROBE_FADE_YEARS;
-    return a > 0 ? { color: PROBE_COLOR_GONE, size: 4, alpha: a } : null;
+    return a > 0 ? { color: PROBE_COLOR_GONE, size: 5, alpha: a } : null;
   }
-  return { color: PROBE_COLOR_DERELICT, size: 3, alpha: 0.6 };
+  return { color: PROBE_COLOR_DERELICT, size: 4, alpha: 0.6 };
 }
 
 // Y defaults to the live timeline year, or today's date when the timeline is off
@@ -561,16 +561,18 @@ function selectBody(name) {
     enterBtn.textContent = ROCKY.has(name) ? 'Descend to the surface ▸' : 'Explore the globe ▸';
   }
   $('system-panel').hidden = false;
-  // Frame the body.  For a planet with moons, pull back far enough to take in
-  // the outermost moon's orbit and look down at a steeper angle, so the moons
-  // ring the planet instead of hiding edge-on behind it.
+  // Frame the body so its whole entourage — moons AND spacecraft — fits, looking
+  // down at a steeper angle so they ring the planet instead of hiding edge-on.
   const r = bodyRadius(BODIES[name].radius);
   const moons = MOONS[name];
+  const probes = PROBES[name];
+  const extents = [];
+  if (moons) extents.push(...moons.map((m) => (isTrueScale() ? m[1] : m[3] * r)));
+  if (probes) extents.push(...probes.map((pr) => pr[1] * r));
   let range = r * 4.5;
   let pitch = -14;
-  if (moons) {
-    const outer = Math.max(...moons.map((m) => (isTrueScale() ? m[1] : m[3] * r)));
-    range = Math.max(range, outer * 1.9);
+  if (extents.length) {
+    range = Math.max(range, Math.max(...extents) * 1.9);
     pitch = -34;
   }
   scenePosOf(name, _pos);
