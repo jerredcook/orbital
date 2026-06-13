@@ -141,8 +141,8 @@ function applyCatalog(list) {
     const cat = catOf(catalog[i]);
     counts[cat]++;
     swarm.setStyle(i, CAT_COLORS[cat], cat === 'DEB' ? 1.7 : 2.2);
-    if (!catVisible[cat]) swarm.setVisible(i, false);
   }
+  refreshVisibility();   // apply category toggles + any active launch timeline
   viewer.scene.primitives.add(swarm);
   for (const c of Object.keys(counts)) {
     $(`count-${c}`).textContent = counts[c].toLocaleString();
@@ -532,12 +532,90 @@ $('info-track').addEventListener('click', () => {
 
 document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
   box.addEventListener('change', () => {
-    const cat = box.dataset.cat;
-    catVisible[cat] = box.checked;
-    for (let i = 0; i < catalog.length; i++) {
-      if (catOf(catalog[i]) === cat) swarm.setVisible(i, box.checked);
-    }
+    catVisible[box.dataset.cat] = box.checked;
+    refreshVisibility();
   });
+});
+
+// ------------------------------------------------------------ launch timeline ----
+// Watch the tracked population accumulate by launch year, Sputnik-era → today.
+// A satellite shows when its category is on AND (timeline off, or it was launched
+// by the scrubbed year).  Launch year comes from the TLE international designator,
+// so this works fully offline.  Objects with no designator (rare) sort to the end.
+let timelineYear = null;                       // null = timeline off (show all)
+const TIMELINE_START = 1957;                   // year before the first satellite
+const timelineMax = new Date().getUTCFullYear();
+
+function refreshVisibility() {
+  if (!swarm) return;
+  for (let i = 0; i < catalog.length; i++) {
+    const s = catalog[i];
+    const byYear = timelineYear === null
+      || (s.launchYear ?? 9999) <= timelineYear;
+    swarm.setVisible(i, catVisible[catOf(s)] && byYear);
+  }
+}
+
+function countLaunchedBy(year) {
+  let n = 0;
+  for (const s of catalog) if ((s.launchYear ?? 9999) <= year) n++;
+  return n;
+}
+
+function setTimelineYear(year) {
+  timelineYear = year;
+  $('tl-year').value = String(year);
+  $('tl-label').textContent = `${year} · ${countLaunchedBy(year).toLocaleString()} tracked`;
+  refreshVisibility();
+}
+
+let tlPlaying = false;
+let tlRaf = 0;
+let tlAnchorMs = 0;
+let tlAnchorYear = TIMELINE_START;
+const TIMELINE_SECONDS = 42;                   // full Sputnik→today sweep duration
+
+function tlStep(nowMs) {
+  if (!tlPlaying) return;
+  const perYear = (TIMELINE_SECONDS * 1000) / (timelineMax - TIMELINE_START);
+  const year = Math.min(timelineMax, Math.floor(tlAnchorYear + (nowMs - tlAnchorMs) / perYear));
+  if (year !== timelineYear) setTimelineYear(year);
+  if (year >= timelineMax) { stopTimelinePlay(); return; }
+  tlRaf = requestAnimationFrame(tlStep);
+}
+
+function startTimelinePlay() {
+  if (timelineYear >= timelineMax) setTimelineYear(TIMELINE_START);  // replay from the top
+  tlPlaying = true;
+  $('tl-play').textContent = '⏸';
+  tlAnchorYear = timelineYear;
+  tlAnchorMs = performance.now();
+  tlRaf = requestAnimationFrame(tlStep);
+}
+
+function stopTimelinePlay() {
+  tlPlaying = false;
+  $('tl-play').textContent = '▶';
+  cancelAnimationFrame(tlRaf);
+}
+
+$('tl-year').max = String(timelineMax);
+$('tl-year').min = String(TIMELINE_START);
+$('toggle-timeline').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    $('timeline-controls').hidden = false;
+    setTimelineYear(TIMELINE_START);
+  } else {
+    stopTimelinePlay();
+    $('timeline-controls').hidden = true;
+    timelineYear = null;
+    refreshVisibility();
+  }
+});
+$('tl-play').addEventListener('click', () => (tlPlaying ? stopTimelinePlay() : startTimelinePlay()));
+$('tl-year').addEventListener('input', (e) => {
+  stopTimelinePlay();
+  setTimelineYear(parseInt(e.target.value, 10));
 });
 
 $('toggle-orbit').addEventListener('change', () => {

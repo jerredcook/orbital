@@ -34,6 +34,7 @@ top of `src/main.js`.)
 | Search | `/` or click the search box (name or NORAD ID) |
 | Deselect / close | `Esc` or click empty space |
 | Time warp | − / + buttons, NOW to return to real time |
+| Launch timeline | legend toggle — scrub or ▶-play from 1957 to today and watch the tracked population accumulate by launch year (read from each TLE's international designator, so it works offline) |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |

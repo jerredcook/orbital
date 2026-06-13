@@ -231,6 +231,24 @@ body.body-mode #system-scale { display: none; }
 .swatch.conj { background: #FF4D5E; }
 .count { margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: #6B7A8F; font-variant-numeric: tabular-nums; }
 .legend-divider { height: 1px; background: #1E2A3A; margin: 8px 0; }
+
+/* launch timeline */
+#timeline-controls { padding: 4px 0 2px 24px; }
+#timeline-controls[hidden] { display: none; }
+.tl-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+#tl-play {
+  width: 26px; height: 22px; flex: none;
+  background: rgba(13,19,29,0.9); color: #C9D4E3;
+  border: 1px solid #1E2A3A; border-radius: 3px; cursor: pointer;
+  font-size: 11px; line-height: 1;
+}
+#tl-play:hover { border-color: #FFB454; color: #FFB454; }
+#tl-label {
+  font-family: ui-monospace, monospace; font-size: 12px; color: #FFD166;
+  letter-spacing: 0.04em;
+}
+#tl-year { width: 100%; accent-color: #FFB454; cursor: pointer; }
+
 .conj-range-row { font-size: 12px; color: #6B7A8F; padding-left: 24px; }
 #conj-range {
   background: #0D131D; color: #C9D4E3; border: 1px solid #1E2A3A; border-radius: 3px;

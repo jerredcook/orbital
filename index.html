@@ -65,6 +65,12 @@
     </select></label>
     <div id="conj-list"></div>
     <div class="legend-divider"></div>
+    <label class="legend-row"><input type="checkbox" id="toggle-timeline" />Launch timeline</label>
+    <div id="timeline-controls" hidden>
+      <div class="tl-head"><button id="tl-play" title="Play / pause">▶</button><span id="tl-label">1957</span></div>
+      <input id="tl-year" type="range" min="1957" max="2026" step="1" value="1957" />
+    </div>
+    <div class="legend-divider"></div>
     <label class="legend-row"><input type="checkbox" id="toggle-orbit" checked />Orbit track on select</label>
     <div class="legend-foot" id="status">loading catalog…</div>
   </aside>

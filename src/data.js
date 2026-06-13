@@ -117,11 +117,16 @@ export function parseTLEs(text) {
   for (let i = 0; i + 2 < lines.length + 1; ) {
     if (lines[i + 1]?.startsWith('1 ') && lines[i + 2]?.startsWith('2 ')) {
       const l1 = lines[i + 1];
+      // International designator (cols 10-11) gives the launch year, 2-digit with
+      // a 1957 pivot — so every object carries its launch year with no SATCAT.
+      const yy = parseInt(l1.slice(9, 11), 10);
+      const launchYear = Number.isNaN(yy) ? null : (yy < 57 ? 2000 + yy : 1900 + yy);
       out.push({
         name: lines[i].trim(),
         l1,
         l2: lines[i + 2],
         norad: parseInt(l1.slice(2, 7), 10),
+        launchYear,
       });
       i += 3;
     } else {
