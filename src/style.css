@@ -249,6 +249,17 @@ body.body-mode #system-scale { display: none; }
 }
 #tl-year { width: 100%; accent-color: #FFB454; cursor: pointer; }
 
+/* era milestone flash — centered near the top, fades in and out */
+#tl-era {
+  position: absolute; top: 64px; left: 0; right: 0; z-index: 9;
+  text-align: center; pointer-events: none;
+  font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: 0.06em;
+  color: #FFD166; text-shadow: 0 2px 8px #05070C, 0 0 18px rgba(255,209,102,0.4);
+  opacity: 0; transition: opacity 0.5s ease;
+}
+#tl-era.show { opacity: 1; }
+#tl-era[hidden] { display: none; }
+
 .conj-range-row { font-size: 12px; color: #6B7A8F; padding-left: 24px; }
 #conj-range {
   background: #0D131D; color: #C9D4E3; border: 1px solid #1E2A3A; border-radius: 3px;

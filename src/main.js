@@ -84,6 +84,7 @@ let following = false;
 let autoFollowHoldUntil = 0;   // suppress auto-follow during camera flights
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
+let catTotals = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };   // full counts, to restore after the timeline
 const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
 
 const $ = (id) => document.getElementById(id);
@@ -144,6 +145,7 @@ function applyCatalog(list) {
   }
   refreshVisibility();   // apply category toggles + any active launch timeline
   viewer.scene.primitives.add(swarm);
+  catTotals = { ...counts };
   for (const c of Object.keys(counts)) {
     $(`count-${c}`).textContent = counts[c].toLocaleString();
   }
@@ -556,16 +558,50 @@ function refreshVisibility() {
   }
 }
 
-function countLaunchedBy(year) {
-  let n = 0;
-  for (const s of catalog) if ((s.launchYear ?? 9999) <= year) n++;
-  return n;
+// Milestones flashed as the play-head crosses their year.
+const ERAS = [
+  [1957, 'Sputnik 1 — the Space Age begins'],
+  [1958, 'Explorer 1 · NASA is founded'],
+  [1960, 'TIROS-1 — first weather satellite'],
+  [1962, 'Telstar — first active comsat'],
+  [1971, 'Salyut 1 — first space station'],
+  [1978, 'First GPS satellites'],
+  [1981, 'Space Shuttle era begins'],
+  [1990, 'Hubble Space Telescope'],
+  [1998, 'ISS assembly begins'],
+  [2019, 'Starlink — the megaconstellation era'],
+];
+let eraTimer = 0;
+function flashEra(text) {
+  const el = $('tl-era');
+  el.textContent = text;
+  el.hidden = false;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');  // restart the fade
+  clearTimeout(eraTimer);
+  eraTimer = setTimeout(() => { el.classList.remove('show'); }, 4500);
+}
+
+// One pass: per-category counts launched by `year`, the running total for the
+// readout — and, in passing, drive the legend counts live during playback.
+function updateTimelineReadout(year) {
+  const c = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
+  let total = 0;
+  for (const s of catalog) {
+    if ((s.launchYear ?? 9999) <= year) { c[catOf(s)]++; total++; }
+  }
+  for (const k of Object.keys(c)) $(`count-${k}`).textContent = c[k].toLocaleString();
+  $('tl-label').textContent = `${year} · ${total.toLocaleString()} tracked`;
 }
 
 function setTimelineYear(year) {
+  const prev = timelineYear;
   timelineYear = year;
   $('tl-year').value = String(year);
-  $('tl-label').textContent = `${year} · ${countLaunchedBy(year).toLocaleString()} tracked`;
+  updateTimelineReadout(year);
+  // Flash the latest era milestone crossed since the previous year.
+  let era = null;
+  for (const [y, text] of ERAS) if (y === year || (prev !== null && y > prev && y <= year)) era = text;
+  if (era) flashEra(era);
   refreshVisibility();
 }
 
@@ -608,7 +644,9 @@ $('toggle-timeline').addEventListener('change', (e) => {
   } else {
     stopTimelinePlay();
     $('timeline-controls').hidden = true;
+    $('tl-era').hidden = true;
     timelineYear = null;
+    for (const k of Object.keys(catTotals)) $(`count-${k}`).textContent = catTotals[k].toLocaleString();
     refreshVisibility();
   }
 });
