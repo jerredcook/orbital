@@ -273,20 +273,25 @@ function buildMoons() {
 //  end year (null = still operating), deorbited? (true = left orbit at `end`,
 //  so it fades out and is gone; false = derelict, still orbiting but dead)].
 const PROBES = {
-  Mercury: [['BepiColombo', 1.4, 0.10, 88, 0, 2026, null, false]],
-  Venus:   [['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, 1992, true],
+  Mercury: [['MESSENGER', 1.6, 0.5, 82, 30, 2011, 2015, true],
+            ['BepiColombo', 1.4, 0.10, 88, 0, 2026, null, false]],
+  Venus:   [['Venera 15', 1.8, 1.0, 87, 60, 1983, 1984, true],
+            ['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, 1992, true],
             ['Magellan', 1.6, 0.157, 86, 90, 1990, 1994, true],
+            ['Venus Express', 2.2, 1.0, 89, 130, 2006, 2015, true],
             ['Akatsuki', 2.6, 10.5, 9, 0, 2015, 2024, false]],
   Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, 2022, true],
             ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, 2019, true],
+            ['Viking 2 Orbiter', 2.2, 1.5, 55, 220, 1976, 1979, true],
+            ['Mars Global Surveyor', 1.5, 0.078, 93, 60, 1997, 2006, true],
             ['Mars Odyssey', 1.30, 0.082, 93, 0, 2001, null, false],
-            ['Mars Express', 1.7, 0.30, 86, 60, 2003, null, false],
-            ['MRO', 1.45, 0.075, 93, 130, 2006, null, false],
-            ['MAVEN', 2.1, 0.19, 75, 200, 2014, null, false],
-            ['Mangalyaan', 2.9, 3.2, 150, 250, 2014, 2022, false],
-            ['ExoMars TGO', 1.6, 0.083, 74, 310, 2016, null, false],
-            ['Hope', 3.1, 2.3, 25, 30, 2021, null, false],
-            ['Tianwen-1', 2.4, 0.30, 87, 160, 2021, null, false]],
+            ['Mars Express', 1.7, 0.30, 86, 150, 2003, null, false],
+            ['MRO', 1.45, 0.075, 93, 250, 2006, null, false],
+            ['MAVEN', 2.1, 0.19, 75, 320, 2014, null, false],
+            ['Mangalyaan', 2.9, 3.2, 150, 40, 2014, 2022, false],
+            ['ExoMars TGO', 1.6, 0.083, 74, 110, 2016, null, false],
+            ['Hope', 3.1, 2.3, 25, 200, 2021, null, false],
+            ['Tianwen-1', 2.4, 0.30, 87, 290, 2021, null, false]],
   Jupiter: [['Galileo', 2.2, 7, 5, 200, 1995, 2003, true], ['Juno', 3.0, 53, 90, 0, 2016, null, false]],
   Saturn:  [['Cassini', 2.6, 16, 20, 0, 2004, 2017, true]],
 };
@@ -701,6 +706,7 @@ function show(earthViewer) {
   $('system-exit').hidden = false;
   $('system-scale').hidden = false;
   $('probe-timeline').hidden = false;
+  $('system-legend').hidden = false;
   document.body.classList.add('system-mode');
   $('system-toggle').classList.add('active');
   earthViewer.useDefaultRenderLoop = false;
@@ -741,8 +747,11 @@ const PROBE_ERAS = [
   [1978, 'Pioneer Venus maps the clouds'],
   [1990, 'Magellan radar-maps Venus'],
   [1995, 'Galileo arrives at Jupiter'],
+  [1997, 'Mars Global Surveyor'],
   [2001, 'Mars Odyssey — still working today'],
   [2004, 'Cassini reaches Saturn'],
+  [2006, 'Venus Express & MRO arrive'],
+  [2011, 'MESSENGER orbits Mercury'],
   [2014, 'A fleet reaches Mars — MAVEN, Mangalyaan'],
   [2016, 'Juno arrives at Jupiter'],
   [2021, 'Hope & Tianwen-1 at Mars'],

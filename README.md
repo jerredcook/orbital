@@ -42,7 +42,7 @@ top of `src/main.js`.)
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); `← Back` / `Esc` returns to the system |
-| Planetary spacecraft | Fly to a planet to see its robotic orbiters alongside its moons, colored by status: **bright cyan** = operating, **dim slate** = derelict (dead but still in orbit), and craft that **deorbited fade out** (orange) and are gone. The **Spacecraft timeline** (bottom-left) plays/scrubs from 1971 by arrival year — with the deorbit fades animating live — and flashes its own era banners |
+| Planetary spacecraft | Fly to a planet to see its robotic orbiters alongside its moons, colored by status (a legend, top-right, explains them): **bright cyan** = operating, **dim slate** = derelict (dead but still in orbit), and craft that **deorbited fade out** (orange) and are gone. The **Spacecraft timeline** (bottom-left) plays/scrubs from 1971 by arrival year — with the deorbit fades animating live — and flashes its own era banners |
 
 ## Architecture
 
