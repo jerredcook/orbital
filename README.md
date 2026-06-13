@@ -42,6 +42,7 @@ top of `src/main.js`.)
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); `← Back` / `Esc` returns to the system |
+| Planetary spacecraft | Fly to a planet to see its robotic orbiters (Mars's fleet, Akatsuki, Juno, BepiColombo…) in cyan alongside its moons; the **Spacecraft timeline** (bottom-left) plays/scrubs them in by the year they reached orbit |
 
 ## Architecture
 
@@ -146,7 +147,11 @@ Design decisions worth knowing before you extend it:
   marker+label entity whose `CallbackProperty` position is the host planet's
   position plus an inclined circular offset — sized to the planet's *rendered*
   radius in readable mode (so they clear the exaggerated disc) and to their real
-  distance in true scale.  Saturn's rings are a hand-built double-sided annulus geometry
+  distance in true scale.  **Manmade orbiters** (Mars's fleet, Akatsuki, Juno,
+  BepiColombo) ride the same machinery in tech cyan, gateable by the year they
+  reached orbit via the spacecraft timeline; their orbits are schematic (real
+  altitudes are ~1–1.5 planet radii) — the point is what's there and when it
+  arrived.  Saturn's rings are a hand-built double-sided annulus geometry
   (UV.s = inner→outer) with the alpha ring texture, transformed each frame to
   Saturn's position and tilt.
 - **Descend to a planet** ([src/bodyglobe.js](src/bodyglobe.js)) reuses the

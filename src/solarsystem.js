@@ -261,6 +261,67 @@ function buildMoons() {
   }
 }
 
+// Manmade orbiters around the other planets: [name, display factor, period
+// (days), inclination°, node°, year reached orbit].  Rendered like moons but in
+// tech cyan, and gateable by year via the spacecraft timeline so you can watch
+// the robotic fleet arrive.  Orbits are schematic (real altitudes are ~1–1.5
+// planet radii); the point is to see what's there and when it got there.
+const PROBES = {
+  Mercury: [['BepiColombo', 1.4, 0.10, 88, 0, 2026]],
+  Venus:   [['Akatsuki', 2.6, 10.5, 9, 0, 2015]],
+  Mars:    [['Mars Odyssey', 1.30, 0.082, 93, 0, 2001], ['Mars Express', 1.7, 0.30, 86, 60, 2003],
+            ['MRO', 1.45, 0.075, 93, 130, 2006], ['MAVEN', 2.0, 0.19, 75, 200, 2014],
+            ['Mangalyaan', 2.8, 3.2, 150, 250, 2014], ['ExoMars TGO', 1.55, 0.083, 74, 310, 2016],
+            ['Hope', 3.0, 2.3, 25, 30, 2021], ['Tianwen-1', 2.3, 0.30, 87, 160, 2021]],
+  Jupiter: [['Juno', 3.0, 53, 90, 0, 2016]],
+};
+const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');
+let probeList = [];          // { entity, year }
+let probeYear = null;        // null = show all (timeline off)
+
+function addProbe(planet, probe, idx) {
+  const [name, factor, periodDays, inclDeg, nodeDeg, year] = probe;
+  const phase = idx * 2.1;
+  const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
+  const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
+  const entity = viewer.entities.add({
+    name,
+    position: new CallbackProperty((time, result) => {
+      result = result || new Cartesian3();
+      scenePosOf(planet, _moonHost);
+      const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
+      const r = factor * bodyRadius(BODIES[planet].radius);
+      const th = (days / periodDays) * 2 * Math.PI + phase;
+      const ct = Math.cos(th), st = Math.sin(th);
+      result.x = _moonHost.x + r * (cO * ct - sO * ci * st);
+      result.y = _moonHost.y + r * (sO * ct + cO * ci * st);
+      result.z = _moonHost.z + r * (si * st);
+      return result;
+    }, false),
+    point: { pixelSize: 4, color: PROBE_COLOR, outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1 },
+    label: {
+      text: name,
+      font: '500 11px Inter, system-ui, sans-serif',
+      fillColor: PROBE_COLOR,
+      style: LabelStyle.FILL,
+      verticalOrigin: VerticalOrigin.BOTTOM,
+      pixelOffset: new Cartesian2(0, -7),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      translucencyByDistance: new NearFarScalar(6e8, 1.0, 3e9, 0.0),
+    },
+  });
+  probeList.push({ entity, year });
+}
+
+function buildProbes() {
+  probeList = [];
+  for (const planet of Object.keys(PROBES)) PROBES[planet].forEach((pr, i) => addProbe(planet, pr, i));
+}
+
+function refreshProbes() {
+  for (const p of probeList) p.entity.show = (probeYear === null || p.year <= probeYear);
+}
+
 function addBody(name) {
   const isSun = name === 'Sun';
   entities[name] = viewer.entities.add({
@@ -551,6 +612,7 @@ function createViewer() {
   addBody('Sun');
   for (const name of PLANETS) addBody(name);
   buildMoons();
+  buildProbes();
   buildRing();
   rebuildOrbits();
   buildSky();
@@ -590,6 +652,7 @@ function show(earthViewer) {
   $('systemContainer').hidden = false;
   $('system-exit').hidden = false;
   $('system-scale').hidden = false;
+  $('probe-timeline').hidden = false;
   document.body.classList.add('system-mode');
   $('system-toggle').classList.add('active');
   earthViewer.useDefaultRenderLoop = false;
@@ -603,6 +666,8 @@ function hide(earthViewer) {
   $('systemContainer').hidden = true;
   $('system-exit').hidden = true;
   $('system-scale').hidden = true;
+  $('probe-timeline').hidden = true;
+  probeStopPlay();
   document.body.classList.remove('system-mode');
   $('system-toggle').classList.remove('active');
   if (viewer) viewer.useDefaultRenderLoop = false;
@@ -612,6 +677,43 @@ function hide(earthViewer) {
 // The Earth viewer's clock, captured at init so createViewer() can wire the
 // CallbackPropertys against it before the first open.
 let pendingClock = null;
+
+// --------------------------------------------------------- spacecraft timeline ----
+// Gate the manmade orbiters by the year they reached their planet, so you can
+// watch the robotic fleet arrive (2001 →).  Mirrors the Earth launch timeline.
+const PROBE_TL_START = 2000;
+const probeMaxYear = () => new Date().getUTCFullYear();
+let probePlaying = false, probeRaf = 0, probeAnchorMs = 0, probeAnchorYear = PROBE_TL_START;
+
+function setProbeYear(y) {
+  probeYear = y;
+  $('ptl-year').value = String(y);
+  $('ptl-label').textContent = String(y);
+  refreshProbes();
+}
+function probeStep(now) {
+  if (!probePlaying) return;
+  const max = probeMaxYear();
+  const perYear = (12 * 1000) / Math.max(1, max - PROBE_TL_START);   // ~12 s sweep
+  const y = Math.min(max, Math.floor(probeAnchorYear + (now - probeAnchorMs) / perYear));
+  if (y !== probeYear) setProbeYear(y);
+  if (y >= max) { probeStopPlay(); return; }
+  probeRaf = requestAnimationFrame(probeStep);
+}
+function probeStartPlay() {
+  const max = probeMaxYear();
+  if (probeYear === null || probeYear >= max) setProbeYear(PROBE_TL_START);
+  probePlaying = true;
+  $('ptl-play').textContent = '⏸';
+  probeAnchorYear = probeYear;
+  probeAnchorMs = performance.now();
+  probeRaf = requestAnimationFrame(probeStep);
+}
+function probeStopPlay() {
+  probePlaying = false;
+  $('ptl-play').textContent = '▶';
+  cancelAnimationFrame(probeRaf);
+}
 
 // ------------------------------------------------------------------- init ----
 
@@ -638,6 +740,15 @@ export function initSystemView(earthViewer, moonView) {
       frameWholeSystem(1.2);
     }
   });
+
+  // Spacecraft timeline — gate the manmade orbiters by arrival year.
+  $('ptl-year').max = String(probeMaxYear());
+  $('ptl-toggle').addEventListener('change', (e) => {
+    if (e.target.checked) { $('ptl-controls').hidden = false; setProbeYear(PROBE_TL_START); }
+    else { probeStopPlay(); $('ptl-controls').hidden = true; probeYear = null; refreshProbes(); }
+  });
+  $('ptl-play').addEventListener('click', () => (probePlaying ? probeStopPlay() : probeStartPlay()));
+  $('ptl-year').addEventListener('input', (e) => { probeStopPlay(); setProbeYear(parseInt(e.target.value, 10)); });
 
   // "Enter Earth" → back to the satellite tracker.  "Go to the Moon" → exit to
   // Earth first (its loop must be live), then open the lunar globe.

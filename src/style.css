@@ -162,7 +162,28 @@ body.body-mode #body-attr { display: block; }
 /* While on a planet globe, the system-view chrome underneath must hide. */
 body.body-mode #system-panel,
 body.body-mode #system-exit,
-body.body-mode #system-scale { display: none; }
+body.body-mode #system-scale,
+body.body-mode #probe-timeline { display: none; }
+
+/* spacecraft timeline (system view, bottom-left — clear of the info panel) */
+#probe-timeline {
+  position: absolute; bottom: 36px; left: 16px; z-index: 11;
+  background: rgba(13,19,29,0.9); border: 1px solid #1E2A3A; border-radius: 4px;
+  padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 12px; color: #C9D4E3;
+}
+#probe-timeline[hidden] { display: none; }
+.ptl-row { display: flex; align-items: center; gap: 6px; cursor: pointer; letter-spacing: 0.04em; }
+.ptl-row input { accent-color: #6FE0FF; cursor: pointer; }
+#ptl-controls { margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+#ptl-controls[hidden] { display: none; }
+#ptl-play {
+  width: 26px; height: 22px; flex: none;
+  background: rgba(8,12,20,0.9); color: #C9D4E3; border: 1px solid #1E2A3A;
+  border-radius: 3px; cursor: pointer; font-size: 11px; line-height: 1;
+}
+#ptl-play:hover { border-color: #6FE0FF; color: #6FE0FF; }
+#ptl-label { color: #6FE0FF; min-width: 34px; }
+#ptl-year { width: 120px; accent-color: #6FE0FF; cursor: pointer; }
 
 /* ---------- top bar ---------- */
 #topbar {
