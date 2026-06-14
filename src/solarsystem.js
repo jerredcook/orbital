@@ -33,7 +33,7 @@ import {
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
-import { createBelt, createTrojans } from './belt.js';
+import { createBelt, createTrojans, createFamilies } from './belt.js';
 import { initBodyGlobes } from './bodyglobe.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
@@ -65,6 +65,7 @@ let skyPrimitive = null;    // the NASA star-map celestial sphere
 let ringPrimitive = null;   // Saturn's rings
 let belt = null;            // the asteroid-belt swarm controller
 let trojans = null;         // Jupiter L4/L5 Trojan swarm controller
+let families = null;        // main-belt family swarm controller (coloured rings)
 let bodyGlobes = null;      // the per-planet surface-globe controller
 let inBodyGlobe = false;    // true while a planet globe is open over the system
 let selectedName = null;
@@ -672,6 +673,7 @@ function createViewer() {
   buildSky();
   createBelt(v, earthClock).then((b) => { belt = b; });
   createTrojans(v, earthClock).then((t) => { trojans = t; });
+  createFamilies(v, earthClock).then((f) => { families = f; buildFamilyLegend(); });
   frameWholeSystem();
 
   // Keep the headlight aimed where the camera looks, and hand-tick the shared
@@ -681,6 +683,7 @@ function createViewer() {
     updateSpheres();
     if (belt) belt.tick(performance.now());
     if (trojans) trojans.tick(performance.now());
+    if (families) families.tick(performance.now());
     Cartesian3.clone(v.camera.directionWC, _dir);
     v.scene.light.direction = _dir;
   });
@@ -807,6 +810,24 @@ function probeStopPlay() {
   cancelAnimationFrame(probeRaf);
 }
 
+// Populate the asteroid-family legend from the loaded metadata — a colour dot +
+// name per family, inner→outer.  No-op until createFamilies resolves.
+function buildFamilyLegend() {
+  const host = $('family-list');
+  if (!host || !families?.families) return;
+  host.replaceChildren();
+  for (const f of families.families) {
+    if (!f.count) continue;          // a family whose fetch failed has no rings to label
+    const row = document.createElement('span');
+    row.className = 'sl-fam';
+    const dot = document.createElement('span');
+    dot.className = 'sl-dot';
+    dot.style.background = f.color;
+    row.append(dot, document.createTextNode(f.name));
+    host.appendChild(row);
+  }
+}
+
 // ------------------------------------------------------------------- init ----
 
 export function initSystemView(earthViewer, moonView) {
@@ -829,9 +850,16 @@ export function initSystemView(earthViewer, moonView) {
       buildSky();
       if (belt) belt.tick(performance.now(), true);    // re-place at the new scale
       if (trojans) trojans.tick(performance.now(), true);
+      if (families) families.tick(performance.now(), true);
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = skyRadius() * 0.92;
       frameWholeSystem(1.2);
     }
+  });
+
+  // Asteroid-family rings — show/hide the coloured family swarm over the belt.
+  $('toggle-families').addEventListener('change', (e) => {
+    if (families) families.show = e.target.checked;
+    $('family-list').classList.toggle('off', !e.target.checked);
   });
 
   // Spacecraft timeline — gate the manmade orbiters by arrival year.

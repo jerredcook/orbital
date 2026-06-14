@@ -23,6 +23,7 @@ const TOTAL = 14000;                 // real subset + procedural fill
 const COLOR = Color.fromCssColorString('#CDB78F');
 const TROJAN_COLOR = Color.fromCssColorString('#8FB0A8');   // cooler tint: a distinct population
 const POINT_SIZE = 2.0;
+const FAMILY_POINT_SIZE = 2.6;       // a touch larger so the coloured rings read over the belt haze
 const BOUNDING_RADIUS = 1.0e12;      // covers belt (~3 AU) and Trojans (~5.2 AU) in both scale modes
 
 // Kirkwood gaps (mean-motion resonances with Jupiter), in AU — procedural
@@ -66,13 +67,14 @@ function bake(elements, epochJD) {
 }
 
 // Build a Kepler-propagated point-cloud from a baked element set: one GL draw
-// call, re-solved on a throttled wall-clock tick.  Shared by the main belt and
-// the Jupiter Trojans — only the element source, colour and count differ.
-function createKeplerSwarm(viewer, earthClock, { elements, epoch, color }) {
+// call, re-solved on a throttled wall-clock tick.  Shared by the main belt, the
+// Jupiter Trojans and the asteroid families — only the element source, colour
+// (uniform `color`, or per-point `colorAt(k)`) and point size differ.
+function createKeplerSwarm(viewer, earthClock, { elements, epoch, color, colorAt, pointSize = POINT_SIZE }) {
   const ast = bake(elements, epoch);
 
   const swarm = new SatSwarm(ast.n, { boundingRadius: BOUNDING_RADIUS });
-  for (let k = 0; k < ast.n; k++) swarm.setStyle(k, color, POINT_SIZE);
+  for (let k = 0; k < ast.n; k++) swarm.setStyle(k, colorAt ? colorAt(k) : color, pointSize);
   viewer.scene.primitives.add(swarm);
 
   const buf = new Float64Array(ast.n * 3);
@@ -106,8 +108,10 @@ function createKeplerSwarm(viewer, earthClock, { elements, epoch, color }) {
     set show(v) { swarm.show = v; },
     // Throttled to ~8 Hz of wall time — the swarm drifts slowly even under heavy
     // time-warp at this zoom, and tens of thousands of Kepler solves a frame is
-    // wasteful.
+    // wasteful.  Hidden (the family toggle) skips the solve + GPU upload entirely;
+    // the first tick after re-showing re-places immediately (lastWall is stale).
     tick(nowMs, force) {
+      if (!swarm.show) return;
       if (force || lastWall < 0 || nowMs - lastWall > 120) { lastWall = nowMs; recompute(); }
     },
     destroy() { viewer.scene.primitives.remove(swarm); },
@@ -134,4 +138,29 @@ export async function createTrojans(viewer, earthClock) {
   try { real = await (await fetch(`${BASE}trojans.json`)).json(); } catch { return null; }
   if (!real.elements.length) return null;
   return createKeplerSwarm(viewer, earthClock, { elements: real.elements, epoch: real.epoch, color: TROJAN_COLOR });
+}
+
+// The major main-belt asteroid families, tinted as their own clusters
+// (see tools/fetch-families.mjs → public/families.json).  A family is a cluster
+// in PROPER-element space (a, e, sin i), not in physical position, so each
+// member carries its real proper a/e/i and gets a random orbital phase here —
+// the result is a set of coloured, inclined rings threading the belt, not blobs.
+// Returns the swarm controller with `.families` (legend metadata) attached.
+export async function createFamilies(viewer, earthClock) {
+  let data;
+  try { data = await (await fetch(`${BASE}families.json`)).json(); } catch { return null; }
+  if (!data?.members?.length || !data?.families?.length) return null;
+
+  const colors = data.families.map((f) => Color.fromCssColorString(f.color));
+  const famOf = data.members.map((m) => m[3]);
+  const elements = data.members.map(([a, e, i]) => [
+    a, e, i, Math.random() * 360, Math.random() * 360, Math.random() * 360,
+  ]);
+
+  const ctrl = createKeplerSwarm(viewer, earthClock, {
+    elements, epoch: J2000_JD, pointSize: FAMILY_POINT_SIZE,
+    colorAt: (k) => colors[famOf[k]] ?? colors[0],   // ?? guards a malformed family index
+  });
+  ctrl.families = data.families;
+  return ctrl;
 }
