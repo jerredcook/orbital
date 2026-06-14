@@ -180,6 +180,8 @@ body.body-mode #probe-timeline { display: none; }
 .sl-derelict { background: #8AA7B2; }
 .sl-gone { background: #FF9A5A; }
 .sl-moon { background: #CFC7B8; }
+.sl-trojan { background: #8FB0A8; }
+.sl-hilda { background: #D98BB0; }
 .sl-divider { border-top: 1px solid #1E2A3A; margin: 7px 0 6px; }
 .sl-toggle { cursor: pointer; }
 .sl-toggle input { margin: 0 2px 0 0; accent-color: #6FE0FF; }

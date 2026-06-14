@@ -22,9 +22,10 @@ const J2000_JD = 2451545.0;
 const TOTAL = 14000;                 // real subset + procedural fill
 const COLOR = Color.fromCssColorString('#CDB78F');
 const TROJAN_COLOR = Color.fromCssColorString('#8FB0A8');   // cooler tint: a distinct population
+const HILDA_COLOR = Color.fromCssColorString('#D98BB0');    // dusty rose: the 3:2 triangle stands apart
 const POINT_SIZE = 2.0;
 const FAMILY_POINT_SIZE = 2.6;       // a touch larger so the coloured rings read over the belt haze
-const BOUNDING_RADIUS = 1.0e12;      // covers belt (~3 AU) and Trojans (~5.2 AU) in both scale modes
+const BOUNDING_RADIUS = 1.0e12;      // covers belt (~3 AU), Hildas (~5.2 AU aphelion) and Trojans (~6.6 AU aphelion) in both scale modes
 
 // Kirkwood gaps (mean-motion resonances with Jupiter), in AU — procedural
 // asteroids are rejected near these so the gaps actually show.
@@ -138,6 +139,19 @@ export async function createTrojans(viewer, earthClock) {
   try { real = await (await fetch(`${BASE}trojans.json`)).json(); } catch { return null; }
   if (!real.elements.length) return null;
   return createKeplerSwarm(viewer, earthClock, { elements: real.elements, epoch: real.epoch, color: TROJAN_COLOR });
+}
+
+// The Hilda group: asteroids in 3:2 mean-motion resonance with Jupiter (a ≈ 3.97
+// AU).  Locked in resonance they librate around Jupiter's L3/L4/L5 and trace the
+// "Hilda triangle" — a SPATIAL pattern, so (unlike the families) they carry their
+// REAL orbital phases; the triangle only forms from the true angles and rotates
+// with Jupiter (see tools/fetch-hildas.mjs).  Two-body propagation reproduces the
+// present-day snapshot faithfully and smears it only under long time-warp.
+export async function createHildas(viewer, earthClock) {
+  let real = { epoch: J2000_JD, elements: [] };
+  try { real = await (await fetch(`${BASE}hildas.json`)).json(); } catch { return null; }
+  if (!real.elements.length) return null;
+  return createKeplerSwarm(viewer, earthClock, { elements: real.elements, epoch: real.epoch, color: HILDA_COLOR });
 }
 
 // The major main-belt asteroid families, tinted as their own clusters

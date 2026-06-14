@@ -39,7 +39,7 @@ top of `src/main.js`.)
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
-| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
+| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the Hilda group's 3:2-resonance triangle, the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
 | Landing sites | Mars rovers & landers (Viking → Perseverance, Zhurong), the Moon's Apollo + Luna/Lunokhod/Surveyor/Chang'e/Chandrayaan sites, and Venus's Venera landers — visible on the surface globes, near-side only as you rotate |
@@ -58,7 +58,7 @@ src/bodyglobe.js            descend to a planet's surface globe (Treks / local m
 src/surface.js              landing-site markers pinned on the surface globes
 src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
 src/scale.js                readable ⟷ true-scale mapping for the system view
-src/belt.js                 asteroid belt + Jupiter Trojans + families: Kepler swarms
+src/belt.js                 belt + Trojans + Hildas + families: Kepler swarms
 src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
@@ -156,7 +156,14 @@ Design decisions worth knowing before you extend it:
   family signature) and is given a *random* orbital phase: the result is a set of
   inclined, coloured rings threading the belt (Themis and Hygiea overlapping in
   radius but split by inclination; Hungaria a high-i ring inside the belt; Koronis
-  a tight low-i band), not blobs.  Belt, Trojans and families all run through one
+  a tight low-i band), not blobs.  And the **Hilda group** — ~1,150 asteroids in
+  3:2 mean-motion resonance with Jupiter (a ≈ 3.97 AU) — rides the same machinery
+  with its real angles kept (like the Trojans, not the families): locked in
+  resonance they librate around Jupiter's L3/L4/L5 and trace the famous **Hilda
+  triangle**, which rotates with Jupiter (verified: a present-day snapshot shows a
+  ~2× density contrast peaking at the three vertices, minimum toward Jupiter).
+  Two-body propagation reproduces today's snapshot and smears the triangle only
+  under long time-warp.  Belt, Trojans, Hildas and families all run through one
   generic `createKeplerSwarm` core (per-point colour for families).  Moons (Luna,
   the Galileans + Amalthea, seven of Saturn's, five Uranian, Triton + Proteus)
   carry real JPL mean elements — period and *inclination*, so each orbit tilts
@@ -209,9 +216,9 @@ Design decisions worth knowing before you extend it:
    is the hook, but it needs a global MOLA/LOLA elevation grid, which (unlike the
    imagery) Treks doesn't expose as open tiles; sourcing/hosting a downsampled DEM
    (or adding a Cesium Ion token, which has Mars terrain ready-made) is the
-   blocker.  The Jupiter Trojans and the major main-belt asteroid families
-   (Themis, Eos, Koronis…) now ship as their own coloured swarms; still open:
-   the Hilda group (3:2 resonance) and higher-res / regional imagery
+   blocker.  The Jupiter Trojans, the major main-belt asteroid families
+   (Themis, Eos, Koronis…) and the Hilda group (3:2 resonance triangle) now ship
+   as their own swarms; still open: higher-res / regional imagery
    (Mars CTX/HiRISE) on the surface globes.
 
 Data freshness and resilience:
@@ -299,7 +306,10 @@ Design notes for the 3D close-up view:
   `tools/fetch-asteroids.mjs` → `public/asteroids.json`), plus procedural fill to
   ~14k for density.  Jupiter Trojans: ~2,700 real largest members (H < 13.5)
   from the same database (`tools/fetch-trojans.mjs` → `public/trojans.json`), all
-  real — no fill.  Asteroid families: member proper elements (a, e, sin i) for 14
+  real — no fill.  Hilda group: ~1,150 asteroids selected by the 3:2-resonance
+  orbital signature (a ≈ 3.97 AU, e < 0.3, H < 15) from the same database
+  (`tools/fetch-hildas.mjs` → `public/hildas.json`).  Asteroid families: member
+  proper elements (a, e, sin i) for 14
   families from NASA PDS's [Nesvorný HCM Asteroid Families V2.0](https://sbnarchive.psi.edu/pds4/non_mission/ast.nesvorny.families_V2_0/)
   (Nesvorný 2024, doi:10.26033/5hyq-6k90; public domain), brightest ~600 each via
   `tools/fetch-families.mjs` → `public/families.json`.  Saturn's ring map: Solar

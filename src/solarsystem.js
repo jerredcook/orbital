@@ -33,7 +33,7 @@ import {
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
-import { createBelt, createTrojans, createFamilies } from './belt.js';
+import { createBelt, createTrojans, createFamilies, createHildas } from './belt.js';
 import { initBodyGlobes } from './bodyglobe.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
@@ -65,6 +65,7 @@ let skyPrimitive = null;    // the NASA star-map celestial sphere
 let ringPrimitive = null;   // Saturn's rings
 let belt = null;            // the asteroid-belt swarm controller
 let trojans = null;         // Jupiter L4/L5 Trojan swarm controller
+let hildas = null;          // Hilda group swarm controller (3:2 resonance triangle)
 let families = null;        // main-belt family swarm controller (coloured rings)
 let bodyGlobes = null;      // the per-planet surface-globe controller
 let inBodyGlobe = false;    // true while a planet globe is open over the system
@@ -673,6 +674,7 @@ function createViewer() {
   buildSky();
   createBelt(v, earthClock).then((b) => { belt = b; });
   createTrojans(v, earthClock).then((t) => { trojans = t; });
+  createHildas(v, earthClock).then((h) => { hildas = h; });
   createFamilies(v, earthClock).then((f) => { families = f; buildFamilyLegend(); });
   frameWholeSystem();
 
@@ -683,6 +685,7 @@ function createViewer() {
     updateSpheres();
     if (belt) belt.tick(performance.now());
     if (trojans) trojans.tick(performance.now());
+    if (hildas) hildas.tick(performance.now());
     if (families) families.tick(performance.now());
     Cartesian3.clone(v.camera.directionWC, _dir);
     v.scene.light.direction = _dir;
@@ -850,6 +853,7 @@ export function initSystemView(earthViewer, moonView) {
       buildSky();
       if (belt) belt.tick(performance.now(), true);    // re-place at the new scale
       if (trojans) trojans.tick(performance.now(), true);
+      if (hildas) hildas.tick(performance.now(), true);
       if (families) families.tick(performance.now(), true);
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = skyRadius() * 0.92;
       frameWholeSystem(1.2);
