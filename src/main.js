@@ -2,10 +2,10 @@
 
 import {
   Viewer, ImageryLayer, UrlTemplateImageryProvider, EllipsoidTerrainProvider,
-  Credit, Cartesian3, Color, PointPrimitiveCollection, JulianDate,
+  Credit, Cartesian3, Cartesian2, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
   PolylineCollection, Material, DistanceDisplayCondition, Matrix3, Quaternion,
-  CallbackProperty,
+  CallbackProperty, LabelCollection, Cartographic,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
@@ -74,6 +74,11 @@ const overlay = viewer.scene.primitives.add(new PointPrimitiveCollection());
 // polyline's Material, so re-adding every tick crashes the render loop.
 const conjLines = viewer.scene.primitives.add(new PolylineCollection());
 const conjMarkers = viewer.scene.primitives.add(new PointPrimitiveCollection());
+
+// Ground-station marker (point + label).  Its own collections, not viewer.entities
+// — clearSelection() does entities.removeAll() and would wipe the station.
+const stationPoints = viewer.scene.primitives.add(new PointPrimitiveCollection());
+const stationLabels = viewer.scene.primitives.add(new LabelCollection());
 
 // ---------------------------------------------------------------- state ----
 
@@ -154,6 +159,16 @@ function applyCatalog(list) {
     type: 'init',
     tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })),
   });
+
+  // A hot-swap renumbers every index, so any pass results point at the wrong
+  // satellites now — drop them, and re-scan against the new catalog if the
+  // station feature is live.
+  if (passing) {
+    cancelPasses();
+    $('pass-list').innerHTML = '';
+    $('pass-count').textContent = '—';
+    if ($('toggle-station').checked && station) startPasses();
+  }
 }
 
 async function boot() {
@@ -467,6 +482,17 @@ viewer.clock.onTick.addEventListener((clock) => {
 
 const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click) => {
+  // Placing a ground station: the next globe click drops it instead of selecting.
+  if (stationPlacing) {
+    const cart = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+    if (cart) {
+      const c = Cartographic.fromCartesian(cart);
+      stationPlacing = false;
+      $('pass-setloc').classList.remove('active');
+      placeStation(c.latitude / DEG2RAD, c.longitude / DEG2RAD);
+    }
+    return;
+  }
   const picked = viewer.scene.pick(click.position);
   if (defined(picked) && typeof picked.id === 'number') {
     selectByIndex(picked.id);
@@ -912,6 +938,199 @@ $('info-screen').addEventListener('click', () => {
   if (screening?.active) { cancelScreening(); resetScreenUi(); return; }
   startScreening();
 });
+
+// ------------------------------------------------- ground-station passes ----
+// Drop a station on the globe; a worker sweeps the whole catalog for every pass
+// above a minimum elevation over the next 24 h (rise / peak / set) and the list
+// streams in sorted by rise time.  Click a pass to jump the clock to its peak
+// and watch the satellite ride over the station.
+
+const DEG2RAD = Math.PI / 180;
+const RE_KM = 6378.137;
+const PASS_HORIZON_H = 24;
+const PASS_STORE_KEY = 'orbital.station';
+
+let station = null;        // { lat, lon } in degrees
+let stationPlacing = false;
+let passing = null;        // { passes: [...], active }
+let lastPassRenderMs = 0;  // throttle the streaming re-render (sort cost grows)
+
+const passesWorker = new Worker(
+  new URL('./passes.worker.js', import.meta.url),
+  { type: 'module' },
+);
+
+function drawStation() {
+  stationPoints.removeAll();
+  stationLabels.removeAll();
+  if (!station) return;
+  const pos = Cartesian3.fromDegrees(station.lon, station.lat, 0);
+  stationPoints.add({
+    position: pos, pixelSize: 11, color: Color.fromCssColorString('#5BE0C8'),
+    outlineColor: Color.fromCssColorString('#06120F'), outlineWidth: 2,
+  });
+  stationLabels.add({
+    position: pos, text: '⌖ station', font: '12px ui-monospace, monospace',
+    fillColor: Color.fromCssColorString('#9FF3E4'), pixelOffset: new Cartesian2(0, -16),
+  });
+}
+
+function placeStation(lat, lon) {
+  station = { lat, lon };
+  try { localStorage.setItem(PASS_STORE_KEY, JSON.stringify(station)); } catch { /* ignore */ }
+  drawStation();
+  startPasses();
+}
+
+function loadStation() {
+  try {
+    const s = JSON.parse(localStorage.getItem(PASS_STORE_KEY) || 'null');
+    if (s && Number.isFinite(s.lat) && Number.isFinite(s.lon)) station = s;
+  } catch { /* ignore */ }
+}
+
+// Prefilter: a satellite can only be seen if the station's latitude can fall
+// within (max sub-satellite latitude + the horizon's Earth-central angle) of it.
+function passCandidates(minEl) {
+  const latAbs = Math.abs(station.lat);
+  const cosEl = Math.cos(minEl * DEG2RAD);
+  const out = [];
+  for (let i = 0; i < catalog.length; i++) {
+    const sat = catalog[i];
+    const revsPerDay = parseFloat(sat.l2.slice(52, 63));
+    if (revsPerDay && revsPerDay < 1.2) continue;   // near-geostationary: no discrete passes
+    const incl = parseFloat(sat.l2.slice(8, 16)) || 0;
+    const maxSubLat = incl <= 90 ? incl : 180 - incl;
+    const apo = altBandOf(sat)[1];
+    const apoKm = Number.isFinite(apo) ? apo : 40_000;
+    const ratio = (RE_KM / (RE_KM + apoKm)) * cosEl;
+    const lam = Math.abs(ratio) <= 1 ? Math.acos(ratio) / DEG2RAD - minEl : 90;
+    if (latAbs <= maxSubLat + lam + 5) out.push({ i, l1: sat.l1, l2: sat.l2 });
+  }
+  return out;
+}
+
+function startPasses() {
+  if (!station) return;
+  if (!catalog.length) { updatePassStatus('waiting for the catalog…'); return; }
+  cancelPasses();
+  const minEl = Number($('pass-minel').value);
+  const candidates = passCandidates(minEl);
+  passing = { passes: [], active: true };
+  passesWorker.postMessage({
+    type: 'passes',
+    startMs: JulianDate.toDate(viewer.clock.currentTime).getTime(),
+    horizonHours: PASS_HORIZON_H,
+    minElevDeg: minEl,
+    station: { latRad: station.lat * DEG2RAD, lonRad: station.lon * DEG2RAD, altM: 0 },
+    candidates,
+  });
+  updatePassStatus(`scanning ${candidates.length.toLocaleString()} satellites… 0%`);
+}
+
+function cancelPasses() {
+  if (passing?.active) passesWorker.postMessage({ type: 'passes-cancel' });
+  passing = null;
+}
+
+function updatePassStatus(text) {
+  const el = $('pass-status');
+  el.hidden = false;
+  if (text) { el.textContent = text; return; }
+  const n = passing ? passing.passes.length : 0;
+  el.textContent = `${n} pass${n === 1 ? '' : 'es'} · next ${PASS_HORIZON_H} h`;
+}
+
+function renderPasses() {
+  const listEl = $('pass-list');
+  listEl.innerHTML = '';
+  if (!passing) { $('pass-count').textContent = '—'; return; }
+  const n = passing.passes.length;
+  $('pass-count').textContent = !n ? '—' : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
+  const upcoming = passing.passes
+    .filter((p) => p.setMs > nowMs)
+    .sort((a, b) => a.riseMs - b.riseMs)
+    .slice(0, 40);
+  for (const p of upcoming) {
+    const sat = catalog[p.i];
+    const dt = p.riseMs - nowMs;
+    const when = dt < -20_000 ? 'up now'
+      : dt < 60_000 ? 'rising now'
+        : dt < 3.6e6 ? `in ${Math.round(dt / 60_000)} min`
+          : `in ${(dt / 3.6e6).toFixed(1)} h`;
+    const durMin = Math.max(1, Math.round((p.setMs - p.riseMs) / 60_000));
+    const row = document.createElement('div');
+    row.className = 'conj-row';
+    row.innerHTML =
+      `<div class="conj-main"><span class="cnames">${sat.name}</span>` +
+      `<span class="ckm">${Math.round(p.peakEl)}°</span></div>` +
+      `<div class="conj-sub">${when} · ${durMin} min${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
+    row.addEventListener('click', () => jumpToPass(p));
+    listEl.appendChild(row);
+  }
+}
+
+// Jump the clock to the pass's peak and fly to the satellite, so it's framed
+// high over the station; time then runs forward at 1× through the pass.
+function jumpToPass(p) {
+  viewer.clock.currentTime = JulianDate.fromDate(new Date(p.peakMs));
+  setRate(0);
+  selectByIndex(p.i);
+  const pos = currentPosition(satellite.twoline2satrec(catalog[p.i].l1, catalog[p.i].l2));
+  if (pos) {
+    const range = Math.max(Cartesian3.magnitude(pos) * 0.12, 1.2e6);
+    const dest = Cartesian3.multiplyByScalar(
+      Cartesian3.normalize(pos, new Cartesian3()), Cartesian3.magnitude(pos) + range, new Cartesian3());
+    autoFollowHoldUntil = Date.now() + 3000;
+    viewer.camera.flyTo({ destination: dest, duration: 1.4 });
+  }
+}
+
+passesWorker.onmessage = (e) => {
+  const msg = e.data;
+  if (!passing) return;
+  if (msg.type === 'passes-progress') {
+    passing.passes.push(...msg.passes);
+    updatePassStatus(`scanning ${msg.total.toLocaleString()} satellites… ${Math.round((msg.done / msg.total) * 100)}%`);
+    const now = Date.now();
+    if (now - lastPassRenderMs > 400) { lastPassRenderMs = now; renderPasses(); }
+  } else if (msg.type === 'passes-done') {
+    passing.active = false;
+    renderPasses();
+    updatePassStatus();
+  }
+};
+
+$('toggle-station').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    $('pass-controls').hidden = false;
+    if (station) { drawStation(); startPasses(); }
+    else { stationPlacing = true; $('pass-setloc').classList.add('active'); updatePassStatus('click the map to place your station'); }
+  } else {
+    stationPlacing = false;
+    cancelPasses();
+    stationPoints.removeAll();
+    stationLabels.removeAll();
+    $('pass-controls').hidden = true;
+    $('pass-list').innerHTML = '';
+    $('pass-status').hidden = true;
+    $('pass-count').textContent = '—';
+    $('pass-setloc').classList.remove('active');
+  }
+});
+
+$('pass-setloc').addEventListener('click', () => {
+  stationPlacing = !stationPlacing;
+  $('pass-setloc').classList.toggle('active', stationPlacing);
+  if (stationPlacing) updatePassStatus('click the map to place your station');
+});
+
+$('pass-minel').addEventListener('change', () => {
+  if ($('toggle-station').checked && station) startPasses();
+});
+
+loadStation();
 
 function fmtTca(key, nowMs) {
   if (tcaPending.has(key)) return 'computing closest approach…';

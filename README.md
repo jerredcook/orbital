@@ -37,6 +37,7 @@ top of `src/main.js`.)
 | Launch timeline | legend toggle — scrub or ▶-play from 1957 to today (with a speed selector for the dense modern years) and watch the tracked population accumulate by launch year; era banners flash the milestones |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
+| Ground station | legend toggle → **⌖ set location** → click the globe to drop a station; a worker predicts every satellite pass over the next 24 h (above 10/25/50°), streamed and sorted by rise time with peak elevation and duration. Click a pass to jump the clock to its peak and fly to the satellite. The station persists across sessions |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the Hilda group's 3:2-resonance triangle, the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
@@ -63,6 +64,7 @@ src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
 src/tca.worker.js           closest-approach search for conjunction pairs
+src/passes.worker.js        ground-station pass prediction (look-angle sweep)
 tools/make-models.mjs       generates the generic spacecraft GLBs
 public/models/              ISS + Hubble (NASA) and generated generics
 ```
@@ -117,6 +119,21 @@ Design decisions worth knowing before you extend it:
   second.  Crossing geometries are caught, not just co-moving ones: the
   staged gates were validated against an independent 1 s brute-force
   search on a 51.6° × 120.4° inclination pair.
+- **Ground-station passes** (`src/passes.worker.js`) reuse that screening shape
+  for a different question: when does each satellite rise above *your* horizon?
+  The worker builds the station's ECF position + local east/north/up basis once,
+  precomputes per-step GMST (advanced linearly — `gmst0 + ω·Δt` — so the ECI→ECF
+  rotation is a couple of multiplies, not a `gstime` call, per sample), then for
+  every satellite walks a 60 s grid computing elevation = `asin(los·up / |los|)`.
+  Each above-horizon run becomes a pass; the min-elevation crossings are bisected
+  for exact rise/set and the peak is ternary-refined.  The look-angle math was
+  checked against `satellite.ecfToLookAngles` (agrees to 0.0000°), and rise/set
+  bisect to el ≈ the threshold within ~0.01°.  A latitude prefilter (station |lat|
+  vs the satellite's max sub-point latitude + the horizon's Earth-central angle)
+  skips the never-visible; near-geostationary objects are dropped and any run
+  spanning the whole window is discarded, since neither is a discrete *pass*.
+  Clicking a pass flies `viewer.clock` to its peak so the catalog snaps to that
+  instant and the satellite is framed over the station.
 - **Solar System view** (`src/solarsystem.js`) is a third Cesium Viewer with
   the globe switched off (`globe: false`) — there's no body to stand on out in
   heliocentric space.  Planet positions come from JPL low-precision Keplerian
@@ -283,8 +300,11 @@ Design notes for the 3D close-up view:
   velocity, +Z zenith.
 5. **Desktop wrap** — `npm create tauri-app`, point it at this Vite
    project; you get a native menu-bar app for ~10 MB.
-6. **Ground stations & passes** — satvis (github.com/Flowm/satvis) has a
-   good reference implementation for pass prediction.
+6. **Ground stations & passes** — ships now (legend → **Ground station**):
+   drop a station on the globe and a worker predicts every pass over the next
+   24 h.  Worth extending: a pass detail card (rise/peak/set azimuths, magnitude),
+   sun-lit vs eclipsed passes for naked-eye visibility, and multiple saved
+   stations.
 
 ## Data sources
 

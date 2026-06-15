@@ -87,6 +87,18 @@
     </select></label>
     <div id="conj-list"></div>
     <div class="legend-divider"></div>
+    <label class="legend-row"><input type="checkbox" id="toggle-station" /><span class="swatch station"></span>Ground station <span class="count" id="pass-count">—</span></label>
+    <div class="pass-controls" id="pass-controls" hidden>
+      <button id="pass-setloc" type="button">⌖ set location</button>
+      <select id="pass-minel">
+        <option value="10" selected>passes ≥ 10°</option>
+        <option value="25">≥ 25°</option>
+        <option value="50">≥ 50°</option>
+      </select>
+    </div>
+    <div id="pass-status" class="pass-status" hidden></div>
+    <div id="pass-list"></div>
+    <div class="legend-divider"></div>
     <label class="legend-row"><input type="checkbox" id="toggle-timeline" />Launch timeline</label>
     <div id="timeline-controls" hidden>
       <div class="tl-head"><button id="tl-play" title="Play / pause">▶</button><span id="tl-label">1957</span></div>
