@@ -10,18 +10,21 @@
 // we never touch the global `Ellipsoid.default`.
 
 import {
-  Viewer, Globe, GeographicProjection, Ellipsoid, ImageryLayer,
+  Viewer, Globe, GeographicProjection, GeographicTilingScheme, Ellipsoid, ImageryLayer,
   UrlTemplateImageryProvider, EllipsoidTerrainProvider, Credit, Cartesian3,
 } from 'cesium';
 import { SURFACE, addSurfaceMarkers } from './surface.js';
 
 // LRO Wide Angle Camera global mosaic, 303 px/deg (~100 m/px), served
-// keylessly by NASA's Solar System Treks as a plain geographic tile pyramid
-// (level 0 = two root tiles, matching Cesium's default GeographicTilingScheme).
-// Max depth is level 8.
+// keylessly by NASA's Solar System Treks as a plain equirectangular tile pyramid
+// (level 0 = two root tiles).  It MUST be told to use a GeographicTilingScheme:
+// UrlTemplateImageryProvider otherwise defaults to WebMercator (one root tile),
+// which misaddresses the tiles and floats the landing-site markers over the
+// wrong terrain.  Max depth is level 8.
 const LRO_WAC = new UrlTemplateImageryProvider({
   url: 'https://trek.nasa.gov/tiles/Moon/EQ/LRO_WAC_Mosaic_Global_303ppd_v02/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
   maximumLevel: 8,
+  tilingScheme: new GeographicTilingScheme({ ellipsoid: Ellipsoid.MOON }),
   credit: new Credit('Lunar imagery: NASA/USGS LRO WAC Global Mosaic · NASA Solar System Treks'),
 });
 

@@ -41,7 +41,7 @@ top of `src/main.js`.)
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the Hilda group's 3:2-resonance triangle, the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click a body to fly to it, toggle **True scale**, and from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
-| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
+| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); on Mars, keep zooming and the colour Viking overview gives way to the ~5 m/px CTX mosaic — ~46× sharper, real craters and channels under every landing site; landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
 | Landing sites | Mars rovers & landers (Viking → Perseverance, Zhurong), the Moon's Apollo + Luna/Lunokhod/Surveyor/Chang'e/Chandrayaan sites, and Venus's Venera landers — visible on the surface globes, near-side only as you rotate |
 | Planetary spacecraft | Fly to a planet to see its robotic orbiters alongside its moons, colored by status (a legend, top-right, explains them): **bright cyan** = operating, **dim slate** = derelict (dead but still in orbit), and craft that **deorbited fade out** (orange) and are gone. The **Spacecraft timeline** (bottom-left) plays/scrubs from 1971 by arrival year — with the deorbit fades animating live — and flashes its own era banners |
 
@@ -191,6 +191,20 @@ Design decisions worth knowing before you extend it:
   rebuilds it — to keep the WebGL-context count low.  The system scene idles
   beneath and is restored on exit; a guard flag keeps the system view's Esc from
   firing while a planet globe owns it.
+- **Mars zooms in for real.**  On top of the colour Viking base sits the Bruce
+  Murray Lab global **CTX mosaic** (~5 m/px, ~46× finer; Esri-hosted, keyless),
+  added as a second imagery layer.  It's gated by the layer's `minimumTerrainLevel`
+  so it loads only once you descend past Viking's depth (using the provider's
+  `minimumLevel` instead would clamp every tile up to level 8 and fire tens of
+  thousands of requests at the global view — Cesium warns against exactly that);
+  where CTX has a gap the colour Viking base shows through.  **Tiling-scheme
+  gotcha, the hard-won one:** Treks/CTX pyramids are equirectangular (2×1 tiles at
+  level 0), but `UrlTemplateImageryProvider` *defaults to WebMercator* (1×1) —
+  leaving it implicit (as the Mars, Mercury **and** Moon globes originally did)
+  misaddresses the tiles so only the western hemisphere renders, stretched, with
+  the geographic landing-site markers floating over the wrong terrain.  Every
+  Treks/CTX provider is now handed an explicit `GeographicTilingScheme`.  (Earth's
+  Esri World Imagery genuinely *is* Web Mercator, so it keeps the default.)
 
 ## Roadmap (good Claude Code sessions)
 
@@ -299,7 +313,10 @@ Design notes for the 3D close-up view:
 - Planet surface globes: NASA Solar System Treks tile pyramids — Mars (Viking
   MDIM2.1 color) and Mercury (MESSENGER MDIS) — zoomable to the surface, the
   same source and tiling as the Moon; Venus and the gas giants use their local
-  equirectangular map as a single-tile globe.
+  equirectangular map as a single-tile globe.  Mars also layers the global
+  **CTX mosaic** (~5 m/px) — the [Bruce Murray Laboratory](https://murray-lab.caltech.edu/CTX/)
+  beta01 mosaic (NASA/JPL/MSSS · Caltech), streamed keylessly from Esri's
+  `astro.arcgis.com` on the same Mars_2000 geographic tiling.
 - Asteroid belt: ~3,200 real largest main-belt asteroids (H < 12.5) with
   osculating elements from NASA/JPL's
   [Small-Body Database](https://ssd-api.jpl.nasa.gov/) (fetched by
