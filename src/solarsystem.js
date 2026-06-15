@@ -70,6 +70,10 @@ let families = null;        // main-belt family swarm controller (coloured rings
 let bodyGlobes = null;      // the per-planet surface-globe controller
 let inBodyGlobe = false;    // true while a planet globe is open over the system
 let selectedName = null;
+let anchored = false;       // camera orbit/zoom is pivoting on the selected body
+const _anchorPos = new Cartesian3();
+const _anchorMat = new Matrix4();
+const SYSTEM_MIN_ZOOM = 1e4;   // free-fly floor when not pivoting on a body
 
 const ALL_BODIES = ['Sun', ...PLANETS];
 
@@ -583,16 +587,47 @@ function selectBody(name) {
     range = Math.max(range, Math.max(...extents) * 1.9);
     pitch = -34;
   }
+  releaseAnchor();                 // fly in the world frame…
   scenePosOf(name, _pos);
   viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, r), {
     duration: 1.5,
     offset: new HeadingPitchRange(0, CMath.toRadians(pitch), range),
+    // …then pivot the camera on the body so scroll/drag orbit around it, and
+    // floor the zoom just above its surface (no globe out here to collide with).
+    complete: () => {
+      if (selectedName === name && !inBodyGlobe) {
+        anchored = true;
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance = r * 1.1;
+      }
+    },
   });
 }
 
 function deselect() {
   selectedName = null;
+  releaseAnchor();
   $('system-panel').hidden = true;
+}
+
+// Pivot the camera's orbit/zoom on the selected body — the way the tracker
+// orbits Earth — instead of on the scene origin (the Sun).  Out here there's no
+// globe, so the controller otherwise pivots on (0,0,0); a lookAtTransform at the
+// body's live position makes drag/scroll orbit and zoom around *it*.  Re-applied
+// each frame so it stays centred as the body creeps along its orbit.
+function maintainAnchor() {
+  if (!anchored || !selectedName || inBodyGlobe) return;
+  scenePosOf(selectedName, _anchorPos);
+  viewer.camera.lookAtTransform(Matrix4.fromTranslation(_anchorPos, _anchorMat));
+}
+
+// Back to the world frame.  Must run before any flyTo/setView (those are
+// singular or misbehave inside a translated reference frame).
+function releaseAnchor() {
+  anchored = false;
+  if (viewer) {
+    viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = SYSTEM_MIN_ZOOM;
+  }
 }
 
 // Drop from the system view onto a planet's own globe (bodyglobe.js).  The system
@@ -617,6 +652,7 @@ function enterPlanet(name) {
 // the local ENU frame at the sphere centre, which is *singular* at the geocentre
 // (0,0,0) — so its pitch/heading come out garbage and the Sun lands off-screen.
 function frameWholeSystem(duration = 0) {
+  releaseAnchor();
   const D = systemExtent() * 2.0;
   const elev = CMath.toRadians(50);   // a high 3/4 angle so the belt ring reads
   const C = new Cartesian3(0, -D * Math.cos(elev), D * Math.sin(elev));
@@ -658,7 +694,7 @@ function createViewer() {
   // No globe to collide with — let the camera fly anywhere, close or far.
   const ctrl = v.scene.screenSpaceCameraController;
   ctrl.enableCollisionDetection = false;
-  ctrl.minimumZoomDistance = 1e4;
+  ctrl.minimumZoomDistance = SYSTEM_MIN_ZOOM;
   ctrl.maximumZoomDistance = skyRadius() * 0.92;   // stop just inside the stars
 
   viewer = v;
@@ -683,6 +719,7 @@ function createViewer() {
   v.scene.preRender.addEventListener(() => {
     if (earthClock && earthClock.shouldAnimate) earthClock.tick();
     updateSpheres();
+    maintainAnchor();
     if (belt) belt.tick(performance.now());
     if (trojans) trojans.tick(performance.now());
     if (hildas) hildas.tick(performance.now());
