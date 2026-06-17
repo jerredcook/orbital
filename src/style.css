@@ -97,7 +97,7 @@ body.moon-mode .topbar-right { display: none; }
 #system-exit:hover { border-color: #FFB454; color: #E8EFF8; }
 
 #system-scale {
-  position: absolute; top: 12px; left: 190px; z-index: 11;
+  position: absolute; top: 12px; left: 216px; z-index: 11;
   display: flex; align-items: center; gap: 6px;
   padding: 8px 14px;
   background: rgba(13,19,29,0.9); color: #C9D4E3;
@@ -128,10 +128,11 @@ body.system-mode #system-attr { display: block; }
 #system-panel h2 { margin: 2px 0 12px; font-size: 18px; color: #E8EFF8; font-weight: 600; }
 #sys-earth-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 
+/* System view has its own chrome (Exit button, True-scale toggle, legend), so
+   the Earth top bar would only collide with them in the top-left — hide it. */
+body.system-mode #topbar,
 body.system-mode #legend,
-body.system-mode #infopanel,
-body.system-mode #moon-toggle,
-body.system-mode .topbar-right { display: none; }
+body.system-mode #infopanel { display: none; }
 
 /* ---------- per-planet surface globe ---------- */
 /* A globe scoped to a planet's own ellipsoid, layered above the system view
@@ -171,6 +172,8 @@ body.body-mode #probe-timeline { display: none; }
   position: absolute; top: 12px; right: 16px; z-index: 11;
   background: rgba(13,19,29,0.9); border: 1px solid #1E2A3A; border-radius: 4px;
   padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 11px; color: #C9D4E3;
+  /* scroll rather than overflow the viewport on short / zoomed-in windows */
+  max-height: calc(100vh - 24px); overflow-y: auto;
 }
 #system-legend[hidden] { display: none; }
 .sl-title { color: #6B7A8F; letter-spacing: 0.06em; margin-bottom: 6px; }
