@@ -277,6 +277,7 @@ function buildMoons() {
 // so it follows the planet and, reading isTrueScale each frame, tracks the scale
 // toggle with no rebuild.
 const moonOrbits = [];
+let moonOrbitsOn = false;
 
 function buildMoonOrbits() {
   const SEG = 96;
@@ -311,6 +312,7 @@ function buildMoonOrbits() {
 }
 
 function setMoonOrbits(on) {
+  moonOrbitsOn = on;
   for (const e of moonOrbits) e.show = on;
 }
 
@@ -615,6 +617,10 @@ function selectBody(name) {
   if (enterable) {
     enterBtn.textContent = ROCKY.has(name) ? 'Descend to the surface ▸' : 'Explore the globe ▸';
   }
+  // Show/Hide this body's moon orbits — only for bodies that have moons.
+  const moonBtn = $('sys-moon-orbits');
+  moonBtn.hidden = !MOONS[name];
+  if (MOONS[name]) moonBtn.textContent = moonOrbitsOn ? 'Hide moon orbits' : 'Show moon orbits';
   $('system-panel').hidden = false;
   // Frame the body so its whole entourage — moons AND spacecraft — fits, looking
   // down at a steeper angle so they ring the planet instead of hiding edge-on.
@@ -947,7 +953,10 @@ export function initSystemView(earthViewer, moonView) {
     $('family-list').classList.toggle('off', !e.target.checked);
   });
 
-  $('toggle-moon-orbits').addEventListener('change', (e) => setMoonOrbits(e.target.checked));
+  $('sys-moon-orbits').addEventListener('click', () => {
+    setMoonOrbits(!moonOrbitsOn);
+    $('sys-moon-orbits').textContent = moonOrbitsOn ? 'Hide moon orbits' : 'Show moon orbits';
+  });
 
   // Spacecraft timeline — gate the manmade orbiters by arrival year.
   $('ptl-year').max = String(probeMaxYear());
