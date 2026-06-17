@@ -271,6 +271,49 @@ function buildMoons() {
   }
 }
 
+// Faint orbit rings for the moons, off by default (a legend toggle).  Each is a
+// polyline whose CallbackProperty positions trace the moon's inclined circle
+// around its host planet's *current* position — the same math the marker rides —
+// so it follows the planet and, reading isTrueScale each frame, tracks the scale
+// toggle with no rebuild.
+const moonOrbits = [];
+
+function buildMoonOrbits() {
+  const SEG = 96;
+  for (const planet of Object.keys(MOONS)) {
+    for (const moon of MOONS[planet]) {
+      const [, realR, , factor, inclDeg, nodeDeg] = moon;
+      const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
+      const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
+      const pts = Array.from({ length: SEG + 1 }, () => new Cartesian3());
+      const entity = viewer.entities.add({
+        show: false,
+        polyline: {
+          positions: new CallbackProperty(() => {
+            scenePosOf(planet, _moonHost);
+            const r = isTrueScale() ? realR : factor * bodyRadius(BODIES[planet].radius);
+            for (let k = 0; k <= SEG; k++) {
+              const th = (k / SEG) * 2 * Math.PI, ct = Math.cos(th), st = Math.sin(th);
+              pts[k].x = _moonHost.x + r * (cO * ct - sO * ci * st);
+              pts[k].y = _moonHost.y + r * (sO * ct + cO * ci * st);
+              pts[k].z = _moonHost.z + r * (si * st);
+            }
+            return pts;
+          }, false),
+          width: 1,
+          arcType: ArcType.NONE,          // NONE: geodesic densify OOM-crashes out here
+          material: MOON_COLOR.withAlpha(0.3),
+        },
+      });
+      moonOrbits.push(entity);
+    }
+  }
+}
+
+function setMoonOrbits(on) {
+  for (const e of moonOrbits) e.show = on;
+}
+
 // Manmade orbiters around the other planets: [name, display factor, period
 // (days), inclination°, node°, year reached orbit].  Rendered like moons but in
 // tech cyan, and gateable by year via the spacecraft timeline so you can watch
@@ -703,6 +746,7 @@ function createViewer() {
   addBody('Sun');
   for (const name of PLANETS) addBody(name);
   buildMoons();
+  buildMoonOrbits();
   buildProbes();
   refreshProbes();          // apply each craft's present-day status (active / derelict / gone)
   buildRing();
@@ -902,6 +946,8 @@ export function initSystemView(earthViewer, moonView) {
     if (families) families.show = e.target.checked;
     $('family-list').classList.toggle('off', !e.target.checked);
   });
+
+  $('toggle-moon-orbits').addEventListener('change', (e) => setMoonOrbits(e.target.checked));
 
   // Spacecraft timeline — gate the manmade orbiters by arrival year.
   $('ptl-year').max = String(probeMaxYear());
