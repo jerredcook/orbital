@@ -61,6 +61,7 @@ let earthClock = null;      // the shared source-of-truth clock (Earth viewer's)
 const entities = {};        // body name -> marker/label Entity
 const moonInfo = {};        // moon name -> { planet, entity, realR, periodDays, facts }
 const spheres = {};         // body name -> textured sphere Primitive
+const moonSpheres = {};     // moon name -> textured sphere Primitive (textured moons only)
 let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
 let skyPrimitive = null;    // the NASA star-map celestial sphere
 let ringPrimitive = null;   // Saturn's rings
@@ -266,11 +267,68 @@ const MOON_FACTS = {
   Nereid: { r: 170, disc: 1949, by: 'Gerard Kuiper', tint: '#8a857c', fact: 'Follows one of the most lopsided orbits of any moon, swinging far out from Neptune and back.' },
 };
 
+// Real surface maps for the major moons (tools/fetch-moon-textures.mjs).  The
+// rest — Titan's haze, the Martian moons, the small irregulars — have no useful
+// global map and stay flat-tinted spheres.
+const MOON_TEX = {
+  Moon: 'moon.jpg', Io: 'io.jpg', Europa: 'europa.jpg', Ganymede: 'ganymede.jpg',
+  Callisto: 'callisto.jpg', Mimas: 'mimas.jpg', Enceladus: 'enceladus.jpg', Tethys: 'tethys.jpg',
+  Dione: 'dione.jpg', Rhea: 'rhea.jpg', Iapetus: 'iapetus.jpg', Miranda: 'miranda.jpg',
+  Ariel: 'ariel.jpg', Umbriel: 'umbriel.jpg', Titania: 'titania.jpg', Oberon: 'oberon.jpg',
+  Triton: 'triton.jpg',
+};
+const MOON_TEX_DIR = `${BASE}textures/moons/`;
+
 // Rendered radius of a moon's little sphere — real metres in true scale, the same
 // exaggerating power law the planets use otherwise.
 function moonRadius(name) {
   const physM = (MOON_FACTS[name]?.r ?? 40) * 1000;
   return isTrueScale() ? physM : bodyRadius(physM);
+}
+
+// Textured-moon sphere — same Primitive recipe as the planets (an entity
+// ellipsoid can't take an image material).  Picks resolve to the moon name.
+function buildMoonSphere(name) {
+  const r = moonRadius(name);
+  const primitive = new Primitive({
+    geometryInstances: new GeometryInstance({
+      geometry: new EllipsoidGeometry({
+        radii: new Cartesian3(r, r, r),
+        vertexFormat: VertexFormat.POSITION_NORMAL_AND_ST,
+        slicePartitions: 36, stackPartitions: 36,
+      }),
+      id: name,
+    }),
+    appearance: new MaterialAppearance({
+      material: Material.fromType('Image', { image: `${MOON_TEX_DIR}${MOON_TEX[name]}` }),
+      materialSupport: MaterialAppearance.MaterialSupport.TEXTURED,
+      faceForward: false, closed: true,
+    }),
+    asynchronous: false,
+  });
+  viewer.scene.primitives.add(primitive);
+  moonSpheres[name] = primitive;
+}
+
+function buildMoonSpheres() {
+  for (const name of Object.keys(MOON_TEX)) if (moonInfo[name]) buildMoonSphere(name);
+}
+
+// Translate each textured moon sphere to its live position every frame (radii are
+// baked into the geometry; orientation is north-up, no spin).
+function updateMoonSpheres() {
+  for (const name of Object.keys(moonSpheres)) {
+    moonInfo[name].entity.position.getValue(earthClock.currentTime, _pos);
+    Matrix4.fromTranslationQuaternionRotationScale(_pos, Quaternion.IDENTITY, _one, moonSpheres[name].modelMatrix);
+  }
+}
+
+function rebuildMoonSpheres() {
+  for (const name of Object.keys(moonSpheres)) {
+    viewer.scene.primitives.remove(moonSpheres[name]);   // destroys GL resources
+    delete moonSpheres[name];
+  }
+  buildMoonSpheres();
 }
 
 // One moon: a marker + label + a small tinted sphere you can fly to, whose
@@ -297,19 +355,22 @@ function addMoon(planet, moon, idx) {
       result.z = _moonHost.z + r * (si * st);
       return result;
     }, false),
-    // A small tinted sphere: sub-pixel from afar (the marker shows then), a body
-    // you can orbit once you've flown in.  radii is a CallbackProperty so it
-    // tracks the scale toggle.  A solid colour needs no texture coords, so unlike
-    // the planets it renders fine as an entity ellipsoid (no Primitive needed).
-    ellipsoid: {
-      radii: new CallbackProperty((time, result) => {
-        const rr = moonRadius(name);
-        result = result || new Cartesian3();
-        result.x = result.y = result.z = rr;
-        return result;
-      }, false),
-      material: tint,
-    },
+    // Moons with a real surface map get a textured Primitive sphere (built
+    // separately); the rest get a small flat-tinted entity ellipsoid here —
+    // sub-pixel from afar (the marker shows then), a body you can orbit up close.
+    // A solid colour needs no texture coords, so it renders fine as an ellipsoid;
+    // radii is a CallbackProperty so it tracks the scale toggle.
+    ...(MOON_TEX[name] ? {} : {
+      ellipsoid: {
+        radii: new CallbackProperty((time, result) => {
+          const rr = moonRadius(name);
+          result = result || new Cartesian3();
+          result.x = result.y = result.z = rr;
+          return result;
+        }, false),
+        material: tint,
+      },
+    }),
     point: { pixelSize: 3.5, color: MOON_COLOR, outlineColor: Color.BLACK.withAlpha(0.5), outlineWidth: 1 },
     label: {
       text: name,
@@ -567,6 +628,7 @@ function rebuildSpheres() {
 // Sun glow is pixel-sized, so it needs no rescaling.)
 function applyScaleToBodies() {
   rebuildSpheres();
+  rebuildMoonSpheres();
 }
 
 // Static orbit rings — sample the ellipse once (geometry barely moves over the
@@ -854,6 +916,7 @@ function createViewer() {
   addBody('Sun');
   for (const name of PLANETS) addBody(name);
   buildMoons();
+  buildMoonSpheres();
   buildMoonOrbits();
   buildProbes();
   refreshProbes();          // apply each craft's present-day status (active / derelict / gone)
@@ -871,6 +934,7 @@ function createViewer() {
   v.scene.preRender.addEventListener(() => {
     if (earthClock && earthClock.shouldAnimate) earthClock.tick();
     updateSpheres();
+    updateMoonSpheres();
     maintainAnchor();
     if (belt) belt.tick(performance.now());
     if (trojans) trojans.tick(performance.now());

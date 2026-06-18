@@ -327,7 +327,19 @@ Design notes for the 3D close-up view:
   because the two scenes hold their own ellipsoids.
 - Planet & Sun surface maps: [Solar System Scope](https://www.solarsystemscope.com/textures/)
   equirectangular textures (CC BY 4.0), fetched into `public/textures/planets/`
-  by `tools/fetch-textures.mjs`.  Planet positions are computed locally from
+  by `tools/fetch-textures.mjs`.
+- Moon surface maps: 17 of the major moons (the Galileans, the round Saturnian
+  and Uranian moons, Triton, plus our Moon) carry real equirectangular maps —
+  our Moon from Solar System Scope (CC BY 4.0), the rest compiled by
+  [Steve Albers](https://stevealbers.net/albers/sos/sos.html) and
+  [Björn Jónsson](https://bjj.mmedia.is/) from public-domain Voyager / Galileo /
+  Cassini / Clementine imagery.  `tools/fetch-moon-textures.mjs` downloads and
+  downscales them (2k JPG) into `public/textures/moons/`.  **Note:** the Albers /
+  Jónsson maps are licensed for *personal, non-commercial* use — fine for this
+  project, but swap them for the underlying public-domain USGS/NASA mosaics if
+  you take it commercial.  The Martian moons, Titan (permanent haze) and the
+  small irregular moons have no useful global map and stay flat-tinted.  Planet
+  positions are computed locally from
   JPL's low-precision Keplerian elements (no service, no key); see
   `src/ephemeris.js`.
 - Planet surface globes: NASA Solar System Treks tile pyramids — Mars (Viking
