@@ -128,16 +128,19 @@ body.system-mode #system-attr { display: block; }
 #system-panel h2 { margin: 2px 0 12px; font-size: 18px; color: #E8EFF8; font-weight: 600; }
 #sys-earth-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 
-/* Moon detail panel — same look as the body panel, plus a facts line. */
-#moon-panel {
+/* Moon / spacecraft detail panels — same look as the body panel, plus a facts line. */
+#moon-panel, #probe-panel {
   position: absolute; top: 64px; left: 16px; z-index: 11;
   width: 280px; padding: 16px 18px;
   background: rgba(8,12,20,0.92); border: 1px solid #1E2A3A; border-radius: 6px;
   backdrop-filter: blur(6px);
 }
-#moon-panel[hidden] { display: none; }
-#moon-panel h2 { margin: 2px 0 12px; font-size: 18px; color: #E8EFF8; font-weight: 600; }
+#moon-panel[hidden], #probe-panel[hidden] { display: none; }
+#moon-panel h2, #probe-panel h2 { margin: 2px 0 12px; font-size: 18px; color: #E8EFF8; font-weight: 600; }
 .moon-fact { margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: #AEB9C8; }
+#probe-status.st-active { color: #6FE0FF; }
+#probe-status.st-derelict { color: #8AA7B2; }
+#probe-status.st-gone { color: #FF9A5A; }
 
 /* System view has its own chrome (Exit button, True-scale toggle, legend), so
    the Earth top bar would only collide with them in the top-left — hide it. */
@@ -174,6 +177,7 @@ body.body-mode #body-attr { display: block; }
 /* While on a planet globe, the system-view chrome underneath must hide. */
 body.body-mode #system-panel,
 body.body-mode #moon-panel,
+body.body-mode #probe-panel,
 body.body-mode #system-exit,
 body.body-mode #system-scale,
 body.body-mode #system-legend,

@@ -60,6 +60,7 @@ let visible = false;
 let earthClock = null;      // the shared source-of-truth clock (Earth viewer's)
 const entities = {};        // body name -> marker/label Entity
 const moonInfo = {};        // moon name -> { planet, entity, realR, periodDays, facts }
+const probeInfo = {};       // spacecraft name -> { planet, entity, periodDays, inclDeg, arrival, end, deorbited }
 const spheres = {};         // body name -> textured sphere Primitive
 const moonSpheres = {};     // moon name -> textured sphere Primitive (textured moons only)
 let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
@@ -73,6 +74,7 @@ let bodyGlobes = null;      // the per-planet surface-globe controller
 let inBodyGlobe = false;    // true while a planet globe is open over the system
 let selectedName = null;
 let selectedMoonName = null;
+let selectedProbeName = null;
 let anchorEntity = null;    // the entity (planet or moon) camera orbit/zoom pivots on
 const _anchorPos = new Cartesian3();
 const _anchorMat = new Matrix4();
@@ -469,6 +471,34 @@ const PROBES = {
   Jupiter: [['Galileo', 2.2, 7, 5, 200, 1995, 2003, true], ['Juno', 3.0, 53, 90, 0, 2016, null, false]],
   Saturn:  [['Cassini', 2.6, 16, 20, 0, 2004, 2017, true]],
 };
+
+// Operator + one-line mission note for the click-to-inspect panel.  The exact
+// years live in the fact text; the panel's "status" is just the present state.
+const PROBE_FACTS = {
+  MESSENGER: { op: 'NASA', fact: 'The first spacecraft to orbit Mercury (2011–15); it mapped the whole planet and found water ice in permanently shadowed polar craters before crashing into the surface.' },
+  BepiColombo: { op: 'ESA / JAXA', fact: 'A joint European–Japanese mission cruising to Mercury by repeated flybys; it splits into two orbiters once it arrives in 2026.' },
+  'Venera 15': { op: 'USSR', fact: 'With its twin Venera 16, it radar-mapped the northern hemisphere of cloud-shrouded Venus in 1983–84.' },
+  'Pioneer Venus': { op: 'NASA', fact: 'Orbited Venus for 14 years (1978–92), studying its thick atmosphere and making the first global radar map of the surface.' },
+  Magellan: { op: 'NASA', fact: 'Radar-mapped 98% of Venus at high resolution (1990–94), revealing volcanoes, lava plains and a young, resurfaced world with few craters.' },
+  'Venus Express': { op: 'ESA', fact: "Europe's first Venus orbiter (2006–15); it tracked the super-rotating atmosphere and hints of recent volcanism." },
+  Akatsuki: { op: 'JAXA', fact: "Japan's Venus climate orbiter, which limped into orbit in 2015 on a second attempt after its engine failed in 2010." },
+  'Mariner 9': { op: 'NASA', fact: 'The first spacecraft to orbit another planet (1971); it waited out a global dust storm, then revealed Valles Marineris and the giant Tharsis volcanoes.' },
+  'Viking 1 Orbiter': { op: 'NASA', fact: 'Relayed for the Viking 1 lander and imaged Mars from orbit (1976–80), scouting the surface and its moons.' },
+  'Viking 2 Orbiter': { op: 'NASA', fact: 'Companion to the Viking 2 lander (1976–79), photographing Mars and Deimos from orbit.' },
+  'Mars Global Surveyor': { op: 'NASA', fact: 'Mapped Mars for a decade (1997–2006): laser-altimeter topography, gullies hinting at water, and stripes of ancient crustal magnetism.' },
+  'Mars Odyssey': { op: 'NASA', fact: 'The longest-working spacecraft at Mars (since 2001); it found vast subsurface water ice and still relays data from the rovers.' },
+  'Mars Express': { op: 'ESA', fact: "Europe's first Mars orbiter (since 2003); its radar detected subsurface ice and a possible lake near the south pole." },
+  MRO: { op: 'NASA', fact: 'The Mars Reconnaissance Orbiter (since 2006) carries HiRISE, the sharpest camera ever sent to Mars, and is a key relay for surface missions.' },
+  MAVEN: { op: 'NASA', fact: 'Studies how Mars lost most of its atmosphere to space (since 2014), explaining how a once-wetter world dried out.' },
+  Mangalyaan: { op: 'ISRO', fact: "India's first interplanetary mission — it made India the first nation to reach Mars orbit on its very first try (2014)." },
+  'ExoMars TGO': { op: 'ESA / Roscosmos', fact: 'The Trace Gas Orbiter (since 2016) sniffs the atmosphere for methane and other gases, and relays for surface craft.' },
+  Hope: { op: 'UAE Space Agency', fact: "The Emirates Mars Mission (since 2021) — the Arab world's first interplanetary probe — watches Martian weather from a high orbit." },
+  'Tianwen-1': { op: 'CNSA', fact: "China's first Mars mission (2021): an orbiter that also delivered the Zhurong rover to the surface." },
+  Galileo: { op: 'NASA', fact: 'The first Jupiter orbiter (1995–2003); it dropped a probe into the clouds, found evidence of an ocean inside Europa, then plunged into Jupiter to protect the moons.' },
+  Juno: { op: 'NASA', fact: "A polar orbiter (since 2016) peering beneath Jupiter's clouds to map its gravity, magnetic field and deep interior — and its swirling poles." },
+  Cassini: { op: 'NASA / ESA / ASI', fact: "Orbited Saturn 2004–17, landed the Huygens probe on Titan and discovered Enceladus's icy geysers, before its fiery “Grand Finale” dive into Saturn." },
+};
+
 const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');           // active
 const PROBE_COLOR_DERELICT = Color.fromCssColorString('#8AA7B2');  // dead but still orbiting
 const PROBE_COLOR_GONE = Color.fromCssColorString('#FF9A5A');      // reentering — fading out
@@ -508,6 +538,7 @@ function addProbe(planet, probe, idx) {
     },
   });
   probeList.push({ entity, arrival, end, deorbited });
+  probeInfo[name] = { planet, entity, periodDays, inclDeg, arrival, end, deorbited };
 }
 
 function buildProbes() {
@@ -726,7 +757,9 @@ function bodyFacts(name) {
 function selectBody(name) {
   selectedName = name;
   selectedMoonName = null;
+  selectedProbeName = null;
   $('moon-panel').hidden = true;
+  $('probe-panel').hidden = true;
   const f = bodyFacts(name);
   $('sys-name').textContent = name;
   $('sys-type').textContent = f.type;
@@ -775,9 +808,11 @@ function selectBody(name) {
 function deselect() {
   selectedName = null;
   selectedMoonName = null;
+  selectedProbeName = null;
   releaseAnchor();
   $('system-panel').hidden = true;
   $('moon-panel').hidden = true;
+  $('probe-panel').hidden = true;
 }
 
 // Click a moon: show its facts panel, fly in close, and pivot the camera on it
@@ -786,8 +821,10 @@ function selectMoon(name) {
   const info = moonInfo[name];
   if (!info) return;
   selectedName = null;
+  selectedProbeName = null;
   selectedMoonName = name;
   $('system-panel').hidden = true;
+  $('probe-panel').hidden = true;
   fillMoonPanel(name, info);
   $('moon-panel').hidden = false;
 
@@ -814,6 +851,53 @@ function fillMoonPanel(name, info) {
   $('moon-dist').textContent = `${Math.round(info.realR / 1000).toLocaleString()} km`;
   $('moon-disc').textContent = disc;
   $('moon-fact').textContent = f.fact || '';
+}
+
+// Click a manmade orbiter: show its mission panel and frame it over its planet,
+// pivoting the camera on it (it has no body of its own, so this just lets you
+// orbit/zoom the marker against the planet behind it).
+function selectProbe(name) {
+  const info = probeInfo[name];
+  if (!info) return;
+  selectedName = null;
+  selectedMoonName = null;
+  selectedProbeName = name;
+  $('system-panel').hidden = true;
+  $('moon-panel').hidden = true;
+  fillProbePanel(name, info);
+  $('probe-panel').hidden = false;
+
+  const planetR = bodyRadius(BODIES[info.planet].radius);
+  releaseAnchor();
+  info.entity.position.getValue(earthClock.currentTime, _pos);
+  viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, planetR), {
+    duration: 1.3,
+    offset: new HeadingPitchRange(0, CMath.toRadians(-22), planetR * 3.5),
+    complete: () => { if (selectedProbeName === name && !inBodyGlobe) anchorOn(info.entity, planetR * 0.25); },
+  });
+}
+
+// Present-day state — the legend's vocabulary; the fact text carries the years.
+function probeStatusLabel(info) {
+  const Y = nowYear();
+  if (Y < info.arrival) return ['en route', 'st-active'];
+  if (info.end == null || Y < info.end) return ['operating', 'st-active'];
+  return info.deorbited ? ['mission ended', 'st-gone'] : ['derelict', 'st-derelict'];
+}
+
+function fillProbePanel(name, info) {
+  const f = PROBE_FACTS[name] || {};
+  const d = info.periodDays;
+  const period = d < 1 ? `${(d * 24).toFixed(1)} h` : `${d.toFixed(d < 10 ? 1 : 0)} day${d >= 2 ? 's' : ''}`;
+  const [status, statusClass] = probeStatusLabel(info);
+  $('probe-eyebrow').textContent = `Spacecraft at ${info.planet}`;
+  $('probe-name').textContent = name;
+  $('probe-op').textContent = f.op || '—';
+  $('probe-arrived').textContent = `${Math.floor(info.arrival)}${nowYear() < info.arrival ? ' (en route)' : ''}`;
+  $('probe-status').textContent = status;
+  $('probe-status').className = statusClass;
+  $('probe-orbit').textContent = `${period} · ${info.inclDeg.toFixed(0)}° incl`;
+  $('probe-fact').textContent = f.fact || '';
 }
 
 // Pivot the camera's orbit/zoom on the selected body — the way the tracker
@@ -953,6 +1037,7 @@ function createViewer() {
     const id = picked && picked.id;
     const name = typeof id === 'string' ? id : (id && id.name);
     if (name && moonInfo[name]) selectMoon(name);
+    else if (name && probeInfo[name]) selectProbe(name);
     else if (name && entities[name]) selectBody(name);
     else deselect();
   }, ScreenSpaceEventType.LEFT_CLICK);
