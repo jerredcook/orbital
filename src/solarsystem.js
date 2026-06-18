@@ -59,6 +59,7 @@ let viewer = null;          // created lazily on first open
 let visible = false;
 let earthClock = null;      // the shared source-of-truth clock (Earth viewer's)
 const entities = {};        // body name -> marker/label Entity
+const moonInfo = {};        // moon name -> { planet, entity, realR, periodDays, facts }
 const spheres = {};         // body name -> textured sphere Primitive
 let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
 let skyPrimitive = null;    // the NASA star-map celestial sphere
@@ -70,7 +71,8 @@ let families = null;        // main-belt family swarm controller (coloured rings
 let bodyGlobes = null;      // the per-planet surface-globe controller
 let inBodyGlobe = false;    // true while a planet globe is open over the system
 let selectedName = null;
-let anchored = false;       // camera orbit/zoom is pivoting on the selected body
+let selectedMoonName = null;
+let anchorEntity = null;    // the entity (planet or moon) camera orbit/zoom pivots on
 const _anchorPos = new Cartesian3();
 const _anchorMat = new Matrix4();
 const SYSTEM_MIN_ZOOM = 1e4;   // free-fly floor when not pivoting on a body
@@ -229,14 +231,59 @@ const MOONS = {
 };
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 
-// One moon as a marker+label entity whose CallbackProperty position is the host
-// planet's position plus a circular but inclined orbit offset.
+// Per-moon physical data for the click-to-inspect panel and the little spheres:
+// r = mean radius (km), disc = discovery year (or 'antiquity'), by = discoverer,
+// tint = surface colour, fact = one notable thing.  (Public-domain facts.)
+const MOON_FACTS = {
+  Moon: { r: 1737, disc: 'antiquity', by: '', tint: '#cfc7b8', fact: 'Tidally locked, so the same face always points at Earth; most likely formed when a Mars-sized body struck the young Earth.' },
+  Phobos: { r: 11, disc: 1877, by: 'Asaph Hall', tint: '#6b6258', fact: 'Orbits Mars in 7.7 hours — faster than Mars spins — and is spiralling inward to break apart or crash in ~50 million years.' },
+  Deimos: { r: 6, disc: 1877, by: 'Asaph Hall', tint: '#7a7165', fact: 'The smaller, outer Martian moon; a thick blanket of regolith gives it a smoother look than Phobos.' },
+  Amalthea: { r: 84, disc: 1892, by: 'E. E. Barnard', tint: '#a85a44', fact: 'The reddest object in the Solar System, and the last moon found by direct visual observation.' },
+  Thebe: { r: 49, disc: 1979, by: 'Voyager 1', tint: '#8a7a6a', fact: "A small inner moon whose shed dust feeds one of Jupiter's faint gossamer rings." },
+  Io: { r: 1822, disc: 1610, by: 'Galileo', tint: '#e3d96b', fact: 'The most volcanically active world known — hundreds of vents kept molten by Jupiter’s tides.' },
+  Europa: { r: 1561, disc: 1610, by: 'Galileo', tint: '#d8c9ad', fact: 'A cracked ice shell hides a global saltwater ocean — among the best places to look for life.' },
+  Ganymede: { r: 2634, disc: 1610, by: 'Galileo', tint: '#9a8f80', fact: 'The largest moon in the Solar System — bigger than Mercury — and the only one with its own magnetic field.' },
+  Callisto: { r: 2410, disc: 1610, by: 'Galileo', tint: '#6e6258', fact: 'The most heavily cratered body known; its ancient surface has barely changed in billions of years.' },
+  Himalia: { r: 85, disc: 1904, by: 'C. D. Perrine', tint: '#7d7468', fact: "The largest of Jupiter's captured outer moons, on a distant, steeply tilted orbit." },
+  Mimas: { r: 198, disc: 1789, by: 'William Herschel', tint: '#cdd2d8', fact: 'Its enormous Herschel crater gives it an uncanny resemblance to the Death Star.' },
+  Enceladus: { r: 252, disc: 1789, by: 'William Herschel', tint: '#f0f4f8', fact: "Geysers of water ice erupt from a subsurface ocean through south-polar “tiger stripes,” feeding Saturn's E ring." },
+  Tethys: { r: 531, disc: 1684, by: 'G. D. Cassini', tint: '#cdd2d8', fact: 'Almost pure water ice, scarred by the vast Ithaca Chasma canyon and the Odysseus impact basin.' },
+  Dione: { r: 561, disc: 1684, by: 'G. D. Cassini', tint: '#c8cdd3', fact: 'Its bright wispy streaks turned out to be a network of towering ice cliffs.' },
+  Rhea: { r: 764, disc: 1672, by: 'G. D. Cassini', tint: '#c5cace', fact: "Saturn's second-largest moon, an icy cratered world that may once have had a faint ring of its own." },
+  Titan: { r: 2575, disc: 1655, by: 'Christiaan Huygens', tint: '#d9a441', fact: 'The only moon with a thick atmosphere; rivers and seas of liquid methane pool on its surface. Huygens landed there in 2005.' },
+  Hyperion: { r: 135, disc: 1848, by: 'Bond & Lassell', tint: '#9a8a72', fact: 'A sponge-like, porous body that tumbles chaotically, never settling into a fixed spin.' },
+  Iapetus: { r: 734, disc: 1671, by: 'G. D. Cassini', tint: '#8a7c64', fact: 'Two-faced — one hemisphere bright ice, the other coal-dark — with a strange ridge running along its equator.' },
+  Phoebe: { r: 107, disc: 1899, by: 'W. H. Pickering', tint: '#5a544c', fact: "A captured body orbiting backward; debris from it forms Saturn's vast Phoebe ring. The first moon found photographically." },
+  Puck: { r: 81, disc: 1985, by: 'Voyager 2', tint: '#7d7468', fact: "The largest of Uranus's small inner moons, spotted as Voyager 2 sped past." },
+  Miranda: { r: 236, disc: 1948, by: 'Gerard Kuiper', tint: '#b8bcc2', fact: 'A jumbled patchwork of terrains, home to Verona Rupes — at ~20 km, the tallest known cliff.' },
+  Ariel: { r: 579, disc: 1851, by: 'William Lassell', tint: '#c2c6cc', fact: 'The brightest, youngest-looking Uranian moon, cut by deep fault valleys.' },
+  Umbriel: { r: 585, disc: 1851, by: 'William Lassell', tint: '#6e6e76', fact: 'The darkest of Uranus’s large moons, marked by the mysterious bright ring “Wunda.”' },
+  Titania: { r: 789, disc: 1787, by: 'William Herschel', tint: '#a89e92', fact: 'The largest moon of Uranus, split by enormous canyons up to 1,500 km long.' },
+  Oberon: { r: 761, disc: 1787, by: 'William Herschel', tint: '#9a8f84', fact: "Uranus's outermost large moon — ancient and cratered, with dark material pooled on some crater floors." },
+  Larissa: { r: 97, disc: 1989, by: 'Voyager 2', tint: '#7a716a', fact: 'A small, irregular inner moon racing around Neptune in well under a day.' },
+  Proteus: { r: 210, disc: 1989, by: 'Voyager 2', tint: '#5e5a54', fact: 'One of the darkest objects in the Solar System, and about as big as a body can get while staying lumpy rather than round.' },
+  Triton: { r: 1353, disc: 1846, by: 'William Lassell', tint: '#d6cfc0', fact: 'Orbits backward — a captured Kuiper Belt world — with nitrogen geysers and one of the coldest surfaces ever measured (~38 K).' },
+  Nereid: { r: 170, disc: 1949, by: 'Gerard Kuiper', tint: '#8a857c', fact: 'Follows one of the most lopsided orbits of any moon, swinging far out from Neptune and back.' },
+};
+
+// Rendered radius of a moon's little sphere — real metres in true scale, the same
+// exaggerating power law the planets use otherwise.
+function moonRadius(name) {
+  const physM = (MOON_FACTS[name]?.r ?? 40) * 1000;
+  return isTrueScale() ? physM : bodyRadius(physM);
+}
+
+// One moon: a marker + label + a small tinted sphere you can fly to, whose
+// CallbackProperty position is the host planet's position plus a circular but
+// inclined orbit offset.  Registered in moonInfo so a click selects it.
 function addMoon(planet, moon, idx) {
   const [name, realR, periodDays, factor, inclDeg, nodeDeg] = moon;
   const phase = idx * 1.7;            // de-phase moons so they don't line up
   const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
-  viewer.entities.add({
+  const tint = Color.fromCssColorString(MOON_FACTS[name]?.tint ?? '#b8b2a6');
+  const _rad = new Cartesian3();
+  const entity = viewer.entities.add({
     name,
     position: new CallbackProperty((time, result) => {
       result = result || new Cartesian3();
@@ -250,6 +297,19 @@ function addMoon(planet, moon, idx) {
       result.z = _moonHost.z + r * (si * st);
       return result;
     }, false),
+    // A small tinted sphere: sub-pixel from afar (the marker shows then), a body
+    // you can orbit once you've flown in.  radii is a CallbackProperty so it
+    // tracks the scale toggle.  A solid colour needs no texture coords, so unlike
+    // the planets it renders fine as an entity ellipsoid (no Primitive needed).
+    ellipsoid: {
+      radii: new CallbackProperty((time, result) => {
+        const rr = moonRadius(name);
+        result = result || new Cartesian3();
+        result.x = result.y = result.z = rr;
+        return result;
+      }, false),
+      material: tint,
+    },
     point: { pixelSize: 3.5, color: MOON_COLOR, outlineColor: Color.BLACK.withAlpha(0.5), outlineWidth: 1 },
     label: {
       text: name,
@@ -263,6 +323,7 @@ function addMoon(planet, moon, idx) {
       translucencyByDistance: new NearFarScalar(6e8, 1.0, 3e9, 0.0),
     },
   });
+  moonInfo[name] = { planet, entity, realR, periodDays, facts: MOON_FACTS[name] };
 }
 
 function buildMoons() {
@@ -602,6 +663,8 @@ function bodyFacts(name) {
 
 function selectBody(name) {
   selectedName = name;
+  selectedMoonName = null;
+  $('moon-panel').hidden = true;
   const f = bodyFacts(name);
   $('sys-name').textContent = name;
   $('sys-type').textContent = f.type;
@@ -643,19 +706,52 @@ function selectBody(name) {
     offset: new HeadingPitchRange(0, CMath.toRadians(pitch), range),
     // …then pivot the camera on the body so scroll/drag orbit around it, and
     // floor the zoom just above its surface (no globe out here to collide with).
-    complete: () => {
-      if (selectedName === name && !inBodyGlobe) {
-        anchored = true;
-        viewer.scene.screenSpaceCameraController.minimumZoomDistance = r * 1.1;
-      }
-    },
+    complete: () => { if (selectedName === name && !inBodyGlobe) anchorOn(entities[name], r); },
   });
 }
 
 function deselect() {
   selectedName = null;
+  selectedMoonName = null;
   releaseAnchor();
   $('system-panel').hidden = true;
+  $('moon-panel').hidden = true;
+}
+
+// Click a moon: show its facts panel, fly in close, and pivot the camera on it
+// so you can orbit/zoom the little world the way you do a planet.
+function selectMoon(name) {
+  const info = moonInfo[name];
+  if (!info) return;
+  selectedName = null;
+  selectedMoonName = name;
+  $('system-panel').hidden = true;
+  fillMoonPanel(name, info);
+  $('moon-panel').hidden = false;
+
+  const rr = moonRadius(name);
+  releaseAnchor();
+  info.entity.position.getValue(earthClock.currentTime, _pos);
+  viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, rr), {
+    duration: 1.3,
+    offset: new HeadingPitchRange(0, CMath.toRadians(-22), rr * 4.5),
+    complete: () => { if (selectedMoonName === name && !inBodyGlobe) anchorOn(info.entity, rr); },
+  });
+}
+
+function fillMoonPanel(name, info) {
+  const f = info.facts || {};
+  const days = info.periodDays;
+  const period = days < 1 ? `${(days * 24).toFixed(1)} hours` : `${days.toFixed(2)} days`;
+  const disc = f.disc === 'antiquity' ? 'known since antiquity'
+    : f.by ? `${f.disc} · ${f.by}` : `${f.disc}`;
+  $('moon-host').textContent = `Moon of ${info.planet}`;
+  $('moon-name').textContent = name;
+  $('moon-diam').textContent = f.r ? `${(f.r * 2).toLocaleString()} km` : '—';
+  $('moon-period').textContent = period;
+  $('moon-dist').textContent = `${Math.round(info.realR / 1000).toLocaleString()} km`;
+  $('moon-disc').textContent = disc;
+  $('moon-fact').textContent = f.fact || '';
 }
 
 // Pivot the camera's orbit/zoom on the selected body — the way the tracker
@@ -664,15 +760,21 @@ function deselect() {
 // body's live position makes drag/scroll orbit and zoom around *it*.  Re-applied
 // each frame so it stays centred as the body creeps along its orbit.
 function maintainAnchor() {
-  if (!anchored || !selectedName || inBodyGlobe) return;
-  scenePosOf(selectedName, _anchorPos);
+  if (!anchorEntity || inBodyGlobe) return;
+  anchorEntity.position.getValue(earthClock.currentTime, _anchorPos);
   viewer.camera.lookAtTransform(Matrix4.fromTranslation(_anchorPos, _anchorMat));
+}
+
+// Pivot the camera on a body's entity and floor the zoom just above its surface.
+function anchorOn(entity, renderedRadius) {
+  anchorEntity = entity;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = renderedRadius * 1.1;
 }
 
 // Back to the world frame.  Must run before any flyTo/setView (those are
 // singular or misbehave inside a translated reference frame).
 function releaseAnchor() {
-  anchored = false;
+  anchorEntity = null;
   if (viewer) {
     viewer.camera.lookAtTransform(Matrix4.IDENTITY);
     viewer.scene.screenSpaceCameraController.minimumZoomDistance = SYSTEM_MIN_ZOOM;
@@ -786,7 +888,8 @@ function createViewer() {
     const picked = v.scene.pick(position);
     const id = picked && picked.id;
     const name = typeof id === 'string' ? id : (id && id.name);
-    if (name && entities[name]) selectBody(name);
+    if (name && moonInfo[name]) selectMoon(name);
+    else if (name && entities[name]) selectBody(name);
     else deselect();
   }, ScreenSpaceEventType.LEFT_CLICK);
 
