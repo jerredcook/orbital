@@ -1031,9 +1031,11 @@ function createViewer() {
   // Click a body to select + fly to it; click empty space to deselect.  A sphere
   // pick resolves to its instance id (the body-name string); a marker/label pick
   // resolves to the Entity (read its .name).
+  // Pad the pick so the small moon/spacecraft markers are hittable on touch.
+  const pickPad = window.matchMedia?.('(pointer: coarse)').matches ? 22 : 6;
   const handler = new ScreenSpaceEventHandler(v.scene.canvas);
   handler.setInputAction(({ position }) => {
-    const picked = v.scene.pick(position);
+    const picked = v.scene.pick(position, pickPad, pickPad);
     const id = picked && picked.id;
     const name = typeof id === 'string' ? id : (id && id.name);
     if (name && moonInfo[name]) selectMoon(name);

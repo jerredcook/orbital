@@ -480,6 +480,10 @@ viewer.clock.onTick.addEventListener((clock) => {
 
 // ---------------------------------------------------------------- picking ----
 
+// Satellites are ~2 px GPU points; pick a padded box around the tap so they're
+// actually hittable — generously on touch, where a fingertip covers tens of px.
+const PICK_PAD = window.matchMedia?.('(pointer: coarse)').matches ? 22 : 8;
+
 const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click) => {
   // Placing a ground station: the next globe click drops it instead of selecting.
@@ -493,7 +497,7 @@ handler.setInputAction((click) => {
     }
     return;
   }
-  const picked = viewer.scene.pick(click.position);
+  const picked = viewer.scene.pick(click.position, PICK_PAD, PICK_PAD);
   if (defined(picked) && typeof picked.id === 'number') {
     selectByIndex(picked.id);
   } else if (picked?.id && picked.id === selected?.modelEntity) {

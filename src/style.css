@@ -497,10 +497,12 @@ body.body-mode #probe-timeline { display: none; }
   #system-toggle, #moon-toggle { padding: 6px 9px; font-size: 11px; }
   #search { width: 38vw; max-width: 150px; }
 
-  /* body / moon / spacecraft panels: fit the screen and scroll if tall */
+  /* body / moon / spacecraft panels: keep them off to the left and a touch more
+     see-through, so the body you flew to stays visible beside and behind them */
   #system-panel, #moon-panel, #probe-panel {
-    width: auto; left: 12px; right: 12px; max-width: 340px;
+    width: min(66vw, 270px); left: 10px; right: auto;
     top: 56px; max-height: calc(100dvh - 132px); overflow-y: auto;
+    background: rgba(8,12,20,0.82);
   }
   #system-panel .action, #moon-panel .action { padding: 8px 12px; font-size: 12px; }
 
