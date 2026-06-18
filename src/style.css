@@ -143,6 +143,7 @@ body.system-mode #system-attr { display: block; }
 #moon-panel[hidden], #probe-panel[hidden] { display: none; }
 #moon-panel h2, #probe-panel h2 { margin: 2px 0 12px; font-size: 18px; color: #E8EFF8; font-weight: 600; }
 .moon-fact { margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: #AEB9C8; }
+.card-collapse { display: none; }   /* mobile-only (see the phone breakpoint) */
 #probe-status.st-active { color: #6FE0FF; }
 #probe-status.st-derelict { color: #8AA7B2; }
 #probe-status.st-gone { color: #FF9A5A; }
@@ -505,6 +506,19 @@ body.body-mode #probe-timeline { display: none; }
     background: rgba(8,12,20,0.82);
   }
   #system-panel .action, #moon-panel .action { padding: 8px 12px; font-size: 12px; }
+
+  /* collapse the card to just its name, to clear the moons/spacecraft behind it */
+  .card-collapse {
+    display: block; position: absolute; top: 8px; right: 8px; z-index: 1;
+    background: none; border: none; color: #9FB0C0; font-size: 18px; line-height: 1;
+    cursor: pointer; padding: 2px 8px;
+  }
+  .body-card.collapsed { overflow: visible; }
+  .body-card.collapsed h2 { margin-bottom: 2px; }
+  .body-card.collapsed .readout,
+  .body-card.collapsed .moon-fact,
+  .body-card.collapsed #sys-earth-actions,
+  .body-card.collapsed .action { display: none; }
 
   /* the "what's in orbit" reference legend collides with the panels and the
      top controls on a narrow screen — hide it here */

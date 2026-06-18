@@ -780,6 +780,7 @@ function selectBody(name) {
   moonBtn.hidden = !MOONS[name];
   if (MOONS[name]) moonBtn.textContent = moonOrbitsOn ? 'Hide moon orbits' : 'Show moon orbits';
   $('system-panel').hidden = false;
+  expandCard('system-panel');
   // Frame the body so its whole entourage — moons AND spacecraft — fits, looking
   // down at a steeper angle so they ring the planet instead of hiding edge-on.
   const r = bodyRadius(BODIES[name].radius);
@@ -815,6 +816,15 @@ function deselect() {
   $('probe-panel').hidden = true;
 }
 
+// Reset a body card to its expanded state (a fresh selection always shows the
+// details; the mobile collapse toggle then hides them to reveal the scene).
+function expandCard(id) {
+  const card = $(id);
+  card.classList.remove('collapsed');
+  const btn = card.querySelector('.card-collapse');
+  if (btn) { btn.textContent = '▾'; btn.setAttribute('aria-label', 'Collapse details'); }
+}
+
 // Click a moon: show its facts panel, fly in close, and pivot the camera on it
 // so you can orbit/zoom the little world the way you do a planet.
 function selectMoon(name) {
@@ -827,6 +837,7 @@ function selectMoon(name) {
   $('probe-panel').hidden = true;
   fillMoonPanel(name, info);
   $('moon-panel').hidden = false;
+  expandCard('moon-panel');
 
   const rr = moonRadius(name);
   releaseAnchor();
@@ -866,6 +877,7 @@ function selectProbe(name) {
   $('moon-panel').hidden = true;
   fillProbePanel(name, info);
   $('probe-panel').hidden = false;
+  expandCard('probe-panel');
 
   const planetR = bodyRadius(BODIES[info.planet].radius);
   releaseAnchor();
@@ -1210,6 +1222,15 @@ export function initSystemView(earthViewer, moonView) {
   $('sys-moon-orbits').addEventListener('click', () => {
     setMoonOrbits(!moonOrbitsOn);
     $('sys-moon-orbits').textContent = moonOrbitsOn ? 'Hide moon orbits' : 'Show moon orbits';
+  });
+
+  // Collapse / expand a body card (mobile) to clear the moons + craft behind it.
+  document.querySelectorAll('.card-collapse').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const collapsed = btn.closest('.body-card').classList.toggle('collapsed');
+      btn.textContent = collapsed ? '▸' : '▾';
+      btn.setAttribute('aria-label', collapsed ? 'Show details' : 'Collapse details');
+    });
   });
 
   // Spacecraft timeline — gate the manmade orbiters by arrival year.
