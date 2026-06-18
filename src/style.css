@@ -13,6 +13,11 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute must always win — several panels set display:flex/grid,
+   whose id/class selectors would otherwise beat the UA [hidden] rule and leave
+   the element on screen (e.g. the True-scale toggle leaking into the Earth view). */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0; height: 100%; overflow: hidden;
   background: #05070C; color: #C9D4E3;
@@ -456,4 +461,42 @@ body.body-mode #probe-timeline { display: none; }
   #legend { display: none; }
   #infopanel { left: 12px; right: 12px; width: auto; top: auto; bottom: 64px; max-height: 45vh; }
   #search { width: 160px; }
+}
+
+/* ---------- phones: keep the overlay panels from colliding ---------- */
+@media (max-width: 600px) {
+  /* compact top bar */
+  .brand-sub { display: none; }
+  .brand-mark { font-size: 13px; letter-spacing: 0.18em; }
+  #topbar { padding: 8px 10px; gap: 6px; }
+  #system-toggle, #moon-toggle { padding: 6px 9px; font-size: 11px; }
+  #search { width: 38vw; max-width: 150px; }
+
+  /* body / moon / spacecraft panels: fit the screen and scroll if tall */
+  #system-panel, #moon-panel, #probe-panel {
+    width: auto; left: 12px; right: 12px; max-width: 340px;
+    top: 56px; max-height: calc(100dvh - 132px); overflow-y: auto;
+  }
+  #system-panel .action, #moon-panel .action { padding: 8px 12px; font-size: 12px; }
+
+  /* the "what's in orbit" reference legend collides with the panels and the
+     top controls on a narrow screen — hide it here */
+  #system-legend { display: none; }
+
+  /* exit (top-left) and True-scale (top-right) to opposite corners so they
+     never overlap each other or a panel */
+  #system-exit { padding: 6px 9px; font-size: 11px; }
+  #system-scale { left: auto; right: 12px; padding: 6px 9px; font-size: 11px; }
+
+  /* full-width chrome at the foot */
+  #probe-timeline { left: 8px; right: 8px; }
+  #system-attr, #body-attr { left: 8px; right: 8px; font-size: 9px; }
+}
+
+/* ---------- short / landscape viewports: let any tall panel scroll ---------- */
+@media (max-height: 520px) {
+  /* panels start ≤64px from the top, so cap below that and let them scroll */
+  #legend, #system-panel, #moon-panel, #probe-panel, #system-legend {
+    max-height: calc(100dvh - 76px); overflow-y: auto;
+  }
 }
