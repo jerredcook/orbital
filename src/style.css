@@ -242,6 +242,16 @@ body.body-mode #probe-timeline { display: none; }
 }
 #topbar > * { pointer-events: auto; }
 
+/* The ☰ display-options button + its slide-in drawer are mobile-only — on
+   desktop the legend is always on screen, so both stay hidden. */
+#legend-toggle {
+  display: none; background: rgba(13,19,29,0.9); border: 1px solid #1E2A3A;
+  border-radius: 4px; color: #C9D4E3; font-size: 16px; line-height: 1;
+  padding: 6px 9px; cursor: pointer;
+}
+#legend-toggle:hover { border-color: #FFB454; color: #FFB454; }
+#legend-scrim { display: none; position: fixed; inset: 0; background: rgba(2,4,10,0.5); }
+
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .brand-mark {
   font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
@@ -458,7 +468,22 @@ body.body-mode #probe-timeline { display: none; }
 }
 
 @media (max-width: 760px) {
-  #legend { display: none; }
+  #legend-toggle { display: inline-flex; align-items: center; }
+  .tb-label { display: none; }                 /* icon-only System / Moon buttons */
+  #topbar { z-index: 31; }                      /* keep the bar (and ☰) above the drawer + scrim */
+
+  /* the display-options legend becomes a slide-in drawer */
+  #legend {
+    top: 50px; left: 0; bottom: 0; width: min(86vw, 280px); max-height: calc(100dvh - 50px);
+    border-radius: 0; border-left: none; border-top: none; overflow-y: auto;
+    transform: translateX(-105%); transition: transform 0.22s ease; z-index: 30;
+  }
+  body.legend-open #legend { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.55); }
+  #legend-scrim { z-index: 29; }
+  body.legend-open #legend-scrim { display: block; }
+  /* no legend in the system / moon scenes, so no button either */
+  body.system-mode #legend-toggle, body.moon-mode #legend-toggle { display: none; }
+
   #infopanel { left: 12px; right: 12px; width: auto; top: auto; bottom: 64px; max-height: 45vh; }
   #search { width: 160px; }
 }

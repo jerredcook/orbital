@@ -84,18 +84,20 @@
   </aside>
 
   <header id="topbar">
+    <button id="legend-toggle" title="Display options" aria-label="Display options">☰</button>
     <div class="brand">
       <span class="brand-mark">ORBITAL</span>
       <span class="brand-sub">live catalog</span>
     </div>
-    <button id="system-toggle" title="Fly out to the whole solar system">☉ System</button>
-    <button id="moon-toggle" title="Fly to the Moon">◐ Moon</button>
+    <button id="system-toggle" title="Fly out to the whole solar system">☉ <span class="tb-label">System</span></button>
+    <button id="moon-toggle" title="Fly to the Moon">◐ <span class="tb-label">Moon</span></button>
     <div class="topbar-right">
       <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" />
       <div id="search-results" hidden></div>
     </div>
   </header>
 
+  <div id="legend-scrim"></div>
   <aside id="legend" aria-label="Display options">
     <div class="legend-title">Orbit regimes</div>
     <label class="legend-row"><input type="checkbox" data-cat="LEO" checked /><span class="swatch leo"></span>LEO <span class="count" id="count-LEO"></span></label>

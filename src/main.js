@@ -572,6 +572,15 @@ document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
   });
 });
 
+// Mobile: the display-options legend is a ☰-toggled slide-in drawer.  Tapping the
+// scrim closes it, and leaving the Earth view (System / Moon) closes it too.
+const setLegendOpen = (open) => document.body.classList.toggle('legend-open', open);
+$('legend-toggle').addEventListener('click', () =>
+  setLegendOpen(!document.body.classList.contains('legend-open')));
+$('legend-scrim').addEventListener('click', () => setLegendOpen(false));
+$('system-toggle').addEventListener('click', () => setLegendOpen(false));
+$('moon-toggle').addEventListener('click', () => setLegendOpen(false));
+
 // ------------------------------------------------------------ launch timeline ----
 // Watch the tracked population accumulate by launch year, Sputnik-era → today.
 // A satellite shows when its category is on AND (timeline off, or it was launched
