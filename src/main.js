@@ -87,6 +87,7 @@ let swarm = null;          // SatSwarm, one point per catalog index
 let selected = null;       // { index, satrec, highlight }
 let following = false;
 let autoFollowHoldUntil = 0;   // suppress auto-follow during camera flights
+let autoFollowDisabled = false; // set when the user manually stops following
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
 let catTotals = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };   // full counts, to restore after the timeline
@@ -423,6 +424,7 @@ function clearSelection() {
   viewer.trackedEntity = undefined;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
+  autoFollowDisabled = false;   // a fresh selection auto-follows normally again
   document.body.classList.remove('following');
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
@@ -467,9 +469,13 @@ viewer.clock.onTick.addEventListener((clock) => {
 
   // Inside model range a free camera loses a 7.6 km/s satellite in seconds —
   // lock on automatically so zooming in "just works".  Release is manual
-  // (Stop following / Esc / deselect).
-  if (!following && Date.now() > autoFollowHoldUntil
-      && Cartesian3.distance(viewer.camera.positionWC, pos) < MODEL_SWAP_M * 0.85) {
+  // (Stop following / Esc / deselect).  A manual stop disables auto-follow so
+  // it doesn't immediately re-lock; it re-arms once you pull back out of model
+  // range, so a later zoom-in locks on again.
+  const camDist = Cartesian3.distance(viewer.camera.positionWC, pos);
+  if (autoFollowDisabled && camDist > MODEL_SWAP_M) autoFollowDisabled = false;
+  if (!following && !autoFollowDisabled && Date.now() > autoFollowHoldUntil
+      && camDist < MODEL_SWAP_M * 0.85) {
     engageFollow();
   }
 
@@ -550,6 +556,7 @@ function engageFollow() {
   viewer.trackedEntity = selected.modelEntity;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = 20;
   following = true;
+  autoFollowDisabled = false;
   document.body.classList.add('following');   // mobile: collapse the panel off the centred sat
   $('info-track').classList.add('active');
   $('info-track').textContent = 'Stop following';
@@ -559,6 +566,7 @@ function releaseFollow() {
   viewer.trackedEntity = undefined;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
+  autoFollowDisabled = true;   // don't let the per-tick auto-follow re-lock immediately
   document.body.classList.remove('following');
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
