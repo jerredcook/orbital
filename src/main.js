@@ -423,6 +423,7 @@ function clearSelection() {
   viewer.trackedEntity = undefined;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
+  document.body.classList.remove('following');
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
   selected = null;
@@ -549,6 +550,7 @@ function engageFollow() {
   viewer.trackedEntity = selected.modelEntity;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = 20;
   following = true;
+  document.body.classList.add('following');   // mobile: collapse the panel off the centred sat
   $('info-track').classList.add('active');
   $('info-track').textContent = 'Stop following';
 }
@@ -557,6 +559,7 @@ function releaseFollow() {
   viewer.trackedEntity = undefined;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
+  document.body.classList.remove('following');
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
 }

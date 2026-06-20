@@ -495,6 +495,15 @@ body.body-mode #probe-timeline { display: none; }
 
   #infopanel { left: 12px; right: 12px; width: auto; top: auto; bottom: 64px; max-height: 45vh; }
   #search { width: 160px; }
+
+  /* While following, Cesium parks the satellite at screen centre — but the
+     bottom-anchored info panel sits right over that spot and hides the very
+     thing you're tracking.  Collapse it to a compact strip (name · live
+     altitude/speed · Stop following) so the satellite stays in view.  The full
+     readout returns the moment you stop following. */
+  body.following #infopanel .readout > div:not(.live) { display: none; }
+  body.following #info-screen,
+  body.following #screen-results { display: none; }
 }
 
 /* ---------- phones: keep the overlay panels from colliding ---------- */
