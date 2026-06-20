@@ -64,7 +64,7 @@ function pngEncode(w, h, rgba) {
 
 // ------------------------------------------------------------- textures ----
 
-const TEX_SIZE = 256;
+const TEX_SIZE = 512;
 
 // Seamless multi-octave value noise on a wrapping grid.
 function makeFbm(seed, gridN = 8) {
@@ -110,14 +110,25 @@ function genTexture(fn) {
   return pngEncode(w, h, rgba);
 }
 
-// Gold multi-layer insulation: crinkled foil with sharp creases.
+// Gold multi-layer insulation: shiny crinkled foil.  Real MLI is a reflective
+// gold sheet that puckers into a web of folds, each crease throwing a bright
+// specular glint — not a flat brown blanket.  Broad slow shading sets the lay
+// of the sheet; sharp ridged noise carves the fold lines and spikes their
+// brightness; a fine octave adds the crinkle.  Highlights desaturate toward
+// pale gold the way thin metal does.
 const foilPng = (() => {
-  const fbm = makeFbm(1234), ridge = makeFbm(5678, 16);
+  const lay = makeFbm(1234, 6);
+  const folds = makeFbm(5678, 22);
+  const crinkle = makeFbm(4321, 44);
   return genTexture((x, y, u, v) => {
-    const n = fbm(u * 2, v * 2);
-    const crease = Math.abs(2 * ridge(u * 3, v * 3) - 1);
-    const val = 0.72 + 0.5 * (n - 0.5) - 0.28 * crease;
-    return [228 * val, 172 * val, 84 * val];
+    const shade = 0.5 + 0.95 * (lay(u * 1.7, v * 1.7) - 0.5);    // sheet undulation
+    const fr = Math.abs(2 * folds(u * 5.2, v * 5.2) - 1);        // 0 along a fold
+    const ridge = Math.pow(1 - fr, 5);                           // bright glint at folds
+    const valley = Math.pow(fr, 2.2);                            // shadowed flats between folds
+    const fine = 0.16 * (crinkle(u * 11, v * 11) - 0.5);
+    let l = 0.5 + 0.5 * shade + 0.85 * ridge - 0.2 * valley + fine;
+    l = Math.max(0.16, Math.min(1.5, l));
+    return [205 * l + 56 * ridge, 158 * l + 44 * ridge, 70 * l + 24 * ridge];
   });
 })();
 
@@ -183,8 +194,8 @@ const TEX_INDEX = Object.fromEntries(TEXTURES.map((t, i) => [t.name, i]));
 // the brushed-metal texture serve both bright alu and dark structure).
 
 const MATERIALS = [
-  { name: 'mli-foil', tex: 'foil', color: [1, 1, 1], metallic: 1.0, roughness: 0.38 },
-  { name: 'alu', tex: 'metal', color: [1, 1, 1], metallic: 1.0, roughness: 0.42 },
+  { name: 'mli-foil', tex: 'foil', color: [1, 1, 1], metallic: 0.55, roughness: 0.3 },
+  { name: 'alu', tex: 'metal', color: [1, 1, 1], metallic: 0.8, roughness: 0.38 },
   { name: 'solar-cell', tex: 'solar', color: [1, 1, 1], metallic: 0.45, roughness: 0.24, emissive: [0.012, 0.02, 0.05] },
   { name: 'radiator', tex: 'white', color: [1, 1, 1], metallic: 0.06, roughness: 0.6 },
   { name: 'dark-metal', tex: 'metal', color: [0.3, 0.31, 0.34], metallic: 0.95, roughness: 0.55 },
@@ -346,21 +357,30 @@ function writeGlb(path, builder) {
     return json.bufferViews.length - 1;
   };
 
-  for (const t of TEXTURES) {
-    json.images.push({ bufferView: addView(t.png), mimeType: 'image/png', name: t.name });
+  // Embed only the materials this model actually uses, and only the textures
+  // those materials reference — each GLB otherwise carries all five 512² maps
+  // (≈0.6 MB of dead weight) whether or not it uses them.
+  const usedMats = [...builder.prims.keys()];
+  const texLocal = {};
+  for (const name of [...new Set(usedMats.map((i) => MATERIALS[i].tex).filter(Boolean))]) {
+    json.images.push({ bufferView: addView(TEXTURES[TEX_INDEX[name]].png), mimeType: 'image/png', name });
     json.textures.push({ source: json.images.length - 1, sampler: 0 });
+    texLocal[name] = json.textures.length - 1;
   }
-  for (const m of MATERIALS) {
+  const matLocal = {};
+  for (const gi of usedMats) {
+    const m = MATERIALS[gi];
     json.materials.push({
       name: m.name,
       pbrMetallicRoughness: {
         baseColorFactor: [...m.color, 1],
-        ...(m.tex != null ? { baseColorTexture: { index: TEX_INDEX[m.tex] } } : {}),
+        ...(m.tex != null ? { baseColorTexture: { index: texLocal[m.tex] } } : {}),
         metallicFactor: m.metallic,
         roughnessFactor: m.roughness,
       },
       ...(m.emissive ? { emissiveFactor: m.emissive } : {}),
     });
+    matLocal[gi] = json.materials.length - 1;
   }
 
   for (const [mat, p] of builder.prims) {
@@ -382,7 +402,7 @@ function writeGlb(path, builder) {
         TEXCOORD_0: acc(addView(Buffer.from(uv.buffer), 34962), 5126, uv.length / 2, 'VEC2'),
       },
       indices: acc(addView(Buffer.from(idx.buffer), 34963), idx instanceof Uint32Array ? 5125 : 5123, idx.length, 'SCALAR'),
-      material: mat,
+      material: matLocal[mat],
     });
   }
 
