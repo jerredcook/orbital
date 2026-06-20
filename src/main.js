@@ -61,8 +61,18 @@ const moonView = initMoonView(viewer);
 
 // The "☉ System" toggle flies out to a heliocentric solar-system view (globe
 // off, planets on real Keplerian orbits); see src/solarsystem.js.  It can hand
-// off into the Moon globe, so it gets a reference to the Moon view.
-const systemView = initSystemView(viewer, moonView);
+// off into the Moon globe, so it gets a reference to the Moon view.  The third
+// argument re-centres Earth when you come back: the Earth viewer's render loop
+// is idled while the system view is up, so it never picks up viewport changes
+// (mobile chrome show/hide) or sheds a leftover follow-lock — leaving Earth
+// off-centre and un-recentreable.  Resize, drop any selection, and fly home.
+function returnToEarthView() {
+  clearSelection();
+  $('infopanel').hidden = true;
+  viewer.resize();
+  viewer.camera.flyHome(1.0);
+}
+const systemView = initSystemView(viewer, moonView, returnToEarthView);
 
 // The whole catalog renders through one GPU point-cloud primitive; this
 // little collection only ever holds the enlarged selection highlight.

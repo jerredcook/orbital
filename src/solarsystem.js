@@ -58,6 +58,7 @@ const skyRadius = () => Math.min(systemExtent() * 10, 3.0e13);
 let viewer = null;          // created lazily on first open
 let visible = false;
 let earthClock = null;      // the shared source-of-truth clock (Earth viewer's)
+let onReturnToEarth = null; // main.js hook to re-centre Earth when we exit
 const entities = {};        // body name -> marker/label Entity
 const moonInfo = {};        // moon name -> { planet, entity, realR, periodDays, facts }
 const probeInfo = {};       // spacecraft name -> { planet, entity, periodDays, inclDeg, arrival, end, deorbited }
@@ -1076,7 +1077,10 @@ function show(earthViewer) {
   viewer.resize();
 }
 
-function hide(earthViewer) {
+// recenter: re-frame the Earth viewer on return.  Suppressed for the Moon
+// hand-off, where the Earth scene is only a transient stop on the way to the
+// lunar globe and re-centring it would be wasted (and briefly visible) motion.
+function hide(earthViewer, recenter = true) {
   visible = false;
   deselect();
   $('systemContainer').hidden = true;
@@ -1089,6 +1093,7 @@ function hide(earthViewer) {
   $('system-toggle').classList.remove('active');
   if (viewer) viewer.useDefaultRenderLoop = false;
   earthViewer.useDefaultRenderLoop = true;
+  if (recenter && onReturnToEarth) onReturnToEarth();
 }
 
 // The Earth viewer's clock, captured at init so createViewer() can wire the
@@ -1186,8 +1191,9 @@ function buildFamilyLegend() {
 
 // ------------------------------------------------------------------- init ----
 
-export function initSystemView(earthViewer, moonView) {
+export function initSystemView(earthViewer, moonView, onReturn) {
   pendingClock = earthViewer.clock;
+  onReturnToEarth = onReturn;
 
   $('system-toggle').addEventListener('click', () => {
     if (visible) hide(earthViewer);
@@ -1245,7 +1251,7 @@ export function initSystemView(earthViewer, moonView) {
   // "Enter Earth" → back to the satellite tracker.  "Go to the Moon" → exit to
   // Earth first (its loop must be live), then open the lunar globe.
   $('sys-enter-earth').addEventListener('click', () => hide(earthViewer));
-  $('sys-goto-moon').addEventListener('click', () => { hide(earthViewer); moonView.show(); });
+  $('sys-goto-moon').addEventListener('click', () => { hide(earthViewer, false); moonView.show(); });
 
   // Every other planet → descend onto its own globe (Mars/Mercury via Treks
   // imagery, the rest via their local map).
