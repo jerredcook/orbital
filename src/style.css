@@ -499,9 +499,17 @@ body.body-mode #probe-timeline { display: none; }
   /* While following, Cesium parks the satellite at screen centre — but the
      bottom-anchored info panel sits right over that spot and hides the very
      thing you're tracking.  Collapse it to a compact strip (name · live
-     altitude/speed · Stop following) so the satellite stays in view.  The full
-     readout returns the moment you stop following. */
+     altitude/speed · Stop following) pinned low, so the satellite stays in
+     view.  The full readout returns the moment you stop following. */
+  body.following #infopanel {
+    top: auto; max-height: none; padding: 10px 14px 12px;
+  }
+  body.following #info-regime { display: none; }
+  body.following #infopanel h2 { margin: 0 0 6px; font-size: 15px; }
+  body.following #info-close { top: 6px; }
   body.following #infopanel .readout > div:not(.live) { display: none; }
+  body.following #infopanel .readout > div.live { padding: 3px 0; border-bottom: none; }
+  body.following #info-track { margin-top: 8px; padding: 7px; }
   body.following #info-screen,
   body.following #screen-results { display: none; }
 }
