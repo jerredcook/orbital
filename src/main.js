@@ -28,6 +28,7 @@ const CAT_COLORS = {
 };
 const SELECT_COLOR = Color.fromCssColorString('#FFB454');
 const CONJ_COLOR = Color.fromCssColorString('#FF4D5E');
+const CAT_CSS = Object.fromEntries(Object.entries(CAT_COLORS).map(([k, v]) => [k, v.toCssColorString()]));
 
 // Esri World Imagery: global high-resolution satellite imagery, street-level
 // (~0.3 m/px) in populated areas, served keylessly with attribution.  Swap in
@@ -126,6 +127,7 @@ worker.onmessage = (e) => {
     lastBuf = msg.buf;
     swarm?.updatePositions(msg.buf);
     renderConjunctions(msg.pairs ?? []);
+    renderSky();
   }
 };
 
@@ -1063,9 +1065,93 @@ function drawStation() {
   });
 }
 
+// ------------------------------------------------------ overhead sky chart ----
+// A live polar plot of everything currently above the station: zenith at the
+// centre, the horizon at the rim, azimuth around (N up).  Fed straight off the
+// propagator's ECF buffer each tick, projected through the station's ENU frame.
+const sky = { canvas: null, ctx: null, obs: null, plotted: [] };
+
+// Precompute the observer's ECF position and east/north/up basis (geodetic) so
+// each tick is just a dot product per satellite.
+function prepStation() {
+  if (!station) { sky.obs = null; return; }
+  const latR = station.lat * DEG2RAD, lonR = station.lon * DEG2RAD;
+  const o = Cartesian3.fromDegrees(station.lon, station.lat, 0);
+  const sLa = Math.sin(latR), cLa = Math.cos(latR), sLo = Math.sin(lonR), cLo = Math.cos(lonR);
+  sky.obs = {
+    ox: o.x, oy: o.y, oz: o.z,
+    ex: -sLo, ey: cLo, ez: 0,                        // east
+    nx: -sLa * cLo, ny: -sLa * sLo, nz: cLa,         // north
+    ux: cLa * cLo, uy: cLa * sLo, uz: sLa,           // up (zenith)
+  };
+}
+
+function renderSky() {
+  const panel = $('sky-now');
+  if (!sky.ctx || panel.hidden || !sky.obs || !lastBuf) return;
+  const ctx = sky.ctx, W = sky.canvas.width, H = sky.canvas.height;
+  const cx = W / 2, cy = H / 2, R = Math.min(cx, cy) - 13 * (W / 240);
+  const s = W / 240;   // scale factor vs the 240-unit design
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(9,14,23,0.9)';
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,140,165,0.30)'; ctx.lineWidth = s;
+  for (const el of [0, 30, 60]) { ctx.beginPath(); ctx.arc(cx, cy, (1 - el / 90) * R, 0, 7); ctx.stroke(); }
+  ctx.fillStyle = '#8FA0B4'; ctx.font = `${11 * s}px ui-monospace, monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const [lbl, az] of [['N', 0], ['E', 90], ['S', 180], ['W', 270]]) {
+    const a = az * DEG2RAD;
+    ctx.fillText(lbl, cx + (R + 8 * s) * Math.sin(a), cy - (R + 8 * s) * Math.cos(a));
+  }
+  const o = sky.obs, minEl = Number($('pass-minel').value) || 10;
+  sky.plotted = [];
+  let count = 0;
+  for (let i = 0, n = catalog.length; i < n; i++) {
+    if (!catVisible[catOf(catalog[i])]) continue;
+    const px = lastBuf[i * 3], py = lastBuf[i * 3 + 1], pz = lastBuf[i * 3 + 2];
+    if (px === 0 && py === 0 && pz === 0) continue;
+    const dx = px - o.ox, dy = py - o.oy, dz = pz - o.oz;
+    const u = dx * o.ux + dy * o.uy + dz * o.uz;
+    if (u <= 0) continue;                              // below horizon — cheap reject
+    const e = dx * o.ex + dy * o.ey + dz * o.ez;
+    const nn = dx * o.nx + dy * o.ny + dz * o.nz;
+    const elDeg = Math.atan2(u, Math.hypot(e, nn)) * 180 / Math.PI;
+    if (elDeg < minEl) continue;
+    const az = Math.atan2(e, nn), r = (1 - elDeg / 90) * R;
+    const x = cx + r * Math.sin(az), y = cy - r * Math.cos(az);
+    const selHere = selected && selected.index === i;
+    ctx.fillStyle = selHere ? '#FFB454' : CAT_CSS[catOf(catalog[i])];
+    ctx.beginPath(); ctx.arc(x, y, (selHere ? 4 : 2) * s, 0, 7); ctx.fill();
+    if (selHere) { ctx.strokeStyle = '#fff'; ctx.lineWidth = s; ctx.stroke(); }
+    sky.plotted.push({ i, x, y });
+    count++;
+  }
+  $('sky-count').textContent = count ? `${count} above ${minEl}°` : `nothing above ${minEl}°`;
+}
+
+function initSkyChart() {
+  sky.canvas = $('sky-canvas');
+  if (!sky.canvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  sky.canvas.width = sky.canvas.height = Math.round(240 * dpr);
+  sky.ctx = sky.canvas.getContext('2d');
+  sky.canvas.addEventListener('click', (ev) => {
+    const rect = sky.canvas.getBoundingClientRect();
+    const mx = (ev.clientX - rect.left) * (sky.canvas.width / rect.width);
+    const my = (ev.clientY - rect.top) * (sky.canvas.height / rect.height);
+    const hit = 13 * (sky.canvas.width / 240);
+    let best = null, bestD = hit * hit;
+    for (const p of sky.plotted) { const d = (p.x - mx) ** 2 + (p.y - my) ** 2; if (d < bestD) { bestD = d; best = p; } }
+    if (best) { selectByIndex(best.i); flyToSat(best.i); setLegendOpen(false); }
+  });
+}
+initSkyChart();
+
 function placeStation(lat, lon) {
   station = { lat, lon };
   try { localStorage.setItem(PASS_STORE_KEY, JSON.stringify(station)); } catch { /* ignore */ }
+  prepStation();
+  $('sky-now').hidden = false;
   drawStation();
   startPasses();
   // On a phone the pass list lives in the ☰ drawer, which we closed to free the
@@ -1238,7 +1324,7 @@ passesWorker.onmessage = (e) => {
 $('toggle-station').addEventListener('change', (e) => {
   if (e.target.checked) {
     $('pass-controls').hidden = false;
-    if (station) { drawStation(); startPasses(); }
+    if (station) { prepStation(); $('sky-now').hidden = false; drawStation(); startPasses(); }
     else updatePassStatus('Use your location, or tap the map, to set a ground station');
   } else {
     stationPlacing = false;
@@ -1246,6 +1332,7 @@ $('toggle-station').addEventListener('change', (e) => {
     stationPoints.removeAll();
     stationLabels.removeAll();
     $('pass-controls').hidden = true;
+    $('sky-now').hidden = true;
     $('pass-list').innerHTML = '';
     $('pass-status').hidden = true;
     $('pass-count').textContent = '—';
@@ -1387,4 +1474,5 @@ window.__orbital = {
   get catalog() { return catalog; },
   get swarm() { return swarm; },
   get selected() { return selected; },
+  get skyPlotted() { return sky.plotted; },   // debug: dots in the overhead chart
 };
