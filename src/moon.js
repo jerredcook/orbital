@@ -14,6 +14,7 @@ import {
   UrlTemplateImageryProvider, EllipsoidTerrainProvider, Credit, Cartesian3,
 } from 'cesium';
 import { SURFACE, addSurfaceMarkers } from './surface.js';
+import { writeHash } from './deeplink.js';
 
 // LRO Wide Angle Camera global mosaic, 303 px/deg (~100 m/px), served
 // keylessly by NASA's Solar System Treks as a plain equirectangular tile pyramid
@@ -89,6 +90,7 @@ function show(earthViewer) {
   earthViewer.useDefaultRenderLoop = false;
   moonViewer.useDefaultRenderLoop = true;
   moonViewer.resize();
+  writeHash({ luna: true });
 }
 
 function hide(earthViewer) {
@@ -100,6 +102,7 @@ function hide(earthViewer) {
 
   if (moonViewer) moonViewer.useDefaultRenderLoop = false;
   earthViewer.useDefaultRenderLoop = true;
+  writeHash(null);
 }
 
 // Wire the topbar toggle, the in-view exit button, and Esc-to-leave.

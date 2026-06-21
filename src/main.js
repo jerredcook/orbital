@@ -14,6 +14,7 @@ import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
 import { initSystemView } from './solarsystem.js';
+import { writeHash, readHash } from './deeplink.js';
 
 // ---------------------------------------------------------------- scene ----
 
@@ -187,6 +188,7 @@ async function boot() {
     const list = await loadCatalog(status);
     diffAndToast(list);
     applyCatalog(list);
+    applyDeepLink();
   } catch (err) {
     status('catalog fetch failed — see console');
     console.error(err);
@@ -422,6 +424,7 @@ function selectByIndex(index) {
   drawOrbitTrack(satrec);
   fillInfoPanel(sat);
   $('infopanel').hidden = false;
+  writeHash({ sat: sat.norad });
 }
 
 function clearSelection() {
@@ -439,6 +442,13 @@ function clearSelection() {
   $('info-track').classList.remove('active');
   $('info-track').textContent = 'Follow this satellite';
   selected = null;
+  // Only reached when a real selection was cleared (the guard above returns
+  // early otherwise), so this never wipes a deep-link hash on a fresh boot.
+  // While the system / Moon views are up they own the hash — don't clobber it
+  // (hide() drops the body class before it calls back here, so returning to
+  // Earth still clears the hash as it should).
+  const m = document.body.classList;
+  if (!m.contains('system-mode') && !m.contains('moon-mode')) writeHash(null);
 }
 
 // Closed-ellipse orbit track: sample one full period in ECI, project to the
@@ -618,7 +628,23 @@ $('help-toggle').addEventListener('click', () => { welcome.hidden = false; });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !welcome.hidden) { e.stopPropagation(); closeWelcome(); }
 }, true);
-try { if (!localStorage.getItem('orbital.welcomed')) welcome.hidden = false; } catch { welcome.hidden = false; }
+// First-timers see it — unless they followed a shared deep-link, which lands
+// them straight on the thing the sender pointed at (the flag stays unset, so
+// they still get the intro on a later visit to the bare page).
+try { if (!location.hash && !localStorage.getItem('orbital.welcomed')) welcome.hidden = false; }
+catch { if (!location.hash) welcome.hidden = false; }
+
+// "Copy link" buttons (in each detail panel): the address bar already tracks
+// the view via deeplink.js, so just hand over location.href.
+async function copyShareLink() {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    toast('Link copied — paste it to share this view', 3000);
+  } catch {
+    toast(`Share this link:<br><span class="toast-url">${location.href}</span>`, 8000);
+  }
+}
+document.querySelectorAll('.copy-link').forEach((b) => b.addEventListener('click', copyShareLink));
 
 // ------------------------------------------------------------ launch timeline ----
 // Watch the tracked population accumulate by launch year, Sputnik-era → today.
@@ -1119,20 +1145,41 @@ function renderPasses() {
   }
 }
 
+// Fly the camera out to frame a satellite from a comfortable standoff (without
+// locking on — auto-follow is held off so the flight isn't yanked short).
+function flyToSat(i) {
+  const pos = currentPosition(satellite.twoline2satrec(catalog[i].l1, catalog[i].l2));
+  if (!pos) return;
+  const range = Math.max(Cartesian3.magnitude(pos) * 0.12, 1.2e6);
+  const dest = Cartesian3.multiplyByScalar(
+    Cartesian3.normalize(pos, new Cartesian3()), Cartesian3.magnitude(pos) + range, new Cartesian3());
+  autoFollowHoldUntil = Date.now() + 3000;
+  viewer.camera.flyTo({ destination: dest, duration: 1.4 });
+}
+
 // Jump the clock to the pass's peak and fly to the satellite, so it's framed
 // high over the station; time then runs forward at 1× through the pass.
 function jumpToPass(p) {
   viewer.clock.currentTime = JulianDate.fromDate(new Date(p.peakMs));
   setRate(0);
   selectByIndex(p.i);
-  const pos = currentPosition(satellite.twoline2satrec(catalog[p.i].l1, catalog[p.i].l2));
-  if (pos) {
-    const range = Math.max(Cartesian3.magnitude(pos) * 0.12, 1.2e6);
-    const dest = Cartesian3.multiplyByScalar(
-      Cartesian3.normalize(pos, new Cartesian3()), Cartesian3.magnitude(pos) + range, new Cartesian3());
-    autoFollowHoldUntil = Date.now() + 3000;
-    viewer.camera.flyTo({ destination: dest, duration: 1.4 });
+  flyToSat(p.i);
+}
+
+// Restore the view named in the URL hash on first load (see deeplink.js).  Run
+// once the catalog is in so a #sat= id can be resolved to its current index.
+function applyDeepLink() {
+  const s = readHash();
+  if (!s) return;
+  if (s.sat != null) {
+    const i = catalog.findIndex((c) => String(c.norad) === s.sat);
+    if (i >= 0) { selectByIndex(i); flyToSat(i); }
+    return;
   }
+  if (s.luna) { moonView.show(); return; }
+  if (s.system) { systemView.show(); return; }
+  const name = s.body || s.moon || s.probe;
+  if (name) { systemView.show(); systemView.focus(name); }
 }
 
 passesWorker.onmessage = (e) => {

@@ -468,6 +468,17 @@ body.body-mode #probe-timeline { display: none; }
 .action:hover { background: rgba(255,180,84,0.12); }
 .action.active { background: #FFB454; color: #05070C; }
 
+/* Secondary "copy share link" button — quieter than .action so it reads as a
+   utility, not a primary call to action. */
+.copy-link {
+  margin-top: 8px; width: 100%; padding: 7px;
+  background: transparent; border: 1px solid #243348; border-radius: 4px;
+  color: #8FA0B4; font-family: ui-monospace, monospace; font-size: 11px;
+  letter-spacing: 0.04em; cursor: pointer;
+}
+.copy-link:hover { border-color: #3A4A60; color: #C9D4E3; }
+.toast-url { color: #FFB454; word-break: break-all; }
+
 /* ---------- toasts ---------- */
 #toasts {
   position: absolute; left: 50%; transform: translateX(-50%); bottom: 64px;
@@ -578,7 +589,8 @@ body.body-mode #probe-timeline { display: none; }
   .body-card.collapsed .readout,
   .body-card.collapsed .moon-fact,
   .body-card.collapsed #sys-earth-actions,
-  .body-card.collapsed .action { display: none; }
+  .body-card.collapsed .action,
+  .body-card.collapsed .copy-link { display: none; }
 
   /* the "what's in orbit" reference legend collides with the panels and the
      top controls on a narrow screen — hide it here */

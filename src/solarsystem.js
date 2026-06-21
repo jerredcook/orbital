@@ -35,6 +35,7 @@ import {
 } from './scale.js';
 import { createBelt, createTrojans, createFamilies, createHildas } from './belt.js';
 import { initBodyGlobes } from './bodyglobe.js';
+import { writeHash } from './deeplink.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
 const ROCKY = new Set(['Mercury', 'Venus', 'Mars']);
@@ -782,6 +783,7 @@ function selectBody(name) {
   if (MOONS[name]) moonBtn.textContent = moonOrbitsOn ? 'Hide moon orbits' : 'Show moon orbits';
   $('system-panel').hidden = false;
   expandCard('system-panel');
+  writeHash({ body: name });
   // Frame the body so its whole entourage — moons AND spacecraft — fits, looking
   // down at a steeper angle so they ring the planet instead of hiding edge-on.
   const r = bodyRadius(BODIES[name].radius);
@@ -826,6 +828,14 @@ function expandCard(id) {
   if (btn) { btn.textContent = '▾'; btn.setAttribute('aria-label', 'Collapse details'); }
 }
 
+// Route a name to the right selector — a moon, a spacecraft, or a planet/Sun.
+// Shared by the canvas click handler and the deep-link entry point.
+function focusByName(name) {
+  if (name && moonInfo[name]) selectMoon(name);
+  else if (name && probeInfo[name]) selectProbe(name);
+  else if (name && entities[name]) selectBody(name);
+}
+
 // Click a moon: show its facts panel, fly in close, and pivot the camera on it
 // so you can orbit/zoom the little world the way you do a planet.
 function selectMoon(name) {
@@ -839,6 +849,7 @@ function selectMoon(name) {
   fillMoonPanel(name, info);
   $('moon-panel').hidden = false;
   expandCard('moon-panel');
+  writeHash({ moon: name });
 
   const rr = moonRadius(name);
   releaseAnchor();
@@ -879,6 +890,7 @@ function selectProbe(name) {
   fillProbePanel(name, info);
   $('probe-panel').hidden = false;
   expandCard('probe-panel');
+  writeHash({ probe: name });
 
   const planetR = bodyRadius(BODIES[info.planet].radius);
   releaseAnchor();
@@ -1051,10 +1063,8 @@ function createViewer() {
     const picked = v.scene.pick(position, pickPad, pickPad);
     const id = picked && picked.id;
     const name = typeof id === 'string' ? id : (id && id.name);
-    if (name && moonInfo[name]) selectMoon(name);
-    else if (name && probeInfo[name]) selectProbe(name);
-    else if (name && entities[name]) selectBody(name);
-    else deselect();
+    if (name && (moonInfo[name] || probeInfo[name] || entities[name])) focusByName(name);
+    else { deselect(); writeHash({ system: true }); }
   }, ScreenSpaceEventType.LEFT_CLICK);
 
   return v;
@@ -1075,6 +1085,7 @@ function show(earthViewer) {
   earthViewer.useDefaultRenderLoop = false;
   viewer.useDefaultRenderLoop = true;
   viewer.resize();
+  writeHash({ system: true });   // a deep-link selection overwrites this in turn
 }
 
 // recenter: re-frame the Earth viewer on return.  Suppressed for the Moon
@@ -1269,6 +1280,7 @@ export function initSystemView(earthViewer, moonView, onReturn) {
 
   return {
     show: () => show(earthViewer), hide: () => hide(earthViewer),
+    focus: (name) => focusByName(name),      // deep-link entry: planet · moon · spacecraft
     get viewer() { return viewer; },
     select: (name) => selectBody(name),     // debug
     get bodies() { return entities; },        // debug
