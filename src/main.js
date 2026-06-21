@@ -606,6 +606,20 @@ $('legend-scrim').addEventListener('click', () => setLegendOpen(false));
 $('system-toggle').addEventListener('click', () => setLegendOpen(false));
 $('moon-toggle').addEventListener('click', () => setLegendOpen(false));
 
+// First-run welcome / how-to overlay — shown once, re-openable from the ? button.
+const welcome = $('welcome');
+const closeWelcome = () => {
+  welcome.hidden = true;
+  try { localStorage.setItem('orbital.welcomed', '1'); } catch { /* ignore */ }
+};
+$('welcome-go').addEventListener('click', closeWelcome);
+welcome.addEventListener('click', (e) => { if (e.target === welcome) closeWelcome(); });   // backdrop tap
+$('help-toggle').addEventListener('click', () => { welcome.hidden = false; });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !welcome.hidden) { e.stopPropagation(); closeWelcome(); }
+}, true);
+try { if (!localStorage.getItem('orbital.welcomed')) welcome.hidden = false; } catch { welcome.hidden = false; }
+
 // ------------------------------------------------------------ launch timeline ----
 // Watch the tracked population accumulate by launch year, Sputnik-era → today.
 // A satellite shows when its category is on AND (timeline off, or it was launched
