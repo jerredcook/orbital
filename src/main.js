@@ -646,6 +646,20 @@ async function copyShareLink() {
 }
 document.querySelectorAll('.copy-link').forEach((b) => b.addEventListener('click', copyShareLink));
 
+// Welcome quick-jump chips: one tap dismisses the intro and flies to a
+// showcase destination (and the deep-link write makes that URL shareable too).
+function destFromSpec(spec) {
+  if (spec === 'luna') return { luna: true };
+  if (spec === 'system') return { system: true };
+  const [k, v] = spec.split(':');
+  if (k === 'sat' || k === 'body' || k === 'moon' || k === 'probe') return { [k]: v };
+  return null;
+}
+document.querySelectorAll('.welcome-chip').forEach((chip) => chip.addEventListener('click', () => {
+  closeWelcome();
+  navigateTo(destFromSpec(chip.dataset.go));
+}));
+
 // ------------------------------------------------------------ launch timeline ----
 // Watch the tracked population accumulate by launch year, Sputnik-era → today.
 // A satellite shows when its category is on AND (timeline off, or it was launched
@@ -1166,14 +1180,16 @@ function jumpToPass(p) {
   flyToSat(p.i);
 }
 
-// Restore the view named in the URL hash on first load (see deeplink.js).  Run
-// once the catalog is in so a #sat= id can be resolved to its current index.
-function applyDeepLink() {
-  const s = readHash();
+// Navigate to a view described by a deep-link state object — shared by the
+// on-load hash restore (applyDeepLink) and the welcome overlay's quick-jump
+// chips.  A #sat= target needs the catalog; if it isn't in yet (a chip tapped
+// during boot), retry until it loads.
+function navigateTo(s) {
   if (!s) return;
   if (s.sat != null) {
-    const i = catalog.findIndex((c) => String(c.norad) === s.sat);
+    const i = catalog.findIndex((c) => String(c.norad) === String(s.sat));
     if (i >= 0) { selectByIndex(i); flyToSat(i); }
+    else if (!catalog.length) setTimeout(() => navigateTo(s), 400);
     return;
   }
   if (s.luna) { moonView.show(); return; }
@@ -1181,6 +1197,9 @@ function applyDeepLink() {
   const name = s.body || s.moon || s.probe;
   if (name) { systemView.show(); systemView.focus(name); }
 }
+
+// Restore the view named in the URL hash on first load (see deeplink.js).
+function applyDeepLink() { navigateTo(readHash()); }
 
 passesWorker.onmessage = (e) => {
   const msg = e.data;

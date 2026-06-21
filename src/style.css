@@ -289,7 +289,18 @@ body.body-mode #probe-timeline { display: none; }
 .welcome-tips li { display: flex; gap: 13px; font-size: 13px; line-height: 1.5; color: #C9D4E3; }
 .welcome-tips li > span { font-size: 17px; flex: none; width: 22px; text-align: center; color: #FFB454; }
 .welcome-tips b { color: #E8EFF8; font-weight: 600; }
-.welcome-hint { margin: 20px 0 0; font-size: 11px; color: #6B7A8F; letter-spacing: 0.02em; }
+.welcome-jump { margin: 20px 0 0; }
+.welcome-jump-label {
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #6B7A8F;
+}
+.welcome-jump-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+.welcome-chip {
+  flex: 1 1 auto; padding: 9px 10px; cursor: pointer; white-space: nowrap;
+  background: rgba(255,180,84,0.08); border: 1px solid #3A4358; border-radius: 7px;
+  color: #E8EFF8; font-size: 12.5px;
+}
+.welcome-chip:hover { border-color: #FFB454; background: rgba(255,180,84,0.16); }
+.welcome-hint { margin: 16px 0 0; font-size: 11px; color: #6B7A8F; letter-spacing: 0.02em; }
 .welcome-go {
   margin-top: 16px; width: 100%; padding: 11px; cursor: pointer; border: none;
   border-radius: 7px; background: #FFB454; color: #0A0F18; font-weight: 600; font-size: 14px;
