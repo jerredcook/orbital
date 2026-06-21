@@ -91,6 +91,7 @@ const _moonHost = new Cartesian3();
 const _quat = new Quaternion();
 const _qSpin = new Quaternion();
 const _qTilt = new Quaternion();
+const _pom = new Matrix3();     // scratch basis for probe nadir-lock orientation
 const _dir = new Cartesian3();
 const _one = new Cartesian3(1, 1, 1);
 
@@ -515,6 +516,7 @@ function addProbe(planet, probe, idx) {
   const planetR = bodyRadius(BODIES[planet].radius);   // rendered radius — sizes the model + swap
   const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
+  const nx = sO * si, ny = -cO * si, nz = ci;          // orbit-plane normal (for nadir-lock)
   const entity = viewer.entities.add({
     name,
     position: new CallbackProperty((time, result) => {
@@ -528,6 +530,23 @@ function addProbe(planet, probe, idx) {
       result.y = _moonHost.y + r * (sO * ct + cO * ci * st);
       result.z = _moonHost.z + r * (si * st);
       return result;
+    }, false),
+    // Nadir-lock: the dish (+Y) points to space, the bus faces the planet, and
+    // the wings (±Z) lie along-track — so each probe holds a purposeful attitude
+    // and slowly turns to keep facing its world as it orbits.
+    orientation: new CallbackProperty((time, result) => {
+      const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
+      const th = (days / periodDays) * 2 * Math.PI + phase;
+      const ct = Math.cos(th), st = Math.sin(th);
+      let zx = cO * ct - sO * ci * st, zy = sO * ct + cO * ci * st, zz = si * st;   // zenith
+      const zl = Math.hypot(zx, zy, zz) || 1; zx /= zl; zy /= zl; zz /= zl;
+      let Zx = ny * zz - nz * zy, Zy = nz * zx - nx * zz, Zz = nx * zy - ny * zx;    // along-track
+      const Zl = Math.hypot(Zx, Zy, Zz) || 1; Zx /= Zl; Zy /= Zl; Zz /= Zl;
+      const Xx = zy * Zz - zz * Zy, Xy = zz * Zx - zx * Zz, Xz = zx * Zy - zy * Zx;  // completes frame
+      _pom[0] = Xx; _pom[1] = Xy; _pom[2] = Xz;
+      _pom[3] = zx; _pom[4] = zy; _pom[5] = zz;
+      _pom[6] = Zx; _pom[7] = Zy; _pom[8] = Zz;
+      return Quaternion.fromRotationMatrix(_pom, result);
     }, false),
     // A dot in the system overview; up close (after you fly to its planet) it
     // swaps for the little spacecraft model.  Swap range + model size scale
