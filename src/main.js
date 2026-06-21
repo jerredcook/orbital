@@ -1068,6 +1068,25 @@ function placeStation(lat, lon) {
   try { localStorage.setItem(PASS_STORE_KEY, JSON.stringify(station)); } catch { /* ignore */ }
   drawStation();
   startPasses();
+  // On a phone the pass list lives in the ☰ drawer, which we closed to free the
+  // globe for the tap — point them back to it.
+  if (window.matchMedia?.('(pointer: coarse)').matches) {
+    toast('Ground station set — reopen ☰ for upcoming passes', 5000);
+  }
+}
+
+// Arm "tap the globe to place a station" mode.  Closing the legend drawer is
+// the crux on mobile: it (and its scrim) sits over the globe, so without this
+// the placing tap just dismisses the menu.  The "click the map" prompt lives
+// inside that drawer too, so echo it as a toast that survives the close.
+function beginStationPlacing() {
+  stationPlacing = true;
+  $('pass-setloc').classList.add('active');
+  setLegendOpen(false);
+  updatePassStatus('click the map to place your station');
+  if (window.matchMedia?.('(pointer: coarse)').matches) {
+    toast('Tap the globe to drop your ground station', 6000);
+  }
 }
 
 function loadStation() {
@@ -1220,7 +1239,7 @@ $('toggle-station').addEventListener('change', (e) => {
   if (e.target.checked) {
     $('pass-controls').hidden = false;
     if (station) { drawStation(); startPasses(); }
-    else { stationPlacing = true; $('pass-setloc').classList.add('active'); updatePassStatus('click the map to place your station'); }
+    else beginStationPlacing();
   } else {
     stationPlacing = false;
     cancelPasses();
@@ -1235,9 +1254,8 @@ $('toggle-station').addEventListener('change', (e) => {
 });
 
 $('pass-setloc').addEventListener('click', () => {
-  stationPlacing = !stationPlacing;
-  $('pass-setloc').classList.toggle('active', stationPlacing);
-  if (stationPlacing) updatePassStatus('click the map to place your station');
+  if (stationPlacing) { stationPlacing = false; $('pass-setloc').classList.remove('active'); }
+  else beginStationPlacing();
 });
 
 $('pass-minel').addEventListener('change', () => {
