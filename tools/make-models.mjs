@@ -454,6 +454,36 @@ function writeGlb(path, builder) {
   writeGlb(join(OUT, 'generic-sat.glb'), b);
 }
 
+// Deep-space probe (Cassini / Juno / Galileo-style): a compact MLI bus under a
+// big high-gain dish, twin solar wings on ±Z and a long magnetometer boom on
+// -X.  Built so the silhouette still reads as a robotic explorer at icon size:
+// a bright dish over a body, flanked by wings, with one boom thrown out to a
+// side.
+{
+  const b = new Builder();
+  b.box(M['mli-foil'], [0, -0.1, 0], [1.2, 1.0, 1.2]);               // bus
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    b.box(M.alu, [sx * 0.58, -0.1, sz * 0.58], [0.05, 1.0, 0.05]);   // edge rails
+  }
+  b.cylinder(M.radiator, [0, 0.5, 0], 0.30, 1.45, 0, 0.42, 44);      // high-gain dish
+  b.cylinder(M['dark-metal'], [0, 0.42, 0], 0.34, 0.30, -0.04, 0.06, 44); // dish hub
+  b.cylinder(M.alu, [0, 0.9, 0], 0.045, 0.045, 0, 0.6, 10);          // feed mast
+  b.cylinder(M['dark-metal'], [0, 1.44, 0], 0.16, 0.05, 0, 0.16, 16); // feed horn
+  for (const side of [-1, 1]) {                                      // twin wings ±Z
+    b.box(M.alu, [0, -0.1, side * 0.7], [0.06, 0.06, 0.5]);          // yoke
+    for (let s = 0; s < 2; s++) {
+      const z = side * (1.5 + s * 1.7);
+      b.solarPanel([0, -0.1, z], [1.5, 1.55]);
+      b.box(M.alu, [0, -0.1, z - side * 0.85], [0.05, 0.05, 0.06]);  // hinge
+    }
+  }
+  b.box(M.alu, [-1.9, -0.1, 0], [2.8, 0.04, 0.04]);                  // magnetometer boom
+  b.box(M['dark-metal'], [-3.35, -0.1, 0], [0.16, 0.16, 0.16]);      // boom sensor
+  b.box(M['dark-metal'], [0.42, -0.7, 0.32], [0.34, 0.22, 0.34]);    // science instrument
+  b.cylinder(M.scorched, [0, -0.6, 0], 0.12, 0.18, -0.16, 0, 18);    // main engine bell
+  writeGlb(join(OUT, 'probe.glb'), b);
+}
+
 // Starlink v1.5-style: flat silver chassis, white phased-array face, four
 // dishes, single long cell-gridded wing with frame and diagonal strut.
 {

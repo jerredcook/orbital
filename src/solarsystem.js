@@ -24,7 +24,7 @@ import {
   HeadingPitchRange, ArcType, Primitive, GeometryInstance, EllipsoidGeometry,
   VertexFormat, MaterialAppearance, Material, Matrix3, SceneTransforms,
   Geometry, GeometryAttribute, ComponentDatatype, PrimitiveType, BlendingState,
-  Math as CMath,
+  DistanceDisplayCondition, Math as CMath,
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
@@ -504,6 +504,7 @@ const PROBE_FACTS = {
 const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');           // active
 const PROBE_COLOR_DERELICT = Color.fromCssColorString('#8AA7B2');  // dead but still orbiting
 const PROBE_COLOR_GONE = Color.fromCssColorString('#FF9A5A');      // reentering — fading out
+const PROBE_MODEL = `${import.meta.env.BASE_URL}models/probe.glb`; // shown up close
 const PROBE_FADE_YEARS = 1.5;                                      // fade span after a deorbit
 let probeList = [];          // { entity, year }
 let probeYear = null;        // null = show all (timeline off)
@@ -511,6 +512,7 @@ let probeYear = null;        // null = show all (timeline off)
 function addProbe(planet, probe, idx) {
   const [name, factor, periodDays, inclDeg, nodeDeg, arrival, end, deorbited] = probe;
   const phase = idx * 2.1;
+  const planetR = bodyRadius(BODIES[planet].radius);   // rendered radius — sizes the model + swap
   const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
   const entity = viewer.entities.add({
@@ -527,7 +529,20 @@ function addProbe(planet, probe, idx) {
       result.z = _moonHost.z + r * (si * st);
       return result;
     }, false),
-    point: { pixelSize: 4, color: PROBE_COLOR, outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1 },
+    // A dot in the system overview; up close (after you fly to its planet) it
+    // swaps for the little spacecraft model.  Swap range + model size scale
+    // with the rendered planet, so a probe reads the same at Mars or Jupiter.
+    point: {
+      pixelSize: 4, color: PROBE_COLOR,
+      outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1,
+      distanceDisplayCondition: new DistanceDisplayCondition(planetR * 6, Number.MAX_VALUE),
+    },
+    model: {
+      uri: PROBE_MODEL,
+      minimumPixelSize: 56,
+      scale: planetR * 0.009,
+      distanceDisplayCondition: new DistanceDisplayCondition(0, planetR * 6),
+    },
     label: {
       text: name,
       font: '500 11px Inter, system-ui, sans-serif',
