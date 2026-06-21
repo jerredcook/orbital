@@ -1239,7 +1239,7 @@ $('toggle-station').addEventListener('change', (e) => {
   if (e.target.checked) {
     $('pass-controls').hidden = false;
     if (station) { drawStation(); startPasses(); }
-    else beginStationPlacing();
+    else updatePassStatus('Use your location, or tap the map, to set a ground station');
   } else {
     stationPlacing = false;
     cancelPasses();
@@ -1256,6 +1256,38 @@ $('toggle-station').addEventListener('change', (e) => {
 $('pass-setloc').addEventListener('click', () => {
   if (stationPlacing) { stationPlacing = false; $('pass-setloc').classList.remove('active'); }
   else beginStationPlacing();
+});
+
+// One-tap station at the visitor's own location — the fast path to "what flies
+// over my house".  Falls back to the tap-the-map flow if it's denied/blocked.
+$('pass-geoloc').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    toast('Location isn’t available here — tap the map to place your station instead');
+    return;
+  }
+  stationPlacing = false;                       // geolocation supersedes any pending tap-to-place
+  $('pass-setloc').classList.remove('active');
+  $('pass-geoloc').classList.add('active');
+  updatePassStatus('finding your location…');
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      $('pass-geoloc').classList.remove('active');
+      setLegendOpen(false);                     // the drawer covers the globe on mobile
+      placeStation(coords.latitude, coords.longitude);
+      // The visitor didn't pick the spot, so fly there to show it.
+      autoFollowHoldUntil = Date.now() + 3000;
+      viewer.camera.flyTo({
+        destination: Cartesian3.fromDegrees(coords.longitude, coords.latitude, 7.5e6),
+        duration: 1.6,
+      });
+    },
+    () => {
+      $('pass-geoloc').classList.remove('active');
+      updatePassStatus('couldn’t get your location — tap the map instead');
+      toast('Couldn’t get your location — tap the map to place your station');
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+  );
 });
 
 $('pass-minel').addEventListener('change', () => {
