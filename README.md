@@ -300,9 +300,9 @@ Design notes for the 3D close-up view:
   the real GLB shrinks the body to a speck at icon scale.)
 - **Showpieces** (`SHOWPIECES` in `main.js`) — craft that never enter Earth's
   catalog because they don't orbit Earth.  Lagrange-point observatories (JWST,
-  WMAP at L2; SOHO, DSCOVR, ACE at L1), interstellar probes (Voyager 1 & 2,
-  Pioneer 10) and other heliocentric/solar craft (Parker Solar Probe, Spitzer,
-  Kepler, Ulysses, Deep Space 1).  Each is its own entity (L1/L2 positioned off
+  WMAP at L2; SOHO, DSCOVR, ACE at L1), deep-space probes (Voyager 1 & 2,
+  Pioneer 10, New Horizons) and other heliocentric/solar craft (Parker Solar
+  Probe, Spitzer, Kepler, Ulysses, Deep Space 1).  Each is its own entity (L1/L2 positioned off
   the live Sun direction; deep-space ones parked in a fixed far direction, real
   distance in the blurb) with a slow turntable, reachable by **search** (word-
   boundary matched) or a `#<id>` deep-link, and rendered only when you're near
