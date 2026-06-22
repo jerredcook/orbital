@@ -11,6 +11,7 @@
 //   #moon=Europa  a natural satellite in the system view
 //   #probe=Juno   a robotic spacecraft in the system view
 //   #luna         the Moon globe
+//   #jwst         the James Webb Space Telescope, up close at L2
 
 export function writeHash(state) {
   let h = '';
@@ -20,6 +21,7 @@ export function writeHash(state) {
     else if (state.moon) h = `moon=${encodeURIComponent(state.moon)}`;
     else if (state.probe) h = `probe=${encodeURIComponent(state.probe)}`;
     else if (state.luna) h = 'luna';
+    else if (state.jwst) h = 'jwst';
     else if (state.system) h = 'system';
   }
   if (location.hash.replace(/^#/, '') === h) return;            // already there
@@ -31,6 +33,7 @@ export function readHash() {
   const h = location.hash.replace(/^#/, '');
   if (!h) return null;
   if (h === 'luna') return { luna: true };
+  if (h === 'jwst') return { jwst: true };
   if (h === 'system') return { system: true };
   const eq = h.indexOf('=');
   if (eq < 0) return null;

@@ -626,6 +626,9 @@ const jwstEntity = viewer.entities.add({
     const s = sunEcefDir(JulianDate.toDate(time));
     return Cartesian3.fromElements(-s.x * L2_DIST, -s.y * L2_DIST, -s.z * L2_DIST, result || new Cartesian3());
   }, false),
+  // Slow turntable so the showpiece presents itself like a museum exhibit.
+  orientation: new CallbackProperty((time, result) =>
+    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (JulianDate.toDate(time).getTime() / 1000 * 0.12) % (2 * Math.PI), result), false),
   model: { uri: `${MODELS}jwst.glb`, scale: 0.74, minimumPixelSize: 64 },
   point: { pixelSize: 5, color: JWST_GOLD, distanceDisplayCondition: new DistanceDisplayCondition(3e6, Number.MAX_VALUE) },
   label: {
@@ -638,9 +641,15 @@ function inspectJWST() {
   $('infopanel').hidden = true;
   autoFollowHoldUntil = Date.now() + 8000;
   viewer.trackedEntity = jwstEntity;
+  writeHash({ jwst: true });
   toast('🔭 <b>James Webb Space Telescope</b> — parked at L2, ~1.5 million km out on Earth’s night side, where it watches the early universe in the cold and dark. Scroll out or press Esc to leave.', 11000);
 }
-function leaveJWST() { if (viewer.trackedEntity === jwstEntity) { viewer.trackedEntity = undefined; return true; } return false; }
+function leaveJWST() {
+  if (viewer.trackedEntity !== jwstEntity) return false;
+  viewer.trackedEntity = undefined;
+  writeHash(null);
+  return true;
+}
 
 // ---------------------------------------------------------------- legend ----
 
@@ -1464,6 +1473,7 @@ function navigateTo(s) {
     return;
   }
   if (s.luna) { moonView.show(); return; }
+  if (s.jwst) { inspectJWST(); return; }
   if (s.system) { systemView.show(); return; }
   const name = s.body || s.moon || s.probe;
   if (name) { systemView.show(); systemView.focus(name); }
