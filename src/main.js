@@ -531,7 +531,7 @@ handler.setInputAction((click) => {
     selectByIndex(picked.id);
   } else if (picked?.id && picked.id === selected?.modelEntity) {
     // clicking the 3D model keeps the selection
-  } else if (!leaveJWST()) {
+  } else if (!leaveShowpiece()) {
     clearSelection();
     $('infopanel').hidden = true;
   }
@@ -616,36 +616,72 @@ function inspectByNorad(norad) {
   else toast(`That satellite isn’t in today’s catalog (NORAD ${norad}).`, 5000);
 }
 
-// James Webb Space Telescope — a showpiece at L2, ~1.5 M km anti-sunward.  It's
-// not a catalog/TLE object (L2 isn't an Earth orbit), so it lives as its own
-// entity; the position is recomputed each frame as Earth turns under it.
-const L2_DIST = 1.5e9;
-const JWST_GOLD = Color.fromCssColorString('#FFD27A');
-const jwstEntity = viewer.entities.add({
-  position: new CallbackProperty((time, result) => {
-    const s = sunEcefDir(JulianDate.toDate(time));
-    return Cartesian3.fromElements(-s.x * L2_DIST, -s.y * L2_DIST, -s.z * L2_DIST, result || new Cartesian3());
-  }, false),
-  // Slow turntable so the showpiece presents itself like a museum exhibit.
-  orientation: new CallbackProperty((time, result) =>
-    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (JulianDate.toDate(time).getTime() / 1000 * 0.12) % (2 * Math.PI), result), false),
-  model: { uri: `${MODELS}jwst.glb`, scale: 0.74, minimumPixelSize: 64 },
-  point: { pixelSize: 5, color: JWST_GOLD, distanceDisplayCondition: new DistanceDisplayCondition(3e6, Number.MAX_VALUE) },
-  label: {
-    text: 'James Webb · L2', font: '500 12px Inter, system-ui, sans-serif', fillColor: JWST_GOLD,
-    pixelOffset: new Cartesian2(0, -12), disableDepthTestDistance: Number.POSITIVE_INFINITY,
-  },
-});
-function inspectJWST() {
+// Showpieces: craft that never enter Earth's catalog because they don't orbit
+// Earth — they sit at the Sun–Earth Lagrange points or coast through deep space.
+// Each is its own entity you can search for and fly to.  Position by region:
+// L1 sunward and L2 anti-sunward (~1.5 M km, recomputed as Earth turns), or a
+// fixed faraway direction for the interstellar probes (their true distance is
+// billions of km — far too far to show to scale, so it's noted in the blurb).
+const SHOW_GOLD = Color.fromCssColorString('#FFD27A');
+const L_DIST = 1.5e9, DEEP_DIST = 6e9;
+const SHOWPIECES = [
+  { id: 'jwst', name: 'James Webb · L2', file: 'jwst', loc: 'L2',
+    kw: 'JAMES WEBB SPACE TELESCOPE JWST',
+    blurb: '🔭 <b>James Webb Space Telescope</b> — at L2, ~1.5 million km out on Earth’s night side, watching the early universe in the cold and dark.' },
+  { id: 'soho', name: 'SOHO · L1', file: 'soho', loc: 'L1',
+    kw: 'SOHO SOLAR AND HELIOSPHERIC OBSERVATORY',
+    blurb: '☀ <b>SOHO</b> — the Solar &amp; Heliospheric Observatory, watching the Sun non-stop from L1, ~1.5 million km sunward, since 1995.' },
+  { id: 'dscovr', name: 'DSCOVR · L1', file: 'dscovr', loc: 'L1',
+    kw: 'DSCOVR DEEP SPACE CLIMATE OBSERVATORY TRIANA EPIC',
+    blurb: '🌍 <b>DSCOVR</b> — at L1, ~1.5 million km sunward; its EPIC camera takes the famous full-disc portraits of the sunlit Earth.' },
+  { id: 'voyager1', name: 'Voyager 1 · interstellar', file: 'voyager', loc: 'deep', dir: [0.30, 0.42, 0.86],
+    kw: 'VOYAGER 1 VOYAGER ONE',
+    blurb: '🛰 <b>Voyager 1</b> — the most distant human-made object, ~24 billion km out in interstellar space, still calling home since 1977. <i>(Far too distant to show to scale.)</i>' },
+  { id: 'voyager2', name: 'Voyager 2 · interstellar', file: 'voyager', loc: 'deep', dir: [-0.46, -0.78, -0.43],
+    kw: 'VOYAGER 2 VOYAGER TWO',
+    blurb: '🛰 <b>Voyager 2</b> — ~20 billion km out, the only craft to visit all four giant planets, now in interstellar space. <i>(Far too distant to show to scale.)</i>' },
+  { id: 'pioneer10', name: 'Pioneer 10 · deep space', file: 'pioneer', loc: 'deep', dir: [0.72, -0.12, 0.68],
+    kw: 'PIONEER 10 PIONEER TEN',
+    blurb: '🛰 <b>Pioneer 10</b> — first craft through the asteroid belt and past Jupiter, now silent and coasting ~20 billion km out. <i>(Far too distant to show to scale.)</i>' },
+];
+const SHOW_NEAR = new DistanceDisplayCondition(0, 5e8);   // visible only when you're inspecting it
+const turntable = new CallbackProperty((time, result) =>
+  Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (JulianDate.toDate(time).getTime() / 1000 * 0.1) % (2 * Math.PI), result), false);
+for (const sp of SHOWPIECES) {
+  sp.entity = viewer.entities.add({
+    position: new CallbackProperty((time, result) => {
+      result = result || new Cartesian3();
+      if (sp.loc === 'deep') return Cartesian3.fromElements(sp.dir[0] * DEEP_DIST, sp.dir[1] * DEEP_DIST, sp.dir[2] * DEEP_DIST, result);
+      const s = sunEcefDir(JulianDate.toDate(time));   // L1 sunward, L2 anti-sunward
+      const k = (sp.loc === 'L1' ? 1 : -1) * L_DIST;
+      return Cartesian3.fromElements(s.x * k, s.y * k, s.z * k, result);
+    }, false),
+    orientation: turntable,                            // slow museum turntable
+    // Only render a showpiece when the camera is near it (i.e. while you're
+    // inspecting it) so the others — billions of km away in other directions —
+    // don't litter the view with stray labels and dots.
+    model: { uri: `${MODELS}${sp.file}.glb`, scale: 1, minimumPixelSize: 64, distanceDisplayCondition: SHOW_NEAR },
+    point: { pixelSize: 5, color: SHOW_GOLD, distanceDisplayCondition: SHOW_NEAR },
+    label: {
+      text: sp.name, font: '500 12px Inter, system-ui, sans-serif', fillColor: SHOW_GOLD,
+      pixelOffset: new Cartesian2(0, -12), disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      distanceDisplayCondition: SHOW_NEAR,
+    },
+  });
+}
+const showpieceById = Object.fromEntries(SHOWPIECES.map((sp) => [sp.id, sp]));
+function inspectShowpiece(id) {
+  const sp = showpieceById[id];
+  if (!sp) return;
   clearSelection();
   $('infopanel').hidden = true;
   autoFollowHoldUntil = Date.now() + 8000;
-  viewer.trackedEntity = jwstEntity;
-  writeHash({ jwst: true });
-  toast('🔭 <b>James Webb Space Telescope</b> — parked at L2, ~1.5 million km out on Earth’s night side, where it watches the early universe in the cold and dark. Scroll out or press Esc to leave.', 11000);
+  viewer.trackedEntity = sp.entity;
+  writeHash({ show: id });
+  toast(`${sp.blurb} Scroll out or press Esc to leave.`, 11000);
 }
-function leaveJWST() {
-  if (viewer.trackedEntity !== jwstEntity) return false;
+function leaveShowpiece() {
+  if (!viewer.trackedEntity || !SHOWPIECES.some((sp) => sp.entity === viewer.trackedEntity)) return false;
   viewer.trackedEntity = undefined;
   writeHash(null);
   return true;
@@ -711,7 +747,7 @@ function destFromSpec(spec) {
 document.querySelectorAll('.welcome-chip').forEach((chip) => chip.addEventListener('click', () => {
   closeWelcome();
   const go = chip.dataset.go;
-  if (go === 'jwst') inspectJWST();
+  if (go === 'jwst') inspectShowpiece('jwst');
   else if (go.startsWith('sat:')) inspectByNorad(go.slice(4));   // fly into the model close-up
   else navigateTo(destFromSpec(go));
 }));
@@ -1473,7 +1509,7 @@ function navigateTo(s) {
     return;
   }
   if (s.luna) { moonView.show(); return; }
-  if (s.jwst) { inspectJWST(); return; }
+  if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }
   const name = s.body || s.moon || s.probe;
   if (name) { systemView.show(); systemView.focus(name); }
@@ -1610,14 +1646,16 @@ searchBox.addEventListener('input', () => {
     }
   }
   resultsEl.innerHTML = '';
-  // The James Webb isn't in the catalog (it orbits L2, not Earth), so surface it
-  // as a special hit that flies out to its showpiece — searchable like any sat.
-  if ('JAMES WEBB SPACE TELESCOPE'.includes(q) || 'JWST'.includes(q)) {
+  // Showpieces (JWST, Voyager, SOHO…) aren't in the catalog — they don't orbit
+  // Earth — so surface any that match and fly out to them, searchable like a sat.
+  for (const sp of SHOWPIECES) {
+    if (!sp.kw.includes(q) && !sp.name.toUpperCase().includes(q)) continue;
     const row = document.createElement('div');
     row.className = 'result-row';
     row.tabIndex = 0;
-    row.innerHTML = '<span>James Webb Space Telescope</span><span class="rid">L2</span>';
-    const go = () => { inspectJWST(); resultsEl.hidden = true; searchBox.value = ''; };
+    const [name, tag] = sp.name.split(' · ');
+    row.innerHTML = `<span>${name}</span><span class="rid">${tag || ''}</span>`;
+    const go = () => { inspectShowpiece(sp.id); resultsEl.hidden = true; searchBox.value = ''; };
     row.addEventListener('click', go);
     row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
     resultsEl.appendChild(row);
@@ -1642,7 +1680,7 @@ searchBox.addEventListener('input', () => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     resultsEl.hidden = true;
-    if (!leaveJWST()) { clearSelection(); $('infopanel').hidden = true; }
+    if (!leaveShowpiece()) { clearSelection(); $('infopanel').hidden = true; }
   }
   if (e.key === '/' && document.activeElement !== searchBox) {
     e.preventDefault();
