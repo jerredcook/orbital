@@ -24,7 +24,7 @@ import {
   HeadingPitchRange, ArcType, Primitive, GeometryInstance, EllipsoidGeometry,
   VertexFormat, MaterialAppearance, Material, Matrix3, SceneTransforms,
   Geometry, GeometryAttribute, ComponentDatatype, PrimitiveType, BlendingState,
-  DistanceDisplayCondition, Math as CMath,
+  DistanceDisplayCondition, PolylineGlowMaterialProperty, Math as CMath,
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
@@ -506,6 +506,8 @@ const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');           // active
 const PROBE_COLOR_DERELICT = Color.fromCssColorString('#8AA7B2');  // dead but still orbiting
 const PROBE_COLOR_GONE = Color.fromCssColorString('#FF9A5A');      // reentering — fading out
 const PROBE_MODEL = `${import.meta.env.BASE_URL}models/probe.glb`; // shown up close
+const TRAIL_STEPS = 20;          // segments in a probe's trailing arc
+const TRAIL_ARC = 0.55;          // radians of orbit the trail spans (~32°)
 const PROBE_FADE_YEARS = 1.5;                                      // fade span after a deorbit
 let probeList = [];          // { entity, year }
 let probeYear = null;        // null = show all (timeline off)
@@ -517,6 +519,7 @@ function addProbe(planet, probe, idx) {
   const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
   const nx = sO * si, ny = -cO * si, nz = ci;          // orbit-plane normal (for nadir-lock)
+  const trailPts = Array.from({ length: TRAIL_STEPS + 1 }, () => new Cartesian3());   // cached trail
   const entity = viewer.entities.add({
     name,
     position: new CallbackProperty((time, result) => {
@@ -560,6 +563,28 @@ function addProbe(planet, probe, idx) {
       uri: PROBE_MODEL,
       minimumPixelSize: 56,
       scale: planetR * 0.009,
+      distanceDisplayCondition: new DistanceDisplayCondition(0, planetR * 6),
+    },
+    // A short comet-tail sampled backward along the orbit, fading at the far end
+    // (taperPower) — shows which way the craft is travelling.  Shown up close
+    // with the model; mutates cached points so it costs no per-frame allocation.
+    polyline: {
+      positions: new CallbackProperty(() => {
+        scenePosOf(planet, _moonHost);
+        const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
+        const th0 = (days / periodDays) * 2 * Math.PI + phase;
+        const r = factor * bodyRadius(BODIES[planet].radius);
+        for (let k = 0; k <= TRAIL_STEPS; k++) {
+          const th = th0 - TRAIL_ARC + (k / TRAIL_STEPS) * TRAIL_ARC;
+          const ct = Math.cos(th), st = Math.sin(th), pt = trailPts[k];
+          pt.x = _moonHost.x + r * (cO * ct - sO * ci * st);
+          pt.y = _moonHost.y + r * (sO * ct + cO * ci * st);
+          pt.z = _moonHost.z + r * (si * st);
+        }
+        return trailPts;
+      }, false),
+      width: 2,
+      material: new PolylineGlowMaterialProperty({ color: PROBE_COLOR.withAlpha(0.55), glowPower: 0.18, taperPower: 0.4 }),
       distanceDisplayCondition: new DistanceDisplayCondition(0, planetR * 6),
     },
     label: {
