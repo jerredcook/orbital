@@ -299,12 +299,14 @@ Design notes for the 3D close-up view:
   very long magnetometer boom — MESSENGER, Magellan, Galileo — stay generic:
   the real GLB shrinks the body to a speck at icon scale.)
 - **Showpieces** (`SHOWPIECES` in `main.js`) — craft that never enter Earth's
-  catalog because they don't orbit Earth: the Lagrange-point observatories
-  (JWST at L2; SOHO, DSCOVR at L1) and the interstellar probes (Voyager 1 & 2,
-  Pioneer 10).  Each is its own entity (L1/L2 positioned off the live Sun
-  direction; deep-space ones parked in a fixed far direction, real distance in
-  the blurb) with a slow turntable, reachable by **search** or a `#<id>`
-  deep-link, and rendered only when you're near it.
+  catalog because they don't orbit Earth.  Lagrange-point observatories (JWST,
+  WMAP at L2; SOHO, DSCOVR, ACE at L1), interstellar probes (Voyager 1 & 2,
+  Pioneer 10) and other heliocentric/solar craft (Parker Solar Probe, Spitzer,
+  Kepler, Ulysses, Deep Space 1).  Each is its own entity (L1/L2 positioned off
+  the live Sun direction; deep-space ones parked in a fixed far direction, real
+  distance in the blurb) with a slow turntable, reachable by **search** (word-
+  boundary matched) or a `#<id>` deep-link, and rendered only when you're near
+  it.  All use real public-domain NASA models.
 - The model entity's position/orientation are `CallbackProperty`s that
   propagate SGP4 at exact render time.  Don't switch them to imperative
   per-tick updates: Cesium's tracked-camera update runs before clock-tick

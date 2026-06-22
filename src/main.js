@@ -643,6 +643,27 @@ const SHOWPIECES = [
   { id: 'pioneer10', name: 'Pioneer 10 · deep space', file: 'pioneer', loc: 'deep', dir: [0.72, -0.12, 0.68],
     kw: 'PIONEER 10 PIONEER TEN',
     blurb: '🛰 <b>Pioneer 10</b> — first craft through the asteroid belt and past Jupiter, now silent and coasting ~20 billion km out. <i>(Far too distant to show to scale.)</i>' },
+  { id: 'ace', name: 'ACE · L1', file: 'ace', loc: 'L1',
+    kw: 'ACE ADVANCED COMPOSITION EXPLORER',
+    blurb: '☀ <b>Advanced Composition Explorer</b> — at L1, ~1.5 million km sunward, sampling the solar wind and giving ~1 hour’s warning of space-weather storms since 1997.' },
+  { id: 'wmap', name: 'WMAP · L2', file: 'wmap', loc: 'L2',
+    kw: 'WMAP WILKINSON MICROWAVE ANISOTROPY PROBE',
+    blurb: '🌌 <b>WMAP</b> — the Wilkinson Microwave Anisotropy Probe mapped the infant universe’s afterglow from L2, pinning the age of the cosmos at 13.8 billion years.' },
+  { id: 'parker', name: 'Parker Solar Probe · the Sun', file: 'parker', loc: 'deep', dir: [0.85, 0.40, -0.34],
+    kw: 'PARKER SOLAR PROBE',
+    blurb: '☀ <b>Parker Solar Probe</b> — dives closer to the Sun than any craft, through the corona at ~6 million km from the surface. <i>(Shown as a model; really looping the Sun.)</i>' },
+  { id: 'spitzer', name: 'Spitzer · solar orbit', file: 'spitzer', loc: 'deep', dir: [-0.60, 0.50, 0.62],
+    kw: 'SPITZER SPACE TELESCOPE',
+    blurb: '🔭 <b>Spitzer Space Telescope</b> — NASA’s great infrared observatory, trailing Earth in a Sun-circling orbit (2003–2020). <i>(Shown as a model; really far out in solar orbit.)</i>' },
+  { id: 'kepler', name: 'Kepler · solar orbit', file: 'kepler', loc: 'deep', dir: [0.50, -0.70, -0.51],
+    kw: 'KEPLER PLANET HUNTER',
+    blurb: '🔭 <b>Kepler</b> — stared at one patch of sky from a Sun-trailing orbit and found thousands of exoplanets. <i>(Shown as a model; really in solar orbit.)</i>' },
+  { id: 'ulysses', name: 'Ulysses · over the Sun’s poles', file: 'ulysses', loc: 'deep', dir: [-0.30, 0.85, -0.43],
+    kw: 'ULYSSES',
+    blurb: '☀ <b>Ulysses</b> — slung over the Sun’s poles via a Jupiter flyby, the only craft to survey the solar wind from high solar latitudes. <i>(Shown as a model; really in a polar solar orbit.)</i>' },
+  { id: 'ds1', name: 'Deep Space 1 · deep space', file: 'ds1', loc: 'deep', dir: [-0.80, -0.20, 0.56],
+    kw: 'DEEP SPACE 1 DEEP SPACE ONE DS1',
+    blurb: '🛰 <b>Deep Space 1</b> — proved ion propulsion and flew past comet Borrelly out in deep space (1998–2001). <i>(Shown as a model.)</i>' },
 ];
 const SHOW_NEAR = new DistanceDisplayCondition(0, 5e8);   // visible only when you're inspecting it
 const turntable = new CallbackProperty((time, result) =>
@@ -1648,8 +1669,10 @@ searchBox.addEventListener('input', () => {
   resultsEl.innerHTML = '';
   // Showpieces (JWST, Voyager, SOHO…) aren't in the catalog — they don't orbit
   // Earth — so surface any that match and fly out to them, searchable like a sat.
+  // Match on word boundaries so "ace" finds ACE without also matching "sp-ACE".
+  const qWord = new RegExp('\\b' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   for (const sp of SHOWPIECES) {
-    if (!sp.kw.includes(q) && !sp.name.toUpperCase().includes(q)) continue;
+    if (!qWord.test(sp.kw) && !qWord.test(sp.name.toUpperCase())) continue;
     const row = document.createElement('div');
     row.className = 'result-row';
     row.tabIndex = 0;
