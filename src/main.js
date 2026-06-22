@@ -1086,6 +1086,24 @@ function prepStation() {
   };
 }
 
+// Low-precision Sun direction (unit vector, Earth-fixed frame) — enough to tell
+// day from night and which satellites are catching the sunlight.
+function sunEcefDir(date) {
+  const n = (date.getTime() - Date.UTC(2000, 0, 1, 12)) / 86400000;          // days since J2000
+  const g = (357.529 + 0.98560028 * n) * DEG2RAD;                            // mean anomaly
+  const L = (280.459 + 0.98564736 * n) * DEG2RAD;                            // mean longitude
+  const lam = L + (1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * DEG2RAD; // ecliptic longitude
+  const eps = 23.439 * DEG2RAD;
+  const eci = { x: Math.cos(lam), y: Math.cos(eps) * Math.sin(lam), z: Math.sin(eps) * Math.sin(lam) };
+  return satellite.eciToEcf(eci, satellite.gstime(date));
+}
+const SUN_DARK = Math.sin(-6 * Math.PI / 180);   // sky dark enough to spot satellites
+const EARTH_R = 6.371e6;
+// The handful bright enough to actually catch the naked eye when sunlit — these
+// get a ring + name on the sky chart (the ~hundreds of other sunlit craft are
+// real but far too faint to see, so they're only reported as a count).
+const NAKED_EYE = new Map([[25544, 'ISS'], [48274, 'Tiangong']]);
+
 function renderSky() {
   const panel = $('sky-now');
   if (!sky.ctx || panel.hidden || !sky.obs || !lastBuf) return;
@@ -1104,8 +1122,12 @@ function renderSky() {
     ctx.fillText(lbl, cx + (R + 8 * s) * Math.sin(a), cy - (R + 8 * s) * Math.cos(a));
   }
   const o = sky.obs, minEl = Number($('pass-minel').value) || 10;
+  const sun = sunEcefDir(JulianDate.toDate(viewer.clock.currentTime));
+  const sunEl = sun.x * o.ux + sun.y * o.uy + sun.z * o.uz;   // sin(Sun's elevation here)
+  const dark = sunEl < SUN_DARK;                              // dark enough to spot satellites
+  const bright = [];                                         // headline targets, ringed + named
   sky.plotted = [];
-  let count = 0;
+  let count = 0, sunCount = 0;
   for (let i = 0, n = catalog.length; i < n; i++) {
     if (!catVisible[catOf(catalog[i])]) continue;
     const px = lastBuf[i * 3], py = lastBuf[i * 3 + 1], pz = lastBuf[i * 3 + 2];
@@ -1119,14 +1141,43 @@ function renderSky() {
     if (elDeg < minEl) continue;
     const az = Math.atan2(e, nn), r = (1 - elDeg / 90) * R;
     const x = cx + r * Math.sin(az), y = cy - r * Math.cos(az);
+    // Sunlit? — outside Earth's cylindrical shadow.  On the dark side, lit only
+    // if its offset from the Earth–Sun axis clears the planet's radius.
+    const along = px * sun.x + py * sun.y + pz * sun.z;
+    let sunlit = along > 0;
+    if (!sunlit) {
+      const wx = px - along * sun.x, wy = py - along * sun.y, wz = pz - along * sun.z;
+      sunlit = (wx * wx + wy * wy + wz * wz) > EARTH_R * EARTH_R;
+    }
+    if (sunlit && dark) {
+      sunCount++;
+      const nm = NAKED_EYE.get(catalog[i].norad);
+      if (nm) bright.push({ x, y, label: nm });
+    }
     const selHere = selected && selected.index === i;
+    // In a dark sky the shadowed satellites can't be seen — dim them so the
+    // sunlit population reads as the brighter band it really is.
+    ctx.globalAlpha = selHere || !dark || sunlit ? 1 : 0.4;
     ctx.fillStyle = selHere ? '#FFB454' : CAT_CSS[catOf(catalog[i])];
     ctx.beginPath(); ctx.arc(x, y, (selHere ? 4 : 2) * s, 0, 7); ctx.fill();
     if (selHere) { ctx.strokeStyle = '#fff'; ctx.lineWidth = s; ctx.stroke(); }
     sky.plotted.push({ i, x, y });
     count++;
   }
-  $('sky-count').textContent = count ? `${count} above ${minEl}°` : `nothing above ${minEl}°`;
+  ctx.globalAlpha = 1;
+  // Ring + name the genuinely naked-eye targets when they're lit in a dark sky.
+  ctx.font = `${10 * s}px ui-monospace, monospace`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (const v of bright) {
+    ctx.beginPath(); ctx.arc(v.x, v.y, 3 * s, 0, 7); ctx.fillStyle = '#FFF6E0'; ctx.fill();
+    ctx.beginPath(); ctx.arc(v.x, v.y, 6 * s, 0, 7); ctx.lineWidth = 1.4 * s; ctx.strokeStyle = '#FFD27A'; ctx.stroke();
+    ctx.fillStyle = '#FFD27A'; ctx.fillText(v.label, v.x + 8 * s, v.y);
+  }
+  const sunDeg = Math.asin(Math.max(-1, Math.min(1, sunEl))) / DEG2RAD;
+  const lead = sunDeg > -0.83 ? '☀ daylight' : (dark ? '🌙 dark sky' : '🌅 twilight');
+  const spot = bright.length ? ` · 👀 ${bright.map((v) => v.label).join(', ')} overhead` : '';
+  $('sky-count').textContent = (!count ? `nothing above ${minEl}° · ${lead}`
+    : dark ? `${sunCount} sunlit · ${count} up · ${lead}`
+    : `${count} up · ${lead}`) + spot;
 }
 
 function initSkyChart() {
