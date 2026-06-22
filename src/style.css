@@ -206,6 +206,9 @@ body.body-mode #probe-timeline { display: none; }
   max-height: calc(100vh - 24px); overflow-y: auto;
 }
 #system-legend[hidden] { display: none; }
+/* belt-and-suspenders: this legend belongs to the solar-system view only, so it
+   can never linger over the Earth view's search / info panel again */
+body:not(.system-mode) #system-legend { display: none; }
 .sl-title { color: #6B7A8F; letter-spacing: 0.06em; margin-bottom: 6px; }
 .sl-row { display: flex; align-items: center; gap: 7px; line-height: 1.7; }
 .sl-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; border: 1px solid rgba(0,0,0,0.4); }

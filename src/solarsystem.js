@@ -1170,6 +1170,7 @@ function hide(earthViewer, recenter = true) {
   $('systemContainer').hidden = true;
   $('system-exit').hidden = true;
   $('system-scale').hidden = true;
+  $('system-legend').hidden = true;
   $('probe-timeline').hidden = true;
   $('tl-era').hidden = true;
   probeStopPlay();
