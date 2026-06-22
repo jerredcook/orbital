@@ -531,7 +531,7 @@ handler.setInputAction((click) => {
     selectByIndex(picked.id);
   } else if (picked?.id && picked.id === selected?.modelEntity) {
     // clicking the 3D model keeps the selection
-  } else {
+  } else if (!leaveJWST()) {
     clearSelection();
     $('infopanel').hidden = true;
   }
@@ -600,6 +600,48 @@ $('info-track').addEventListener('click', () => {
   else engageFollow();
 });
 
+// ------------------------------------------------------ famous-craft close-ups ----
+// Select a satellite and fly straight into a tracked close-up of its 3D model —
+// the cinematic "see it up close" path (vs. the standoff fly-to).  Cesium
+// animates the camera to the tracked entity, so it works from anywhere.
+function inspectSat(i) {
+  selectByIndex(i);
+  autoFollowHoldUntil = Date.now() + 6000;
+  engageFollow();
+}
+function inspectByNorad(norad) {
+  const i = catalog.findIndex((c) => String(c.norad) === String(norad));
+  if (i >= 0) inspectSat(i);
+  else if (!catalog.length) setTimeout(() => inspectByNorad(norad), 400);   // catalog still loading
+  else toast(`That satellite isn’t in today’s catalog (NORAD ${norad}).`, 5000);
+}
+
+// James Webb Space Telescope — a showpiece at L2, ~1.5 M km anti-sunward.  It's
+// not a catalog/TLE object (L2 isn't an Earth orbit), so it lives as its own
+// entity; the position is recomputed each frame as Earth turns under it.
+const L2_DIST = 1.5e9;
+const JWST_GOLD = Color.fromCssColorString('#FFD27A');
+const jwstEntity = viewer.entities.add({
+  position: new CallbackProperty((time, result) => {
+    const s = sunEcefDir(JulianDate.toDate(time));
+    return Cartesian3.fromElements(-s.x * L2_DIST, -s.y * L2_DIST, -s.z * L2_DIST, result || new Cartesian3());
+  }, false),
+  model: { uri: `${MODELS}jwst.glb`, scale: 0.74, minimumPixelSize: 64 },
+  point: { pixelSize: 5, color: JWST_GOLD, distanceDisplayCondition: new DistanceDisplayCondition(3e6, Number.MAX_VALUE) },
+  label: {
+    text: 'James Webb · L2', font: '500 12px Inter, system-ui, sans-serif', fillColor: JWST_GOLD,
+    pixelOffset: new Cartesian2(0, -12), disableDepthTestDistance: Number.POSITIVE_INFINITY,
+  },
+});
+function inspectJWST() {
+  clearSelection();
+  $('infopanel').hidden = true;
+  autoFollowHoldUntil = Date.now() + 8000;
+  viewer.trackedEntity = jwstEntity;
+  toast('🔭 <b>James Webb Space Telescope</b> — parked at L2, ~1.5 million km out on Earth’s night side, where it watches the early universe in the cold and dark. Scroll out or press Esc to leave.', 11000);
+}
+function leaveJWST() { if (viewer.trackedEntity === jwstEntity) { viewer.trackedEntity = undefined; return true; } return false; }
+
 // ---------------------------------------------------------------- legend ----
 
 document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
@@ -659,7 +701,10 @@ function destFromSpec(spec) {
 }
 document.querySelectorAll('.welcome-chip').forEach((chip) => chip.addEventListener('click', () => {
   closeWelcome();
-  navigateTo(destFromSpec(chip.dataset.go));
+  const go = chip.dataset.go;
+  if (go === 'jwst') inspectJWST();
+  else if (go.startsWith('sat:')) inspectByNorad(go.slice(4));   // fly into the model close-up
+  else navigateTo(destFromSpec(go));
 }));
 
 // ------------------------------------------------------------ launch timeline ----
@@ -1575,8 +1620,7 @@ searchBox.addEventListener('input', () => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     resultsEl.hidden = true;
-    clearSelection();
-    $('infopanel').hidden = true;
+    if (!leaveJWST()) { clearSelection(); $('infopanel').hidden = true; }
   }
   if (e.key === '/' && document.activeElement !== searchBox) {
     e.preventDefault();
