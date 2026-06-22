@@ -1610,6 +1610,18 @@ searchBox.addEventListener('input', () => {
     }
   }
   resultsEl.innerHTML = '';
+  // The James Webb isn't in the catalog (it orbits L2, not Earth), so surface it
+  // as a special hit that flies out to its showpiece — searchable like any sat.
+  if ('JAMES WEBB SPACE TELESCOPE'.includes(q) || 'JWST'.includes(q)) {
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    row.tabIndex = 0;
+    row.innerHTML = '<span>James Webb Space Telescope</span><span class="rid">L2</span>';
+    const go = () => { inspectJWST(); resultsEl.hidden = true; searchBox.value = ''; };
+    row.addEventListener('click', go);
+    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    resultsEl.appendChild(row);
+  }
   for (const i of hits) {
     const row = document.createElement('div');
     row.className = 'result-row';
@@ -1624,7 +1636,7 @@ searchBox.addEventListener('input', () => {
     row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
     resultsEl.appendChild(row);
   }
-  resultsEl.hidden = hits.length === 0;
+  resultsEl.hidden = resultsEl.children.length === 0;
 });
 
 document.addEventListener('keydown', (e) => {
