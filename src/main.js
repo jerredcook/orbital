@@ -1198,6 +1198,75 @@ function initSkyChart() {
 }
 initSkyChart();
 
+// ------------------------------------------------------- visible-pass alerts ----
+// While a station is set, give a heads-up before the bright naked-eye craft
+// (ISS, Tiangong) make a *visible* pass — sunlit, in a dark sky, clear of the
+// horizon — so you can step outside in time.
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const compass = (az) => COMPASS[Math.round(((az % 360) + 360) % 360 / 45) % 8];
+const PASS_LEAD_MS = 7 * 60_000;     // announce up to ~7 min ahead
+const alertedPasses = new Set();
+
+// Step a satellite forward from `from` and return its next visible pass
+// { rise, riseAz, peakEl } within the hour, or null.
+function nextVisiblePass(satrec, from) {
+  const o = sky.obs;
+  let rise = null, riseAz = 0, peakEl = 0;
+  for (let m = 0.5; m <= 60; m += 0.5) {            // 30-second steps, 1 h ahead
+    const t = new Date(from.getTime() + m * 60_000);
+    const pv = satellite.propagate(satrec, t);
+    if (!pv?.position) continue;
+    const gmst = satellite.gstime(t);
+    const ecf = satellite.eciToEcf(pv.position, gmst);
+    const px = ecf.x * 1000, py = ecf.y * 1000, pz = ecf.z * 1000;
+    const dx = px - o.ox, dy = py - o.oy, dz = pz - o.oz;
+    const u = dx * o.ux + dy * o.uy + dz * o.uz;
+    let visible = false, elDeg = 0, az = 0;
+    if (u > 0) {
+      const e = dx * o.ex + dy * o.ey + dz * o.ez, nn = dx * o.nx + dy * o.ny + dz * o.nz;
+      elDeg = Math.atan2(u, Math.hypot(e, nn)) * 180 / Math.PI;
+      az = Math.atan2(e, nn) * 180 / Math.PI;
+      const sun = sunEcefDir(t);
+      const dark = (sun.x * o.ux + sun.y * o.uy + sun.z * o.uz) < SUN_DARK;
+      const along = px * sun.x + py * sun.y + pz * sun.z;
+      let sunlit = along > 0;
+      if (!sunlit) {
+        const wx = px - along * sun.x, wy = py - along * sun.y, wz = pz - along * sun.z;
+        sunlit = (wx * wx + wy * wy + wz * wz) > EARTH_R * EARTH_R;
+      }
+      visible = elDeg >= 10 && sunlit && dark;
+    }
+    if (visible) {
+      if (!rise) { rise = t; riseAz = az; }
+      if (elDeg > peakEl) peakEl = elDeg;
+    } else if (rise) break;                          // visible window ended
+  }
+  return rise ? { rise, riseAz, peakEl } : null;
+}
+
+function checkPassAlerts() {
+  if (!station || !sky.obs || !$('toggle-station').checked) return;
+  if (Math.abs(viewer.clock.multiplier) > 4) return;          // not during fast time-warp
+  const now = JulianDate.toDate(viewer.clock.currentTime);
+  for (const [norad, label] of NAKED_EYE) {
+    const idx = catalog.findIndex((c) => c.norad === norad);
+    if (idx < 0) continue;
+    const pass = nextVisiblePass(satellite.twoline2satrec(catalog[idx].l1, catalog[idx].l2), now);
+    if (!pass) continue;
+    const lead = pass.rise - now;
+    if (lead <= 0 || lead > PASS_LEAD_MS) continue;
+    const key = `${norad}@${Math.round(pass.rise.getTime() / 60_000)}`;
+    if (alertedPasses.has(key)) continue;
+    alertedPasses.add(key);
+    toast(
+      `🛰 <b>${label}</b> visible pass in ~${Math.max(1, Math.round(lead / 60_000))} min` +
+      ` · rises in the ${compass(pass.riseAz)}, peaks ~${Math.round(pass.peakEl)}° · go look up!`,
+      45_000,
+    );
+  }
+}
+setInterval(checkPassAlerts, 60_000);
+
 function placeStation(lat, lon) {
   station = { lat, lon };
   try { localStorage.setItem(PASS_STORE_KEY, JSON.stringify(station)); } catch { /* ignore */ }
@@ -1205,6 +1274,7 @@ function placeStation(lat, lon) {
   $('sky-now').hidden = false;
   drawStation();
   startPasses();
+  checkPassAlerts();
   // On a phone the pass list lives in the ☰ drawer, which we closed to free the
   // globe for the tap — point them back to it.
   if (window.matchMedia?.('(pointer: coarse)').matches) {
@@ -1526,4 +1596,5 @@ window.__orbital = {
   get swarm() { return swarm; },
   get selected() { return selected; },
   get skyPlotted() { return sky.plotted; },   // debug: dots in the overhead chart
+  checkPassAlerts,                              // debug: force a visible-pass check
 };
