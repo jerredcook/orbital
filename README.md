@@ -292,6 +292,12 @@ Design notes for the 3D close-up view:
   26 km long, native TDRS is 0.9 m).  `tools/fix-models.mjs` strips
   texture bindings that reference missing UV sets, which otherwise kill
   Cesium's shader compile (Terra, Hubble shipped that way).
+- **Planetary probes in the solar-system view** swap dot→model up close too,
+  each nadir-locked to its planet with a short comet-tail.  Juno, Cassini and
+  MRO use their real NASA models (`REAL_PROBES` in `solarsystem.js`); the rest
+  use a generic deep-space-probe build from `make-models.mjs`.  (Craft with a
+  very long magnetometer boom — MESSENGER, Magellan, Galileo — stay generic:
+  the real GLB shrinks the body to a speck at icon scale.)
 - The model entity's position/orientation are `CallbackProperty`s that
   propagate SGP4 at exact render time.  Don't switch them to imperative
   per-tick updates: Cesium's tracked-camera update runs before clock-tick

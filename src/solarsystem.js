@@ -505,7 +505,18 @@ const PROBE_FACTS = {
 const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');           // active
 const PROBE_COLOR_DERELICT = Color.fromCssColorString('#8AA7B2');  // dead but still orbiting
 const PROBE_COLOR_GONE = Color.fromCssColorString('#FF9A5A');      // reentering — fading out
-const PROBE_MODEL = `${import.meta.env.BASE_URL}models/probe.glb`; // shown up close
+const PROBE_MODEL = `${import.meta.env.BASE_URL}models/probe.glb`; // generic, shown up close
+// Real published NASA models (github.com/nasa/NASA-3D-Resources, public domain)
+// for the flagship craft whose models are compact enough to read at icon scale;
+// the rest keep the generic.  (Probes like MESSENGER / Magellan / Galileo model
+// a very long magnetometer boom that shrinks the whole body to a speck here, so
+// the tidy generic represents them better.)  `k` normalises each GLB's
+// arbitrary native units so the rendered model is ~7% of its planet's radius.
+const REAL_PROBES = {
+  Juno:    { file: 'juno',    k: 0.0039 },   // Jupiter
+  Cassini: { file: 'cassini', k: 0.0020 },   // Saturn
+  MRO:     { file: 'mro',     k: 0.00080 },  // Mars
+};
 const TRAIL_STEPS = 20;          // segments in a probe's trailing arc
 const TRAIL_ARC = 0.55;          // radians of orbit the trail spans (~32°)
 const PROBE_FADE_YEARS = 1.5;                                      // fade span after a deorbit
@@ -520,6 +531,9 @@ function addProbe(planet, probe, idx) {
   const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
   const nx = sO * si, ny = -cO * si, nz = ci;          // orbit-plane normal (for nadir-lock)
   const trailPts = Array.from({ length: TRAIL_STEPS + 1 }, () => new Cartesian3());   // cached trail
+  const real = REAL_PROBES[name];                       // a real NASA model, or the generic
+  const modelUri = real ? `${import.meta.env.BASE_URL}models/${real.file}.glb` : PROBE_MODEL;
+  const modelScale = (real ? real.k : 0.009) * planetR;
   const entity = viewer.entities.add({
     name,
     position: new CallbackProperty((time, result) => {
@@ -560,9 +574,9 @@ function addProbe(planet, probe, idx) {
       distanceDisplayCondition: new DistanceDisplayCondition(planetR * 6, Number.MAX_VALUE),
     },
     model: {
-      uri: PROBE_MODEL,
+      uri: modelUri,
       minimumPixelSize: 56,
-      scale: planetR * 0.009,
+      scale: modelScale,
       distanceDisplayCondition: new DistanceDisplayCondition(0, planetR * 6),
     },
     // A short comet-tail sampled backward along the orbit, fading at the far end
