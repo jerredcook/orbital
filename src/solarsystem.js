@@ -31,6 +31,7 @@ import {
   orbitalPeriodCenturies, AU_METERS, eclipticFromElements,
 } from './ephemeris.js';
 import { MOON_ELEMENTS, MOON_EPOCH_JD } from './moon-elements.js';
+import { PROBE_ELEMENTS } from './probe-elements.js';
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
@@ -90,7 +91,9 @@ const _real = new Cartesian3();
 const _pos = new Cartesian3();
 const _moonHost = new Cartesian3();
 const _moonRel = new Cartesian3();
+const _probeRel = new Cartesian3();
 const MOON_EPOCH_REL = MOON_EPOCH_JD - 2451545.0;   // days from J2000 to the moon-element epoch
+const PROBE_ECAP = 0.8;   // cap rendered eccentricity so apoapsis stays in-frame and periapsis clears the planet
 
 // Real position of a moon relative to its planet (metres, ecliptic J2000), by
 // advancing its mean anomaly from the element epoch and solving Kepler.
@@ -547,12 +550,25 @@ let probeList = [];          // { entity, year }
 let probeYear = null;        // null = show all (timeline off)
 
 function addProbe(planet, probe, idx) {
-  const [name, factor, periodDays, inclDeg, nodeDeg, arrival, end, deorbited] = probe;
-  const phase = idx * 2.1;
+  const [name, factor, illPeriod, illInc, illNode, arrival, end, deorbited] = probe;
   const planetR = bodyRadius(BODIES[planet].radius);   // rendered radius — sizes the model + swap
-  const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
-  const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
-  const nx = sO * si, ny = -cO * si, nz = ci;          // orbit-plane normal (for nadir-lock)
+  // Real orbit shape + orientation from JPL Horizons where we have it (Juno's
+  // eccentric polar ellipse, MESSENGER's stretched orbit…), else the illustrative
+  // circle.  Periapsis is anchored to factor·planetR and eccentricity capped, so
+  // the orbit clears the planet and its apoapsis stays in frame.
+  const el = PROBE_ELEMENTS[name];
+  const e = el ? Math.min(el.e, PROBE_ECAP) : 0;
+  const orbInc = el ? el.i : illInc;
+  const orbNode = el ? el.node : illNode;
+  const orbPeri = el ? el.peri : 0;
+  const orbPeriod = el ? el.periodDays : illPeriod;
+  const M0 = el ? el.M0 : idx * 120;                   // illustrative de-phasing if no real phase
+  const aRender = (factor * planetR) / (1 - e);        // semi-major giving periapsis = factor·planetR
+  const iR = orbInc * Math.PI / 180, omR = orbNode * Math.PI / 180, siR = Math.sin(iR);
+  const nx = Math.sin(omR) * siR, ny = -Math.cos(omR) * siR, nz = Math.cos(iR);   // orbit-plane normal
+  const meanAnom = (days) => M0 + 360 * days / orbPeriod;
+  const relAt = (M, out) => eclipticFromElements(aRender, e, orbInc, orbNode, orbPeri, M, out);
+
   const trailPts = Array.from({ length: TRAIL_STEPS + 1 }, () => new Cartesian3());   // cached trail
   const real = REAL_PROBES[name];                       // a real NASA model, or the generic
   const modelUri = real ? `${import.meta.env.BASE_URL}models/${real.file}.glb` : PROBE_MODEL;
@@ -562,23 +578,18 @@ function addProbe(planet, probe, idx) {
     position: new CallbackProperty((time, result) => {
       result = result || new Cartesian3();
       scenePosOf(planet, _moonHost);
-      const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
-      const r = factor * bodyRadius(BODIES[planet].radius);
-      const th = (days / periodDays) * 2 * Math.PI + phase;
-      const ct = Math.cos(th), st = Math.sin(th);
-      result.x = _moonHost.x + r * (cO * ct - sO * ci * st);
-      result.y = _moonHost.y + r * (sO * ct + cO * ci * st);
-      result.z = _moonHost.z + r * (si * st);
+      relAt(meanAnom(centuriesSinceJ2000(earthClock.currentTime) * 36525), _probeRel);
+      result.x = _moonHost.x + _probeRel.x;
+      result.y = _moonHost.y + _probeRel.y;
+      result.z = _moonHost.z + _probeRel.z;
       return result;
     }, false),
     // Nadir-lock: the dish (+Y) points to space, the bus faces the planet, and
     // the wings (±Z) lie along-track — so each probe holds a purposeful attitude
     // and slowly turns to keep facing its world as it orbits.
     orientation: new CallbackProperty((time, result) => {
-      const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
-      const th = (days / periodDays) * 2 * Math.PI + phase;
-      const ct = Math.cos(th), st = Math.sin(th);
-      let zx = cO * ct - sO * ci * st, zy = sO * ct + cO * ci * st, zz = si * st;   // zenith
+      relAt(meanAnom(centuriesSinceJ2000(earthClock.currentTime) * 36525), _probeRel);
+      let zx = _probeRel.x, zy = _probeRel.y, zz = _probeRel.z;                      // zenith (away from planet)
       const zl = Math.hypot(zx, zy, zz) || 1; zx /= zl; zy /= zl; zz /= zl;
       let Zx = ny * zz - nz * zy, Zy = nz * zx - nx * zz, Zz = nx * zy - ny * zx;    // along-track
       const Zl = Math.hypot(Zx, Zy, Zz) || 1; Zx /= Zl; Zy /= Zl; Zz /= Zl;
@@ -608,15 +619,14 @@ function addProbe(planet, probe, idx) {
     polyline: {
       positions: new CallbackProperty(() => {
         scenePosOf(planet, _moonHost);
-        const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
-        const th0 = (days / periodDays) * 2 * Math.PI + phase;
-        const r = factor * bodyRadius(BODIES[planet].radius);
+        const M0t = meanAnom(centuriesSinceJ2000(earthClock.currentTime) * 36525);
+        const arcDeg = TRAIL_ARC * 180 / Math.PI;
         for (let k = 0; k <= TRAIL_STEPS; k++) {
-          const th = th0 - TRAIL_ARC + (k / TRAIL_STEPS) * TRAIL_ARC;
-          const ct = Math.cos(th), st = Math.sin(th), pt = trailPts[k];
-          pt.x = _moonHost.x + r * (cO * ct - sO * ci * st);
-          pt.y = _moonHost.y + r * (sO * ct + cO * ci * st);
-          pt.z = _moonHost.z + r * (si * st);
+          relAt(M0t - arcDeg + (k / TRAIL_STEPS) * arcDeg, _probeRel);
+          const pt = trailPts[k];
+          pt.x = _moonHost.x + _probeRel.x;
+          pt.y = _moonHost.y + _probeRel.y;
+          pt.z = _moonHost.z + _probeRel.z;
         }
         return trailPts;
       }, false),
@@ -635,8 +645,32 @@ function addProbe(planet, probe, idx) {
       translucencyByDistance: new NearFarScalar(6e8, 1.0, 3e9, 0.0),
     },
   });
-  probeList.push({ entity, arrival, end, deorbited });
-  probeInfo[name] = { planet, entity, periodDays, inclDeg, arrival, end, deorbited };
+  // Faint orbit ring (the full real ellipse, relative to the planet — fixed, so
+  // sampled once).  Shown only while this probe is selected, so flying to it
+  // reveals its real shape without tangling the Mars fleet together.
+  const ringRel = [];
+  for (let k = 0; k <= 128; k++) ringRel.push(relAt((k / 128) * 360, new Cartesian3()));
+  const ringPts = ringRel.map(() => new Cartesian3());
+  const ring = viewer.entities.add({
+    show: false,
+    polyline: {
+      positions: new CallbackProperty(() => {
+        scenePosOf(planet, _moonHost);
+        for (let k = 0; k < ringPts.length; k++) {
+          ringPts[k].x = _moonHost.x + ringRel[k].x;
+          ringPts[k].y = _moonHost.y + ringRel[k].y;
+          ringPts[k].z = _moonHost.z + ringRel[k].z;
+        }
+        return ringPts;
+      }, false),
+      width: 1.5,
+      arcType: ArcType.NONE,
+      material: PROBE_COLOR.withAlpha(0.4),
+    },
+  });
+  probeList.push({ entity, ring, arrival, end, deorbited });
+  probeInfo[name] = { planet, entity, ring, periodDays: orbPeriod, inclDeg: orbInc, ecc: e,
+    apo: aRender * (1 + e), arrival, end, deorbited };
 }
 
 function buildProbes() {
@@ -667,7 +701,7 @@ function refreshProbes(yArg) {
   const Y = yArg != null ? yArg : (probeYear != null ? probeYear : nowYear());
   for (const p of probeList) {
     const ap = probeAppearance(p, Y);
-    if (!ap) { p.entity.show = false; continue; }
+    if (!ap) { p.entity.show = false; p.ring.show = false; continue; }
     p.entity.show = true;
     p.entity.point.color = ap.color.withAlpha(ap.alpha);
     p.entity.point.pixelSize = ap.size;
@@ -910,6 +944,7 @@ function deselect() {
   selectedMoonName = null;
   selectedProbeName = null;
   releaseAnchor();
+  for (const p of probeList) p.ring.show = false;   // hide any probe orbit ring
   $('system-panel').hidden = true;
   $('moon-panel').hidden = true;
   $('probe-panel').hidden = true;
@@ -981,6 +1016,8 @@ function selectProbe(name) {
   selectedName = null;
   selectedMoonName = null;
   selectedProbeName = name;
+  for (const p of probeList) p.ring.show = false;   // reveal just this probe's orbit ring
+  info.ring.show = true;
   $('system-panel').hidden = true;
   $('moon-panel').hidden = true;
   fillProbePanel(name, info);
@@ -990,10 +1027,14 @@ function selectProbe(name) {
 
   const planetR = bodyRadius(BODIES[info.planet].radius);
   releaseAnchor();
-  info.entity.position.getValue(earthClock.currentTime, _pos);
-  viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, planetR), {
+  // Frame the whole orbit (centred on the planet, sized to apoapsis) so the real
+  // shape reads — eccentric orbits like Juno's are far larger than the planet.
+  // Anchor on the probe afterwards so you can still zoom down onto the model.
+  scenePosOf(info.planet, _pos);
+  const frameR = Math.max(info.apo, planetR * 1.6);
+  viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, frameR), {
     duration: 1.3,
-    offset: new HeadingPitchRange(0, CMath.toRadians(-22), planetR * 3.5),
+    offset: new HeadingPitchRange(0, CMath.toRadians(-30), frameR * 2.4),
     complete: () => { if (selectedProbeName === name && !inBodyGlobe) anchorOn(info.entity, planetR * 0.25); },
   });
 }
@@ -1017,7 +1058,8 @@ function fillProbePanel(name, info) {
   $('probe-arrived').textContent = `${Math.floor(info.arrival)}${nowYear() < info.arrival ? ' (en route)' : ''}`;
   $('probe-status').textContent = status;
   $('probe-status').className = statusClass;
-  $('probe-orbit').textContent = `${period} · ${info.inclDeg.toFixed(0)}° incl`;
+  const shape = info.ecc >= 0.2 ? ` · e ${info.ecc.toFixed(2)}` : '';   // note eccentric orbits
+  $('probe-orbit').textContent = `${period} · ${info.inclDeg.toFixed(0)}° incl${shape}`;
   $('probe-fact').textContent = f.fact || '';
 }
 
