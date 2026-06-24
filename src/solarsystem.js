@@ -98,7 +98,9 @@ const PROBE_ECAP = 0.8;   // cap rendered eccentricity so apoapsis stays in-fram
 // Real position of a moon relative to its planet (metres, ecliptic J2000), by
 // advancing its mean anomaly from the element epoch and solving Kepler.
 function moonRelPos(name, daysSinceJ2000, result) {
+  result = result || new Cartesian3();
   const el = MOON_ELEMENTS[name];
+  if (!el) { result.x = result.y = result.z = 0; return result; }   // guard: a moon with no elements
   const M = el.M0 + 360 * (daysSinceJ2000 - MOON_EPOCH_REL) / el.periodDays;
   return eclipticFromElements(el.a, el.e, el.i, el.node, el.peri, M, result);
 }
@@ -566,6 +568,9 @@ function addProbe(planet, probe, idx) {
   const aRender = (factor * planetR) / (1 - e);        // semi-major giving periapsis = factor·planetR
   const iR = orbInc * Math.PI / 180, omR = orbNode * Math.PI / 180, siR = Math.sin(iR);
   const nx = Math.sin(omR) * siR, ny = -Math.cos(omR) * siR, nz = Math.cos(iR);   // orbit-plane normal
+  // Phase isn't anchored to the element epoch (unlike the moons): a probe's exact
+  // spot on its orbit isn't observable at this scale, so M0 just sets a stable
+  // starting point and it flies its real-shaped orbit from there.
   const meanAnom = (days) => M0 + 360 * days / orbPeriod;
   const relAt = (M, out) => eclipticFromElements(aRender, e, orbInc, orbNode, orbPeri, M, out);
 
@@ -678,6 +683,17 @@ function buildProbes() {
   for (const planet of Object.keys(PROBES)) PROBES[planet].forEach((pr, i) => addProbe(planet, pr, i));
 }
 
+// On a scale toggle, the probes' orbit size/model scale/swap distances are baked
+// from the planet's rendered radius (unlike the moons, which re-read it each
+// frame), so rebuild them against the new scale.
+function rebuildProbes() {
+  for (const p of probeList) { viewer.entities.remove(p.entity); viewer.entities.remove(p.ring); }
+  buildProbes();
+  refreshProbes();
+  const sel = selectedProbeName && probeInfo[selectedProbeName];
+  if (sel) sel.ring.show = sel.entity.show;   // re-reveal the selected probe's ring
+}
+
 const nowYear = () => { const d = new Date(); return d.getUTCFullYear() + (d.getUTCMonth() + 0.5) / 12; };
 
 // Appearance of a craft at (possibly fractional) year Y: null = not shown.
@@ -708,6 +724,8 @@ function refreshProbes(yArg) {
     p.entity.label.fillColor = ap.color.withAlpha(Math.max(0.45, ap.alpha));
   }
 }
+
+function hideProbeRings() { for (const p of probeList) p.ring.show = false; }
 
 function addBody(name) {
   const isSun = name === 'Sun';
@@ -890,6 +908,7 @@ function selectBody(name) {
   selectedName = name;
   selectedMoonName = null;
   selectedProbeName = null;
+  hideProbeRings();
   $('moon-panel').hidden = true;
   $('probe-panel').hidden = true;
   const f = bodyFacts(name);
@@ -944,7 +963,7 @@ function deselect() {
   selectedMoonName = null;
   selectedProbeName = null;
   releaseAnchor();
-  for (const p of probeList) p.ring.show = false;   // hide any probe orbit ring
+  hideProbeRings();
   $('system-panel').hidden = true;
   $('moon-panel').hidden = true;
   $('probe-panel').hidden = true;
@@ -975,6 +994,7 @@ function selectMoon(name) {
   selectedName = null;
   selectedProbeName = null;
   selectedMoonName = name;
+  hideProbeRings();
   $('system-panel').hidden = true;
   $('probe-panel').hidden = true;
   fillMoonPanel(name, info);
@@ -1016,8 +1036,8 @@ function selectProbe(name) {
   selectedName = null;
   selectedMoonName = null;
   selectedProbeName = name;
-  for (const p of probeList) p.ring.show = false;   // reveal just this probe's orbit ring
-  info.ring.show = true;
+  hideProbeRings();                                 // reveal just this probe's orbit ring (if it's up)
+  info.ring.show = info.entity.show;
   $('system-panel').hidden = true;
   $('moon-panel').hidden = true;
   fillProbePanel(name, info);
@@ -1356,9 +1376,11 @@ export function initSystemView(earthViewer, moonView, onReturn) {
   $('system-scale').addEventListener('change', (e) => {
     setTrueScale(e.target.checked);
     if (viewer) {
+      releaseAnchor();              // rebuilding probes drops their entities; clear any anchor first
       applyScaleToBodies();
       buildRing();
       rebuildOrbits();
+      rebuildProbes();             // re-size probe orbits/models to the new scale
       buildSky();
       if (belt) belt.tick(performance.now(), true);    // re-place at the new scale
       if (trojans) trojans.tick(performance.now(), true);

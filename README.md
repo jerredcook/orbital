@@ -303,13 +303,15 @@ Design notes for the 3D close-up view:
   (`probe-elements.js`) carry real osculating elements from **JPL Horizons**
   (ecliptic J2000, planet-centred), fetched by the `fetch-moon-elements` /
   `fetch-probe-elements` tools and propagated with the shared Kepler solver in
-  `ephemeris.js`.  Moons land within ~1° of Horizons (the fetch derives the
-  precise sidereal period from the mean-longitude drift across two epochs, since
-  the osculating period is fatal for fast moons over many orbits).  Probes get
-  their real orbit shape + orientation (Juno's eccentric polar ellipse, etc.),
-  eccentricity capped and periapsis anchored so it frames sensibly; selecting a
-  probe draws its real orbit ring.  Craft Horizons doesn't track keep a generic
-  illustrative orbit.
+  `ephemeris.js`.  The major moons land within ~1° of Horizons — the tiny, fast-
+  precessing inner moonlets within a few degrees.  The fetch derives each moon's
+  precise mean-longitude rate in two steps (a short baseline pins an unambiguous
+  coarse rate; a long baseline counted with *that* rate gives the precise period),
+  because the raw osculating period mis-counts turns for fast moons over many
+  orbits.  Probes get their real orbit shape + orientation (Juno's eccentric polar
+  ellipse, etc.), eccentricity capped and periapsis anchored so it frames sensibly
+  — re-sized to the planet on a **True scale** toggle; selecting a probe draws its
+  real orbit ring.  Craft Horizons doesn't track keep a generic illustrative orbit.
 - **Showpieces** (`SHOWPIECES` in `main.js`) — craft that never enter Earth's
   catalog because they don't orbit Earth.  Lagrange-point observatories (JWST,
   WMAP at L2; SOHO, DSCOVR, ACE at L1), deep-space probes (Voyager 1 & 2,

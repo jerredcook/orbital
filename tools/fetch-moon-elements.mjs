@@ -59,7 +59,30 @@ async function fetchEls(id, planet, dateStr) {
 }
 
 const norm360 = (d) => ((d % 360) + 360) % 360;
-const DATE2 = new Date(Date.UTC(2026, 0, 1) + 400 * 86400000).toISOString().slice(0, 10);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const dateAfter = (days) => new Date(Date.UTC(2026, 0, 1) + days * 86400000).toISOString().slice(0, 10);
+
+// Robust mean-longitude period.  The osculating PR is ~0.1% off the true mean
+// rate (fatal for fast moons over many orbits), so we measure the *mean longitude*
+// (node+peri+M) advance and infer the period from it.  But for fast, strongly-
+// precessing inner moons (Amalthea, Thebe) even the osculating estimate mis-rounds
+// the integer turn count over a long baseline.  So two steps: a SHORT baseline
+// (~25 turns) gives an unambiguous coarse rate; a LONG baseline (~300 turns), with
+// turns counted using that *coarse mean* rate, gives the precise rate.
+async function meanPeriod(id, planet, e0) {
+  const lam0 = norm360(e0.node + e0.peri + e0.M0);
+  const sample = async (turns, predictRate) => {
+    const days = Math.min(1600, Math.max(6, Math.round(turns * e0.Posc)));
+    const e = await fetchEls(id, planet, dateAfter(days));
+    await sleep(300);
+    const base = e.epochJd - e0.epochJd;
+    const frac = norm360(norm360(e.node + e.peri + e.M0) - lam0);
+    return (Math.round((predictRate * base - frac) / 360) * 360 + frac) / base;   // deg/day
+  };
+  const coarse = await sample(25, 360 / e0.Posc);   // few turns: osculating estimate suffices
+  const precise = await sample(300, coarse);        // many turns: count with the coarse mean rate
+  return 360 / precise;
+}
 
 const out = {};
 let epoch = null;
@@ -67,19 +90,9 @@ for (const [name, id, planet] of MOONS) {
   process.stdout.write(`${name.padEnd(11)} `);
   try {
     const e0 = await fetchEls(id, planet, EPOCH_DATE);
-    await new Promise((r) => setTimeout(r, 300));
-    const e1 = await fetchEls(id, planet, DATE2);
+    await sleep(300);
     epoch = e0.epochJd;
-    // Precise sidereal period from the *mean longitude* (node+peri+M) advance over
-    // the baseline — the osculating PR is ~0.1% off the true mean rate, fatal for
-    // fast moons over many orbits.  Unwrap turns using the osculating estimate.
-    const base = e1.epochJd - e0.epochJd;
-    const lam0 = norm360(e0.node + e0.peri + e0.M0);
-    const lam1 = norm360(e1.node + e1.peri + e1.M0);
-    const expected = base * 360 / e0.Posc;
-    const frac = norm360(lam1 - lam0);
-    const revs = Math.round((expected - frac) / 360);
-    const periodDays = base * 360 / (revs * 360 + frac);
+    const periodDays = await meanPeriod(id, planet, e0);
     out[name] = { a: e0.a * 1000, e: e0.e, i: e0.i, node: e0.node, peri: e0.peri, M0: e0.M0, periodDays };
     console.log(`a=${e0.a.toFixed(0)}km  P=${periodDays.toFixed(5)}d (osc ${e0.Posc.toFixed(5)})  i=${e0.i.toFixed(2)}°`);
   } catch (err) { console.log(`FAILED ${err.message}`); }
