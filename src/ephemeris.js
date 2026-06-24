@@ -141,6 +141,29 @@ export function planetPosition(name, T, result) {
   return result;
 }
 
+// Position (in the same length unit as `a`) from explicit Keplerian elements, in
+// the same ecliptic-J2000 frame planetPosition uses — relative to whatever body
+// the elements are centred on.  Angles in degrees; M is the mean anomaly.  Used
+// for the moons (real elements, planet-centred; see moon-elements.js).
+export function eclipticFromElements(a, e, iDeg, OmDeg, wDeg, Mdeg, result) {
+  const i = iDeg * DEG, Om = OmDeg * DEG, w = wDeg * DEG;
+  let M = (norm360(Mdeg) * DEG);
+  if (M > Math.PI) M -= 2 * Math.PI;                 // seed solveKepler in (-π, π]
+  const E = solveKepler(M, e);
+
+  const xp = a * (Math.cos(E) - e);
+  const yp = a * Math.sqrt(1 - e * e) * Math.sin(E);
+  const cosO = Math.cos(Om), sinO = Math.sin(Om);
+  const cosw = Math.cos(w), sinw = Math.sin(w);
+  const cosI = Math.cos(i), sinI = Math.sin(i);
+
+  result = result || new Cartesian3();
+  result.x = (cosw * cosO - sinw * sinO * cosI) * xp + (-sinw * cosO - cosw * sinO * cosI) * yp;
+  result.y = (cosw * sinO + sinw * cosO * cosI) * xp + (-sinw * sinO + cosw * cosO * cosI) * yp;
+  result.z = (sinw * sinI) * xp + (cosw * sinI) * yp;
+  return result;
+}
+
 // Orbital period in Julian centuries — the mean longitude advances el.L[1]
 // degrees per century, so one full 360° revolution takes this long.
 export function orbitalPeriodCenturies(name) {

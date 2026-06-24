@@ -28,8 +28,9 @@ import {
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
-  orbitalPeriodCenturies, AU_METERS,
+  orbitalPeriodCenturies, AU_METERS, eclipticFromElements,
 } from './ephemeris.js';
+import { MOON_ELEMENTS, MOON_EPOCH_JD } from './moon-elements.js';
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
@@ -88,6 +89,16 @@ const ALL_BODIES = ['Sun', ...PLANETS];
 const _real = new Cartesian3();
 const _pos = new Cartesian3();
 const _moonHost = new Cartesian3();
+const _moonRel = new Cartesian3();
+const MOON_EPOCH_REL = MOON_EPOCH_JD - 2451545.0;   // days from J2000 to the moon-element epoch
+
+// Real position of a moon relative to its planet (metres, ecliptic J2000), by
+// advancing its mean anomaly from the element epoch and solving Kepler.
+function moonRelPos(name, daysSinceJ2000, result) {
+  const el = MOON_ELEMENTS[name];
+  const M = el.M0 + 360 * (daysSinceJ2000 - MOON_EPOCH_REL) / el.periodDays;
+  return eclipticFromElements(el.a, el.e, el.i, el.node, el.peri, M, result);
+}
 const _quat = new Quaternion();
 const _qSpin = new Quaternion();
 const _qTilt = new Quaternion();
@@ -339,11 +350,8 @@ function rebuildMoonSpheres() {
 // One moon: a marker + label + a small tinted sphere you can fly to, whose
 // CallbackProperty position is the host planet's position plus a circular but
 // inclined orbit offset.  Registered in moonInfo so a click selects it.
-function addMoon(planet, moon, idx) {
-  const [name, realR, periodDays, factor, inclDeg, nodeDeg] = moon;
-  const phase = idx * 1.7;            // de-phase moons so they don't line up
-  const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
-  const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
+function addMoon(planet, moon) {
+  const [name, realR, periodDays, factor] = moon;   // position now comes from real elements
   const tint = Color.fromCssColorString(MOON_FACTS[name]?.tint ?? '#b8b2a6');
   const _rad = new Cartesian3();
   const entity = viewer.entities.add({
@@ -352,12 +360,18 @@ function addMoon(planet, moon, idx) {
       result = result || new Cartesian3();
       scenePosOf(planet, _moonHost);
       const days = centuriesSinceJ2000(earthClock.currentTime) * 36525;
-      const r = isTrueScale() ? realR : factor * bodyRadius(BODIES[planet].radius);
-      const th = (days / periodDays) * 2 * Math.PI + phase;
-      const ct = Math.cos(th), st = Math.sin(th);
-      result.x = _moonHost.x + r * (cO * ct - sO * ci * st);
-      result.y = _moonHost.y + r * (sO * ct + cO * ci * st);
-      result.z = _moonHost.z + r * (si * st);
+      moonRelPos(name, days, _moonRel);          // real offset (m, ecliptic) from the planet
+      if (isTrueScale()) {                        // true scale: real distance + shape
+        result.x = _moonHost.x + _moonRel.x;
+        result.y = _moonHost.y + _moonRel.y;
+        result.z = _moonHost.z + _moonRel.z;
+      } else {                                    // orrery: real direction, eased-out radius
+        const r = factor * bodyRadius(BODIES[planet].radius);
+        const s = r / (Math.hypot(_moonRel.x, _moonRel.y, _moonRel.z) || 1);
+        result.x = _moonHost.x + _moonRel.x * s;
+        result.y = _moonHost.y + _moonRel.y * s;
+        result.z = _moonHost.z + _moonRel.z * s;
+      }
       return result;
     }, false),
     // Moons with a real surface map get a textured Primitive sphere (built
@@ -410,21 +424,30 @@ function buildMoonOrbits() {
   const SEG = 96;
   for (const planet of Object.keys(MOONS)) {
     for (const moon of MOONS[planet]) {
-      const [, realR, , factor, inclDeg, nodeDeg] = moon;
-      const i = inclDeg * Math.PI / 180, om = nodeDeg * Math.PI / 180;
-      const cO = Math.cos(om), sO = Math.sin(om), ci = Math.cos(i), si = Math.sin(i);
+      const [name, , , factor] = moon;
+      const el = MOON_ELEMENTS[name];
+      if (!el) continue;
+      // The real orbit relative to the planet is fixed, so sample it once: the
+      // true ellipse (m), and an orrery copy normalised to the eased-out radius.
+      const compR = factor * bodyRadius(BODIES[planet].radius);
+      const realRel = [], compRel = [];
+      for (let k = 0; k <= SEG; k++) {
+        const p = eclipticFromElements(el.a, el.e, el.i, el.node, el.peri, (k / SEG) * 360, new Cartesian3());
+        realRel.push(p);
+        const s = compR / (Math.hypot(p.x, p.y, p.z) || 1);
+        compRel.push(new Cartesian3(p.x * s, p.y * s, p.z * s));
+      }
       const pts = Array.from({ length: SEG + 1 }, () => new Cartesian3());
       const entity = viewer.entities.add({
         show: false,
         polyline: {
           positions: new CallbackProperty(() => {
             scenePosOf(planet, _moonHost);
-            const r = isTrueScale() ? realR : factor * bodyRadius(BODIES[planet].radius);
+            const rel = isTrueScale() ? realRel : compRel;
             for (let k = 0; k <= SEG; k++) {
-              const th = (k / SEG) * 2 * Math.PI, ct = Math.cos(th), st = Math.sin(th);
-              pts[k].x = _moonHost.x + r * (cO * ct - sO * ci * st);
-              pts[k].y = _moonHost.y + r * (sO * ct + cO * ci * st);
-              pts[k].z = _moonHost.z + r * (si * st);
+              pts[k].x = _moonHost.x + rel[k].x;
+              pts[k].y = _moonHost.y + rel[k].y;
+              pts[k].z = _moonHost.z + rel[k].z;
             }
             return pts;
           }, false),
