@@ -12,6 +12,7 @@
 //   #probe=Juno   a robotic spacecraft in the system view
 //   #luna         the Moon globe
 //   #jwst         a showpiece craft, up close (also #voyager1, #soho, …)
+//   #guide        the full guide overlay (read-only; never written during use)
 
 export function writeHash(state) {
   let h = '';
@@ -34,6 +35,7 @@ export function readHash() {
   if (!h) return null;
   if (h === 'luna') return { luna: true };
   if (h === 'system') return { system: true };
+  if (h === 'guide') return { guide: true };   // the full guide overlay
   const eq = h.indexOf('=');
   if (eq < 0) return { show: h };   // a bare word is a showpiece id (jwst, voyager1, soho…)
   const k = h.slice(0, eq);

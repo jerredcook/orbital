@@ -31,6 +31,80 @@
       </div>
       <p class="welcome-hint">Drag to rotate · scroll or pinch to zoom · Esc steps back</p>
       <button id="welcome-go" class="welcome-go">Start exploring →</button>
+      <button id="welcome-guide" class="welcome-guide" type="button">Or see everything it can do →</button>
+    </div>
+  </div>
+
+  <div id="guide" hidden>
+    <div class="guide-card">
+      <button id="guide-close" class="guide-close" type="button" aria-label="Close guide">✕</button>
+      <div class="welcome-mark">ORBITAL</div>
+      <p class="guide-sub">Everything this map can do. It's really two worlds in one — a <b>live satellite tracker</b> around Earth, and the <b>whole solar system</b> to fly through. Switch any time with <b>☉ System</b> in the top bar, and <b>Esc</b> always steps back a level.</p>
+
+      <section class="guide-sec">
+        <h3>🛰 The live satellite tracker</h3>
+        <p>The opening view is every catalogued object orbiting Earth — thousands of them — each flown live from real tracking data, moving in real time.</p>
+        <ul>
+          <li><b>Tap any dot</b> to lock on and follow it. The panel shows its name, catalog number, altitude, speed and orbit; the big, well-known craft (ISS, Hubble, Tiangong…) load a real 3D model as you zoom in.</li>
+          <li><b>Colour is the orbit type</b> — low-Earth, medium, geostationary, highly-elliptical, debris. The legend (top-right) explains it and lets you switch types off to declutter.</li>
+          <li><b>Search</b> up top by name or catalog number to jump straight to a craft.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h3>📋 Filters, conjunctions &amp; screening</h3>
+        <p>The side panel — tap <b>☰</b> on a phone — is the control desk.</p>
+        <ul>
+          <li><b>Conjunctions</b>: every pair of objects passing within 5, 10 or 25 km of each other, found live. Click a row to fly to the close approach.</li>
+          <li><b>Screen one satellite</b>: select it, then “Screen close approaches” to list everything that comes within 25 km of it over the next day.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h3>📍 What flies over your house</h3>
+        <ul>
+          <li><b>Drop a spot</b> on Earth (or use your location) and Orbital works out which satellites pass over it, and exactly when.</li>
+          <li><b>Visible passes</b>: a filter for the ones you could actually see by eye — sunlit overhead while you're down in darkness.</li>
+          <li><b>The sky chart</b>: a naked-eye map of what's crossing your sky right now, horizon to overhead.</li>
+          <li><b>Pass alerts</b> count down to the next good viewing opportunity.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h3>☉ Fly the solar system</h3>
+        <p>Hit <b>☉ System</b> to leave Earth for a Sun's-eye view: all eight planets on their real orbits, the asteroid belt, Jupiter's two Trojan clouds, the Hilda triangle, the major asteroid families, and an accurate star sky behind it all. Tap <b>anything</b> — planet, moon or spacecraft — to fly over and orbit it, right down to just above its surface.</p>
+        <ul>
+          <li><b>The positions are real.</b> Planets, moons and probes are placed from real JPL ephemerides — not decoration. The moons sit in their true configuration (watch the Galilean moons dance around Jupiter, or Triton circle Neptune backwards), and each probe flies its real orbit shape — Juno's dramatic eccentric polar ellipse, MESSENGER's stretched loop at Mercury.</li>
+          <li><b>A planet's panel</b> lets you <b>enter it</b> as a full navigable globe, or <b>Show moon orbits</b> to ring it with its satellites' paths.</li>
+          <li><b>True scale</b> toggle: trade the legible “orrery” spacing for the real distances and sizes — space is mostly emptiness, and this shows how much.</li>
+          <li><b>The spacecraft timeline</b> scrubs through the decades — watch the orbiters arrive and depart across mission history.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h3>🌑 Land on another world</h3>
+        <p>Enter a planet or the Moon and you drop onto its actual surface globe — real NASA imagery — to navigate just like you do Earth, from orbit down to the ground.</p>
+      </section>
+
+      <section class="guide-sec">
+        <h3>🔭 The showpieces</h3>
+        <p>Some famous craft never appear in the tracker because they don't orbit Earth — they sit at gravitational balance points or sail through deep space. They're all here, findable by search or a tap:</p>
+        <ul>
+          <li><b>At the Lagrange points</b>: the James Webb and WMAP out at L2; SOHO, DSCOVR and ACE at L1.</li>
+          <li><b>Out in deep space</b>: Voyager 1 &amp; 2, Pioneer 10, New Horizons, the Parker Solar Probe and more — each parked at its real distance.</li>
+        </ul>
+      </section>
+
+      <section class="guide-sec">
+        <h3>🔗 Share what you find &amp; get around</h3>
+        <ul>
+          <li><b>The link updates as you explore</b> — copy the address to send someone the exact thing you're looking at, whether a satellite, a planet, a moon or a probe. They'll open right to it.</li>
+          <li><b>Controls</b>: drag to rotate, scroll or pinch to zoom, <b>Esc</b> steps back one level. The <b>?</b> button (top-right) reopens the welcome any time.</li>
+        </ul>
+      </section>
+
+      <p class="guide-foot">A note on the realism: the planets ride JPL's Keplerian elements; the moons and probes carry real osculating elements from JPL Horizons, with the major moons landing within about a degree of the truth. It's a labour of love — a free page for family and friends. Clear skies! 🌌</p>
+      <button id="guide-done" class="welcome-go" type="button">Back to exploring →</button>
     </div>
   </div>
 

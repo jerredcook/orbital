@@ -738,7 +738,23 @@ const closeWelcome = () => {
 $('welcome-go').addEventListener('click', closeWelcome);
 welcome.addEventListener('click', (e) => { if (e.target === welcome) closeWelcome(); });   // backdrop tap
 $('help-toggle').addEventListener('click', () => { welcome.hidden = false; });
+
+// The full guide — its own page, opened from the welcome (or a #guide link),
+// floating over whatever view you're in.  It never owns the hash; we only clear
+// a stale #guide on close so a reload doesn't reopen it.
+const guide = $('guide');
+const openGuide = () => { welcome.hidden = true; guide.hidden = false; guide.scrollTop = 0; };
+const closeGuide = () => {
+  guide.hidden = true;
+  if (location.hash === '#guide') history.replaceState(null, '', location.pathname + location.search);
+};
+$('welcome-guide').addEventListener('click', () => { closeWelcome(); openGuide(); });
+$('guide-close').addEventListener('click', closeGuide);
+$('guide-done').addEventListener('click', closeGuide);
+guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); });   // backdrop tap
+
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !guide.hidden) { e.stopPropagation(); closeGuide(); return; }
   if (e.key === 'Escape' && !welcome.hidden) { e.stopPropagation(); closeWelcome(); }
 }, true);
 // First-timers see it — unless they followed a shared deep-link, which lands
@@ -1532,6 +1548,7 @@ function navigateTo(s) {
     else if (!catalog.length) setTimeout(() => navigateTo(s), 400);
     return;
   }
+  if (s.guide) { openGuide(); return; }
   if (s.luna) { moonView.show(); return; }
   if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }

@@ -33,6 +33,7 @@ top of `src/main.js`.)
 | Select satellite | click a point |
 | Search | `/` or click the search box (name or NORAD ID) |
 | Deselect / close | `Esc` or click empty space |
+| Help | first-run welcome (a 3-tip intro + quick-jump chips); the `?` button reopens it. **"See everything it can do"** opens the full in-app guide — its own scrollable page documenting every feature, also reachable at `#guide` |
 | Time warp | − / + buttons, NOW to return to real time |
 | Launch timeline | legend toggle — scrub or ▶-play from 1957 to today (with a speed selector for the dense modern years) and watch the tracked population accumulate by launch year; era banners flash the milestones |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |

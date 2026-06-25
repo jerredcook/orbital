@@ -309,6 +309,47 @@ body:not(.system-mode) #system-legend { display: none; }
   border-radius: 7px; background: #FFB454; color: #0A0F18; font-weight: 600; font-size: 14px;
 }
 .welcome-go:hover { background: #FFC676; }
+.welcome-guide {
+  display: block; width: 100%; margin-top: 10px; padding: 5px; cursor: pointer;
+  background: none; border: none; color: #7E8DA3; font-size: 12px;
+}
+.welcome-guide:hover { color: #FFB454; }
+
+/* The full guide — its own scrollable "page", reachable from the welcome,
+   the ? button, or a #guide link. */
+#guide {
+  position: fixed; inset: 0; z-index: 55; padding: 20px; overflow-y: auto;
+  background: rgba(2,4,10,0.86); backdrop-filter: blur(4px);
+}
+#guide[hidden] { display: none; }
+.guide-card {
+  position: relative; width: 100%; max-width: 680px; margin: 0 auto;
+  padding: 30px 30px 26px; border: 1px solid #243348; border-radius: 12px;
+  background: rgba(10,15,24,0.98); box-shadow: 0 16px 56px rgba(0,0,0,0.6);
+}
+.guide-close {
+  position: absolute; top: 20px; right: 22px; width: 34px; height: 34px;
+  border: 1px solid #243348; border-radius: 8px; background: rgba(20,28,42,0.7);
+  color: #AEB9C8; font-size: 14px; cursor: pointer; line-height: 1;
+}
+.guide-close:hover { border-color: #FFB454; color: #FFB454; }
+.guide-sub { margin: 11px 40px 4px 0; font-size: 13.5px; line-height: 1.6; color: #AEB9C8; }
+.guide-sub b { color: #E8EFF8; font-weight: 600; }
+.guide-sec { margin-top: 26px; }
+.guide-sec h3 { margin: 0 0 9px; font-size: 14.5px; color: #E8EFF8; font-weight: 600; }
+.guide-sec p { margin: 0 0 9px; font-size: 13px; line-height: 1.62; color: #AEB9C8; }
+.guide-sec ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.guide-sec li { position: relative; padding-left: 16px; font-size: 13px; line-height: 1.55; color: #C9D4E3; }
+.guide-sec li::before {
+  content: ""; position: absolute; left: 0; top: 8px;
+  width: 5px; height: 5px; border-radius: 50%; background: #FFB454;
+}
+.guide-sec b { color: #E8EFF8; font-weight: 600; }
+.guide-foot {
+  margin: 28px 0 0; padding-top: 17px; border-top: 1px solid #1C2636;
+  font-size: 12.5px; line-height: 1.6; color: #8595A8;
+}
+.guide-card .welcome-go { margin-top: 18px; }
 
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .brand-mark {
