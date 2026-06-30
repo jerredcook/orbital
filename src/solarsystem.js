@@ -24,7 +24,7 @@ import {
   HeadingPitchRange, ArcType, Primitive, GeometryInstance, EllipsoidGeometry,
   VertexFormat, MaterialAppearance, Material, Matrix3, SceneTransforms,
   Geometry, GeometryAttribute, ComponentDatatype, PrimitiveType, BlendingState,
-  DistanceDisplayCondition, PolylineGlowMaterialProperty, Math as CMath,
+  DistanceDisplayCondition, PolylineGlowMaterialProperty, PolylineDashMaterialProperty, Math as CMath,
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
@@ -32,6 +32,7 @@ import {
 } from './ephemeris.js';
 import { MOON_ELEMENTS, MOON_EPOCH_JD } from './moon-elements.js';
 import { PROBE_ELEMENTS } from './probe-elements.js';
+import { DWARF_ELEMENTS, DWARF_EPOCH_JD } from './dwarf-elements.js';
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
@@ -84,7 +85,8 @@ const _anchorPos = new Cartesian3();
 const _anchorMat = new Matrix4();
 const SYSTEM_MIN_ZOOM = 1e4;   // free-fly floor when not pivoting on a body
 
-const ALL_BODIES = ['Sun', ...PLANETS];
+const DWARFS = Object.keys(DWARF_ELEMENTS);   // Ceres, Pluto, Haumea, Makemake, Eris
+const ALL_BODIES = ['Sun', ...PLANETS, ...DWARFS];
 
 // Scratch objects reused every frame to keep the per-frame allocation count low.
 const _real = new Cartesian3();
@@ -93,7 +95,31 @@ const _moonHost = new Cartesian3();
 const _moonRel = new Cartesian3();
 const _probeRel = new Cartesian3();
 const MOON_EPOCH_REL = MOON_EPOCH_JD - 2451545.0;   // days from J2000 to the moon-element epoch
+const DWARF_EPOCH_REL = DWARF_EPOCH_JD - 2451545.0; // …and to the dwarf-planet epoch
 const PROBE_ECAP = 0.8;   // cap rendered eccentricity so apoapsis stays in-frame and periapsis clears the planet
+
+// Real heliocentric position of a dwarf planet (metres, ecliptic J2000), by
+// advancing its mean anomaly from the element epoch.  Slow movers, so plain
+// single-epoch propagation holds across the current era.
+function dwarfPos(name, daysSinceJ2000, result) {
+  const el = DWARF_ELEMENTS[name];
+  const M = el.M0 + 360 * (daysSinceJ2000 - DWARF_EPOCH_REL) / el.periodDays;
+  return eclipticFromElements(el.a, el.e, el.i, el.node, el.peri, M, result);
+}
+
+// Sample a dwarf's orbit as a closed ellipse (heliocentric ecliptic, metres),
+// sweeping the eccentric anomaly so the points stay evenly spread even on the
+// very eccentric ones (Eris e=0.44).
+function dwarfOrbitSamples(name, count = 256) {
+  const el = DWARF_ELEMENTS[name];
+  const pts = [];
+  for (let k = 0; k <= count; k++) {
+    const E = (k / count) * 2 * Math.PI;
+    const Mdeg = (E - el.e * Math.sin(E)) * 180 / Math.PI;
+    pts.push(eclipticFromElements(el.a, el.e, el.i, el.node, el.peri, Mdeg, new Cartesian3()));
+  }
+  return pts;
+}
 
 // Real position of a moon relative to its planet (metres, ecliptic J2000), by
 // advancing its mean anomaly from the element epoch and solving Kepler.
@@ -117,7 +143,8 @@ const _one = new Cartesian3(1, 1, 1);
 function scenePosOf(name, out) {
   if (name === 'Sun') return Cartesian3.clone(Cartesian3.ZERO, out);
   const T = centuriesSinceJ2000(earthClock.currentTime);
-  planetPosition(name, T, _real);
+  if (DWARF_ELEMENTS[name]) dwarfPos(name, T * 36525, _real);   // days since J2000
+  else planetPosition(name, T, _real);
   return scenePosition(_real, out);
 }
 
@@ -146,6 +173,12 @@ function positionProp(name) {
 function buildSphere(name) {
   const r = bodyRadius(BODIES[name].radius);
   const isSun = name === 'Sun';
+  const tex = BODIES[name].texture;
+  // Planets carry a surface map; the dwarf planets have none, so they get a
+  // solid-tinted (still shaded) sphere from their colour.
+  const material = tex
+    ? Material.fromType('Image', { image: TEX(tex) })
+    : Material.fromType('Color', { color: Color.fromCssColorString(BODIES[name].color) });
   const primitive = new Primitive({
     geometryInstances: new GeometryInstance({
       geometry: new EllipsoidGeometry({
@@ -156,7 +189,7 @@ function buildSphere(name) {
       id: name,                     // scene.pick resolves to this string
     }),
     appearance: new MaterialAppearance({
-      material: Material.fromType('Image', { image: TEX(BODIES[name].texture) }),
+      material,
       materialSupport: MaterialAppearance.MaterialSupport.TEXTURED,
       faceForward: false, closed: true,
       flat: isSun,                  // the Sun is emissive — don't shade a terminator onto it
@@ -736,7 +769,7 @@ function addBody(name) {
     // scale even Jupiter is sub-pixel; up close the textured sphere dwarfs it).
     // Depth-tested, so flying in close hides it behind the body's own sphere.
     point: {
-      pixelSize: isSun ? 18 : 9,
+      pixelSize: isSun ? 18 : (BODIES[name].dwarf ? 7 : 9),
       color: Color.fromCssColorString(BODIES[name].color),
       outlineColor: Color.BLACK.withAlpha(0.5),
       outlineWidth: 1,
@@ -834,6 +867,20 @@ function rebuildOrbits() {
     });
     orbitEntities.push({ name, entity });
   }
+  // Dwarf-planet orbits: dashed and fainter so they read as a distinct, more
+  // tilted/eccentric family beyond the planets.
+  for (const name of DWARFS) {
+    const positions = dwarfOrbitSamples(name).map((p) => scenePosition(p, new Cartesian3()));
+    const entity = viewer.entities.add({
+      polyline: {
+        positions, width: 1.5, arcType: ArcType.NONE,
+        material: new PolylineDashMaterialProperty({
+          color: Color.fromCssColorString(BODIES[name].color).withAlpha(0.55), dashLength: 12,
+        }),
+      },
+    });
+    orbitEntities.push({ name, entity });
+  }
 }
 
 // The night sky: NASA's Deep Star Map 2020 (real Tycho + Gaia star positions and
@@ -893,6 +940,13 @@ function bodyFacts(name) {
     return { type: 'Star · G2V', dist: '—', diameter: fmt(diameterKm), day: dayStr, year: '—' };
   }
   const T = centuriesSinceJ2000(earthClock.currentTime);
+  const dayOut = `${dayStr}${b.day < 0 ? ' (retro)' : ''}`;
+  if (b.dwarf) {
+    dwarfPos(name, T * 36525, _real);
+    const distAu = Cartesian3.magnitude(_real) / AU_METERS;
+    const years = DWARF_ELEMENTS[name].periodDays / 365.25;
+    return { type: 'Dwarf planet', dist: `${fmt(distAu, 2)} AU`, diameter: fmt(diameterKm), day: dayOut, year: `${fmt(years, 0)} yr` };
+  }
   planetPosition(name, T, _real);
   const distAu = Cartesian3.magnitude(_real) / AU_METERS;
   const years = orbitalPeriodCenturies(name) * 100;
@@ -900,7 +954,7 @@ function bodyFacts(name) {
   return {
     type: name === 'Earth' ? 'Planet · home' : 'Planet',
     dist: `${fmt(distAu, 2)} AU`, diameter: fmt(diameterKm),
-    day: `${dayStr}${b.day < 0 ? ' (retro)' : ''}`, year: yearStr,
+    day: dayOut, year: yearStr,
   };
 }
 
@@ -921,7 +975,7 @@ function selectBody(name) {
   $('sys-earth-actions').hidden = name !== 'Earth';
   // Every planet but Earth can be entered as its own navigable globe.
   const enterBtn = $('sys-enter-planet');
-  const enterable = name !== 'Sun' && name !== 'Earth';
+  const enterable = name !== 'Sun' && name !== 'Earth' && !BODIES[name].dwarf;
   enterBtn.hidden = !enterable;
   if (enterable) {
     enterBtn.textContent = ROCKY.has(name) ? 'Descend to the surface ▸' : 'Explore the globe ▸';
@@ -1182,6 +1236,7 @@ function createViewer() {
 
   addBody('Sun');
   for (const name of PLANETS) addBody(name);
+  for (const name of DWARFS) addBody(name);
   buildMoons();
   buildMoonSpheres();
   buildMoonOrbits();
@@ -1442,6 +1497,12 @@ export function initSystemView(earthViewer, moonView, onReturn) {
   return {
     show: () => show(earthViewer), hide: () => hide(earthViewer),
     focus: (name) => focusByName(name),      // deep-link entry: planet · moon · spacecraft
+    // Searchable heliocentric bodies (for the Earth-view search box).
+    searchBodies: [
+      { name: 'Sun', kind: 'star' },
+      ...PLANETS.map((name) => ({ name, kind: 'planet' })),
+      ...DWARFS.map((name) => ({ name, kind: 'dwarf planet' })),
+    ],
     get viewer() { return viewer; },
     select: (name) => selectBody(name),     // debug
     get bodies() { return entities; },        // debug

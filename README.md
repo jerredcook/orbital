@@ -50,7 +50,7 @@ left to the network).
 | Ground station | legend toggle → **⌖ set location** → click the globe to drop a station; a worker predicts every satellite pass over the next 24 h (above 10/25/50°), streamed and sorted by rise time with peak elevation and duration. Click a pass to jump the clock to its peak and fly to the satellite. The station persists across sessions |
 | See the spacecraft | select → Follow → scroll in; inside 150 km the dot becomes a 3D model |
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
-| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the Hilda group's 3:2-resonance triangle, the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click anything — planet, moon, or robotic spacecraft — to fly to it and orbit/zoom around it (like the tracker does Earth), down to just above its surface; a moon opens a panel with its size, orbit, discovery and a fact, and a spacecraft opens one with its operator, arrival, status and mission; a planet's panel has a **Show moon orbits** button to ring it with its natural satellites' paths; toggle **True scale**; from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
+| Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the five dwarf planets (Ceres, Pluto, Haumea, Makemake, Eris) on their real tilted/eccentric paths (dashed orbits), the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the Hilda group's 3:2-resonance triangle, the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click anything — planet, dwarf planet, moon, or robotic spacecraft — to fly to it and orbit/zoom around it (like the tracker does Earth), down to just above its surface; a moon opens a panel with its size, orbit, discovery and a fact, and a spacecraft opens one with its operator, arrival, status and mission; a planet's panel has a **Show moon orbits** button to ring it with its natural satellites' paths; toggle **True scale**; from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
 | Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); on Mars, keep zooming and the colour Viking overview gives way to the ~5 m/px CTX mosaic — ~46× sharper, real craters and channels under every landing site; landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
 | Landing sites | Mars rovers & landers (Viking → Perseverance, Zhurong), the Moon's Apollo + Luna/Lunokhod/Surveyor/Chang'e/Chandrayaan sites, and Venus's Venera landers — visible on the surface globes, near-side only as you rotate |
@@ -309,11 +309,15 @@ Design notes for the 3D close-up view:
   very long magnetometer boom — MESSENGER, Magellan, Galileo — stay generic:
   the real GLB shrinks the body to a speck at icon scale.)
 - **Solar-system positions are real.** Planets use JPL's low-precision
-  Keplerian elements; the moons (`moon-elements.js`) and the probes
-  (`probe-elements.js`) carry real osculating elements from **JPL Horizons**
-  (ecliptic J2000, planet-centred), fetched by the `fetch-moon-elements` /
-  `fetch-probe-elements` tools and propagated with the shared Kepler solver in
-  `ephemeris.js`.  The major moons land within ~1° of Horizons — the tiny, fast-
+  Keplerian elements; the moons (`moon-elements.js`), the probes
+  (`probe-elements.js`) and the dwarf planets (`dwarf-elements.js`) carry real
+  osculating elements from **JPL Horizons** (ecliptic J2000 — planet-centred for
+  moons/probes, heliocentric for dwarfs), fetched by the `fetch-moon-elements` /
+  `fetch-probe-elements` / `fetch-dwarf-elements` tools and propagated with the
+  shared Kepler solver in `ephemeris.js`.  The five IAU dwarf planets (Ceres,
+  Pluto, Haumea, Makemake, Eris) ride their real tilted, eccentric orbits
+  (verified <0.02° vs Horizons) as solid-tinted spheres with dashed orbit rings —
+  Pluto crossing Neptune's path, Eris out past 90 AU at 44° inclination.  The major moons land within ~1° of Horizons — the tiny, fast-
   precessing inner moonlets within a few degrees.  The fetch derives each moon's
   precise mean-longitude rate in two steps (a short baseline pins an unambiguous
   coarse rate; a long baseline counted with *that* rate gives the precise period),

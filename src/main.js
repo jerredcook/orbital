@@ -1728,6 +1728,19 @@ searchBox.addEventListener('input', () => {
     row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
     resultsEl.appendChild(row);
   }
+  // Solar-system bodies (the Sun, planets, dwarf planets) — fly out to them in
+  // the system view, searchable by name like everything else.
+  for (const b of systemView.searchBodies) {
+    if (!b.name.toUpperCase().includes(q)) continue;
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    row.tabIndex = 0;
+    row.innerHTML = `<span>${b.name}</span><span class="rid">${b.kind}</span>`;
+    const go = () => { navigateTo({ body: b.name }); resultsEl.hidden = true; searchBox.value = ''; };
+    row.addEventListener('click', go);
+    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    resultsEl.appendChild(row);
+  }
   for (const i of hits) {
     const row = document.createElement('div');
     row.className = 'result-row';
