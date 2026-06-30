@@ -763,6 +763,31 @@ document.addEventListener('keydown', (e) => {
 try { if (!location.hash && !localStorage.getItem('orbital.welcomed')) welcome.hidden = false; }
 catch { if (!location.hash) welcome.hidden = false; }
 
+// Installable-app (PWA) plumbing.  Register the service worker, and when Chrome
+// decides the app is installable, reveal the welcome's "Install" button and use
+// the saved prompt.  (iOS has no prompt API — Safari users add it from Share →
+// Add to Home Screen; the button simply never appears there.)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => { /* not fatal */ });
+  });
+}
+let deferredInstall = null;
+const installBtn = $('welcome-install');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();          // we drive the prompt from our own button
+  deferredInstall = e;
+  if (installBtn) installBtn.hidden = false;
+});
+installBtn?.addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  installBtn.hidden = true;
+});
+window.addEventListener('appinstalled', () => { if (installBtn) installBtn.hidden = true; });
+
 // "Copy link" buttons (in each detail panel): the address bar already tracks
 // the view via deeplink.js, so just hand over location.href.
 async function copyShareLink() {

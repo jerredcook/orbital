@@ -23,6 +23,15 @@ street.  (If you ever add a Cesium Ion token you can swap in Bing
 Aerial + World Terrain for 3D relief; see the provider block at the
 top of `src/main.js`.)
 
+**Install it as an app.**  Orbital is a PWA (`public/manifest.webmanifest`,
+`public/sw.js`, icons in `public/icons/` from `tools/icon.svg`).  On Android,
+open it in Chrome and tap **Install app** — or the **Install** button on the
+welcome screen; on iPhone, Share → **Add to Home Screen**.  It then launches
+full-screen from a home-screen icon and updates itself whenever the site is
+redeployed (the service worker serves navigations network-first, and caches the
+app's own hashed assets stale-while-revalidate; cross-origin tiles/TLE feeds are
+left to the network).
+
 ## Controls
 
 | Action | Input |

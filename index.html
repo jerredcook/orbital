@@ -2,8 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Orbital — live satellite tracker</title>
+  <meta name="description" content="Every satellite orbiting Earth, live — and the whole solar system to fly through." />
+
+  <!-- Installable app (PWA): add to home screen on Android (Chrome) or iOS (Safari). -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#05070C" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Orbital" />
+
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -31,6 +44,7 @@
       </div>
       <p class="welcome-hint">Drag to rotate · scroll or pinch to zoom · Esc steps back</p>
       <button id="welcome-go" class="welcome-go">Start exploring →</button>
+      <button id="welcome-install" class="welcome-install" type="button" hidden>📲 Install Orbital as an app</button>
       <button id="welcome-guide" class="welcome-guide" type="button">Or see everything it can do →</button>
     </div>
   </div>
