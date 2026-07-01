@@ -86,10 +86,11 @@ export const BODIES = {
   Saturn:  { radius: 5.8232e7,  tilt: 26.73,  day: 10.656,  color: '#E0C988', texture: 'saturn.jpg' },
   Uranus:  { radius: 2.5362e7,  tilt: 97.77,  day: -17.24,  color: '#9FD8E0', texture: 'uranus.jpg' },
   Neptune: { radius: 2.4622e7,  tilt: 28.32,  day: 16.11,   color: '#5B7BE0', texture: 'neptune.jpg' },
-  // Dwarf planets — no surface map (solid-tinted sphere), positioned from real
-  // Horizons elements in dwarf-elements.js rather than the table above.
-  Ceres:    { radius: 4.695e5,  tilt: 4,      day: 9.07,    color: '#9C8E7E', dwarf: true },
-  Pluto:    { radius: 1.1883e6, tilt: 122.5,  day: -153.3,  color: '#C9A074', dwarf: true },
+  // Dwarf planets — positioned from real Horizons elements in dwarf-elements.js
+  // rather than the table above.  Pluto and Ceres carry real surface maps (New
+  // Horizons / Dawn, via S. Albers); the rest are solid-tinted spheres.
+  Ceres:    { radius: 4.695e5,  tilt: 4,      day: 9.07,    color: '#9C8E7E', dwarf: true, texture: 'ceres.jpg' },
+  Pluto:    { radius: 1.1883e6, tilt: 122.5,  day: -153.3,  color: '#C9A074', dwarf: true, texture: 'pluto.jpg' },
   Haumea:   { radius: 7.8e5,    tilt: 126,    day: 3.92,    color: '#D8D2C8', dwarf: true },
   Makemake: { radius: 7.15e5,   tilt: 0,      day: 22.83,   color: '#C0705A', dwarf: true },
   Eris:     { radius: 1.163e6,  tilt: 78,     day: 378,     color: '#D5D0C6', dwarf: true },

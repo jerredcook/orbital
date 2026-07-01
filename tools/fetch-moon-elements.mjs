@@ -30,8 +30,9 @@ const MOONS = [
   ['Umbriel', 702, 'Uranus'], ['Titania', 703, 'Uranus'], ['Oberon', 704, 'Uranus'],
   ['Larissa', 807, 'Neptune'], ['Proteus', 808, 'Neptune'], ['Triton', 801, 'Neptune'],
   ['Nereid', 802, 'Neptune'],
+  ['Charon', 901, 'Pluto'],
 ];
-const CENTER = { Earth: '399', Mars: '499', Jupiter: '599', Saturn: '699', Uranus: '799', Neptune: '899' };
+const CENTER = { Earth: '399', Mars: '499', Jupiter: '599', Saturn: '699', Uranus: '799', Neptune: '899', Pluto: '999' };
 
 // Keys are whitespace-separated (" A = …", " MA= …"), so require a boundary
 // before the key — otherwise "A" matches the A inside "MA".

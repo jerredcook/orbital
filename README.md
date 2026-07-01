@@ -317,8 +317,12 @@ Design notes for the 3D close-up view:
   `fetch-dwarf-elements` / `fetch-comet-elements` tools and propagated with the
   shared Kepler solver in `ephemeris.js`.  The five IAU dwarf planets (Ceres,
   Pluto, Haumea, Makemake, Eris) ride their real tilted, eccentric orbits
-  (verified <0.02° vs Horizons) as solid-tinted spheres with dashed orbit rings —
-  Pluto crossing Neptune's path, Eris out past 90 AU at 44° inclination.  Four
+  (verified <0.02° vs Horizons) with dashed orbit rings — Pluto crossing
+  Neptune's path, Eris out past 90 AU at 44° inclination.  Pluto and Ceres are
+  textured globes (real New Horizons / Dawn maps); Haumea, Makemake and Eris
+  stay solid-tinted.  Pluto carries **Charon** (elements from Horizons, 0.0° vs
+  fresh vectors) — half Pluto's size on its steeply-tipped 6.4-day orbit, a
+  true binary, with its real New Horizons map.  Four
   famous comets (Halley, Encke, Hale-Bopp, NEOWISE) trace their real plunges
   (verified <0.1° vs Horizons) as cyan glowing orbits — no sphere (the nucleus is
   a speck); selecting one frames its whole sweep, capped so the giant long-period
@@ -384,13 +388,18 @@ Design notes for the 3D close-up view:
 - Planet & Sun surface maps: [Solar System Scope](https://www.solarsystemscope.com/textures/)
   equirectangular textures (CC BY 4.0), fetched into `public/textures/planets/`
   by `tools/fetch-textures.mjs`.
-- Moon surface maps: 17 of the major moons (the Galileans, the round Saturnian
-  and Uranian moons, Triton, plus our Moon) carry real equirectangular maps —
-  our Moon from Solar System Scope (CC BY 4.0), the rest compiled by
+- Moon surface maps: 18 of the major moons (the Galileans, the round Saturnian
+  and Uranian moons, Triton, Charon, plus our Moon) carry real equirectangular
+  maps — our Moon from Solar System Scope (CC BY 4.0), the rest compiled by
   [Steve Albers](https://stevealbers.net/albers/sos/sos.html) and
   [Björn Jónsson](https://bjj.mmedia.is/) from public-domain Voyager / Galileo /
   Cassini / Clementine imagery.  `tools/fetch-moon-textures.mjs` downloads and
-  downscales them (2k JPG) into `public/textures/moons/`.  **Note:** the Albers /
+  downscales them (2k JPG) into `public/textures/moons/`.  Pluto (the New
+  Horizons heart) and Ceres (Dawn, Occator's bright spots) carry real Albers
+  maps too, via `tools/fetch-dwarf-textures.mjs`; `tools/soften-map-gaps.mjs`
+  then softens the honest data gaps (Charon's unimaged south, Ceres' polar
+  bands) by extending boundary tones — no invented terrain — and gives the
+  polar rows the standard converge-to-uniform treatment.  **Note:** the Albers /
   Jónsson maps are licensed for *personal, non-commercial* use — fine for this
   project, but swap them for the underlying public-domain USGS/NASA mosaics if
   you take it commercial.  The Martian moons, Titan (permanent haze) and the

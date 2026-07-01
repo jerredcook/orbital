@@ -318,6 +318,7 @@ const MOONS = {
             ['Titania', 4.358e8, 8.706, 3.4, 0.34, 280], ['Oberon', 5.835e8, 13.46, 4.0, 0.06, 340]],
   Neptune: [['Larissa', 7.35e7, 0.555, 1.5, 0.20, 0], ['Proteus', 1.176e8, 1.122, 1.9, 0.52, 60],
             ['Triton', 3.548e8, 5.877, 2.9, 157, 180], ['Nereid', 5.513e9, 360.1, 4.8, 7.09, 320]],
+  Pluto:   [['Charon', 1.9596e7, 6.387, 2.6, 112.9, 227]],
 };
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 const COMET_COLOR = Color.fromCssColorString('#BFE8FF');   // icy cyan for comet markers + orbits
@@ -352,6 +353,7 @@ const MOON_FACTS = {
   Umbriel: { r: 585, disc: 1851, by: 'William Lassell', tint: '#6e6e76', fact: 'The darkest of Uranus’s large moons, marked by the mysterious bright ring “Wunda.”' },
   Titania: { r: 789, disc: 1787, by: 'William Herschel', tint: '#a89e92', fact: 'The largest moon of Uranus, split by enormous canyons up to 1,500 km long.' },
   Oberon: { r: 761, disc: 1787, by: 'William Herschel', tint: '#9a8f84', fact: "Uranus's outermost large moon — ancient and cratered, with dark material pooled on some crater floors." },
+  Charon: { r: 606, disc: 1978, by: 'James Christy', tint: '#a89f96', fact: "Half Pluto's size — so large the pair orbit a point in the space between them, making Pluto–Charon a true binary. A dark red polar cap, Mordor Macula, stains its north." },
   Larissa: { r: 97, disc: 1989, by: 'Voyager 2', tint: '#7a716a', fact: 'A small, irregular inner moon racing around Neptune in well under a day.' },
   Proteus: { r: 210, disc: 1989, by: 'Voyager 2', tint: '#5e5a54', fact: 'One of the darkest objects in the Solar System, and about as big as a body can get while staying lumpy rather than round.' },
   Triton: { r: 1353, disc: 1846, by: 'William Lassell', tint: '#d6cfc0', fact: 'Orbits backward — a captured Kuiper Belt world — with nitrogen geysers and one of the coldest surfaces ever measured (~38 K).' },
@@ -366,7 +368,7 @@ const MOON_TEX = {
   Callisto: 'callisto.jpg', Mimas: 'mimas.jpg', Enceladus: 'enceladus.jpg', Tethys: 'tethys.jpg',
   Dione: 'dione.jpg', Rhea: 'rhea.jpg', Iapetus: 'iapetus.jpg', Miranda: 'miranda.jpg',
   Ariel: 'ariel.jpg', Umbriel: 'umbriel.jpg', Titania: 'titania.jpg', Oberon: 'oberon.jpg',
-  Triton: 'triton.jpg',
+  Triton: 'triton.jpg', Charon: 'charon.jpg',
 };
 const MOON_TEX_DIR = `${BASE}textures/moons/`;
 
@@ -1098,15 +1100,33 @@ function selectBody(name) {
     range = Math.max(range, Math.max(...extents) * 1.9);
     pitch = -34;
   }
+  // Pluto–Charon is a close binary: give it extra room so the pair composes.
+  if (BODIES[name].dwarf) range = Math.max(range, r * 6);
   releaseAnchor();                 // fly in the world frame…
   scenePosOf(name, _pos);
-  viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, r), {
-    duration: 1.5,
-    offset: new HeadingPitchRange(0, CMath.toRadians(pitch), range),
-    // …then pivot the camera on the body so scroll/drag orbit around it, and
-    // floor the zoom just above its surface (no globe out here to collide with).
-    complete: () => { if (selectedName === name && !inBodyGlobe) anchorOn(entities[name], r); },
-  });
+  // …then pivot the camera on the body so scroll/drag orbit around it, and
+  // floor the zoom just above its surface (no globe out here to collide with).
+  flyEquatorial(_pos, range, -pitch, 1.5,
+    () => { if (selectedName === name && !inBodyGlobe) anchorOn(entities[name], r); });
+}
+
+// Fly to an explicit vantage: keep the current viewing azimuth, elevated
+// elevDeg° above the target's equatorial (scene-XY) plane.  flyToBoundingSphere's
+// heading/pitch offset lives in a WGS84 east-north-up frame that degrades for
+// bodies far off the ecliptic (Pluto, Ceres) — it arrived pole-on out there,
+// staring at the maps' unimaged southern fills.
+function flyEquatorial(target, range, elevDeg, duration, complete) {
+  const az = Math.atan2(target.y - viewer.camera.positionWC.y, target.x - viewer.camera.positionWC.x);
+  const el = CMath.toRadians(elevDeg);
+  const dest = new Cartesian3(
+    target.x - Math.cos(az) * Math.cos(el) * range,
+    target.y - Math.sin(az) * Math.cos(el) * range,
+    target.z + Math.sin(el) * range,
+  );
+  const dir = Cartesian3.normalize(Cartesian3.subtract(target, dest, new Cartesian3()), new Cartesian3());
+  const right = Cartesian3.normalize(Cartesian3.cross(dir, Cartesian3.UNIT_Z, new Cartesian3()), new Cartesian3());
+  const up = Cartesian3.cross(right, dir, new Cartesian3());
+  viewer.camera.flyTo({ destination: dest, orientation: { direction: dir, up }, duration, complete });
 }
 
 function deselect() {
@@ -1156,11 +1176,8 @@ function selectMoon(name) {
   const rr = moonRadius(name);
   releaseAnchor();
   info.entity.position.getValue(earthClock.currentTime, _pos);
-  viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, rr), {
-    duration: 1.3,
-    offset: new HeadingPitchRange(0, CMath.toRadians(-22), rr * 4.5),
-    complete: () => { if (selectedMoonName === name && !inBodyGlobe) anchorOn(info.entity, rr); },
-  });
+  flyEquatorial(_pos, rr * 4.5, 22, 1.3,
+    () => { if (selectedMoonName === name && !inBodyGlobe) anchorOn(info.entity, rr); });
 }
 
 function fillMoonPanel(name, info) {
