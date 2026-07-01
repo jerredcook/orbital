@@ -99,6 +99,11 @@ export const BODIES = {
   Encke:       { radius: 2.4e3, tilt: 0, day: 11.0, color: '#BFE8FF', comet: true },
   'Hale-Bopp': { radius: 3.0e4, tilt: 0, day: 11.3, color: '#BFE8FF', comet: true },
   NEOWISE:     { radius: 2.5e3, tilt: 0, day: 7.6,  color: '#BFE8FF', comet: true },
+  // Interstellar visitors — unbound hyperbolic (e>1) paths, no sphere. Sizes are
+  // rough (poorly constrained); day 0 renders as "—" (rotation mostly unknown).
+  Oumuamua:   { radius: 1.1e2, tilt: 0, day: 7.3, color: '#C9A6FF', interstellar: true },
+  Borisov:    { radius: 5.0e2, tilt: 0, day: 0,   color: '#C9A6FF', interstellar: true },
+  '3I/ATLAS': { radius: 2.4e3, tilt: 0, day: 0,   color: '#C9A6FF', interstellar: true },
 };
 
 export const PLANETS = Object.keys(ELEMENTS); // Mercury … Neptune, in order
@@ -175,6 +180,43 @@ export function eclipticFromElements(a, e, iDeg, OmDeg, wDeg, Mdeg, result) {
   result.y = (cosw * sinO + sinw * cosO * cosI) * xp + (-sinw * sinO + cosw * cosO * cosI) * yp;
   result.z = (sinw * sinI) * xp + (cosw * sinI) * yp;
   return result;
+}
+
+// Rotate an in-plane (perifocal) point into the ecliptic-J2000 frame.
+function rotPerifocal(xp, yp, iDeg, OmDeg, wDeg, result) {
+  const i = iDeg * DEG, Om = OmDeg * DEG, w = wDeg * DEG;
+  const cosO = Math.cos(Om), sinO = Math.sin(Om);
+  const cosw = Math.cos(w), sinw = Math.sin(w);
+  const cosI = Math.cos(i), sinI = Math.sin(i);
+  result = result || new Cartesian3();
+  result.x = (cosw * cosO - sinw * sinO * cosI) * xp + (-sinw * cosO - cosw * sinO * cosI) * yp;
+  result.y = (cosw * sinO + sinw * cosO * cosI) * xp + (-sinw * sinO + cosw * cosO * cosI) * yp;
+  result.z = (sinw * sinI) * xp + (cosw * sinI) * yp;
+  return result;
+}
+
+// Position on an UNBOUND hyperbolic orbit (e>1) from the hyperbolic anomaly H.
+// absA is |semi-major axis|; at H=0 the point is at perihelion q = absA·(e−1),
+// and H sweeps the open incoming (H<0) and outgoing (H>0) branches.
+export function hyperbolaPosFromH(absA, e, iDeg, OmDeg, wDeg, H, result) {
+  const xp = absA * (e - Math.cosh(H));
+  const yp = absA * Math.sqrt(e * e - 1) * Math.sinh(H);
+  return rotPerifocal(xp, yp, iDeg, OmDeg, wDeg, result);
+}
+
+// Solve the hyperbolic Kepler equation M = e·sinh(H) − H (M in degrees, may be
+// large — it is unbounded) and return the ecliptic position.  Used for the
+// interstellar objects (see interstellar-elements.js).
+export function hyperbolicFromElements(absA, e, iDeg, OmDeg, wDeg, Mdeg, result) {
+  const M = Mdeg * DEG;
+  let H = Math.sign(M) * Math.log(2 * Math.abs(M) / e + 1.8);   // robust seed
+  if (!isFinite(H) || H === 0) H = M || 0.1;
+  for (let k = 0; k < 80; k++) {
+    const dH = (e * Math.sinh(H) - H - M) / (e * Math.cosh(H) - 1);
+    H -= dH;
+    if (Math.abs(dH) < 1e-12) break;
+  }
+  return hyperbolaPosFromH(absA, e, iDeg, OmDeg, wDeg, H, result);
 }
 
 // Orbital period in Julian centuries — the mean longitude advances el.L[1]

@@ -29,11 +29,13 @@ import {
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
   orbitalPeriodCenturies, AU_METERS, eclipticFromElements,
+  hyperbolicFromElements, hyperbolaPosFromH,
 } from './ephemeris.js';
 import { MOON_ELEMENTS, MOON_EPOCH_JD } from './moon-elements.js';
 import { PROBE_ELEMENTS } from './probe-elements.js';
 import { DWARF_ELEMENTS, DWARF_EPOCH_JD } from './dwarf-elements.js';
 import { COMET_ELEMENTS, COMET_EPOCH_JD } from './comet-elements.js';
+import { INTERSTELLAR_ELEMENTS, INTERSTELLAR_EPOCH_JD } from './interstellar-elements.js';
 import {
   scenePosition, bodyRadius, setTrueScale, isTrueScale, systemExtent,
 } from './scale.js';
@@ -88,8 +90,10 @@ const SYSTEM_MIN_ZOOM = 1e4;   // free-fly floor when not pivoting on a body
 
 const DWARFS = Object.keys(DWARF_ELEMENTS);   // Ceres, Pluto, Haumea, Makemake, Eris
 const COMETS = Object.keys(COMET_ELEMENTS);   // Halley, Encke, Hale-Bopp, NEOWISE
+const INTERSTELLARS = Object.keys(INTERSTELLAR_ELEMENTS);   // Oumuamua, Borisov, 3I/ATLAS
 // ALL_BODIES tracks bodies with a rendered sphere (Sun, planets, dwarfs) — the
-// comets have none, so they're excluded here but still get a marker via addBody.
+// comets and interstellar objects have none, so they're excluded here but still
+// get a marker via addBody.
 const ALL_BODIES = ['Sun', ...PLANETS, ...DWARFS];
 
 // Scratch objects reused every frame to keep the per-frame allocation count low.
@@ -101,6 +105,7 @@ const _probeRel = new Cartesian3();
 const MOON_EPOCH_REL = MOON_EPOCH_JD - 2451545.0;   // days from J2000 to the moon-element epoch
 const DWARF_EPOCH_REL = DWARF_EPOCH_JD - 2451545.0; // …and to the dwarf-planet epoch
 const COMET_EPOCH_REL = COMET_EPOCH_JD - 2451545.0; // …and to the comet epoch
+const INTERSTELLAR_EPOCH_REL = INTERSTELLAR_EPOCH_JD - 2451545.0;   // …and the interstellar epoch
 const PROBE_ECAP = 0.8;   // cap rendered eccentricity so apoapsis stays in-frame and periapsis clears the planet
 
 // Real heliocentric position (metres, ecliptic J2000) from an element set, by
@@ -112,6 +117,28 @@ function helioElemPos(el, epochRel, daysSinceJ2000, result) {
 }
 const dwarfPos = (name, days, result) => helioElemPos(DWARF_ELEMENTS[name], DWARF_EPOCH_REL, days, result);
 const cometPos = (name, days, result) => helioElemPos(COMET_ELEMENTS[name], COMET_EPOCH_REL, days, result);
+
+// An interstellar object's real heliocentric position on its unbound hyperbolic
+// path, advancing the (unbounded) mean anomaly at its mean motion.
+function interstellarPos(name, daysSinceJ2000, result) {
+  const el = INTERSTELLAR_ELEMENTS[name];
+  const M = el.M0 + el.n * (daysSinceJ2000 - INTERSTELLAR_EPOCH_REL);
+  return hyperbolicFromElements(el.a, el.e, el.i, el.node, el.peri, M, result);
+}
+
+// Sample an open hyperbolic trajectory (metres, ecliptic) by sweeping the
+// hyperbolic anomaly H symmetrically about perihelion, out to ~rMax AU on each
+// branch — an open arc (incoming + outgoing), not a closed loop.
+function elemHyperbolaSamples(el, rMaxAU = 60, count = 200) {
+  const coshHmax = (rMaxAU * AU_METERS / el.a + 1) / el.e;
+  const Hmax = Math.acosh(Math.max(1.0001, coshHmax));
+  const pts = [];
+  for (let k = 0; k <= count; k++) {
+    const H = -Hmax + (2 * Hmax) * (k / count);
+    pts.push(hyperbolaPosFromH(el.a, el.e, el.i, el.node, el.peri, H, new Cartesian3()));
+  }
+  return pts;
+}
 
 // Sample an orbit as a closed ellipse (heliocentric ecliptic, metres), sweeping
 // the eccentric anomaly so the points stay evenly spread even on the very
@@ -151,6 +178,7 @@ function scenePosOf(name, out) {
   const days = T * 36525;
   if (DWARF_ELEMENTS[name]) dwarfPos(name, days, _real);
   else if (COMET_ELEMENTS[name]) cometPos(name, days, _real);
+  else if (INTERSTELLAR_ELEMENTS[name]) interstellarPos(name, days, _real);
   else planetPosition(name, T, _real);
   return scenePosition(_real, out);
 }
@@ -293,6 +321,7 @@ const MOONS = {
 };
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 const COMET_COLOR = Color.fromCssColorString('#BFE8FF');   // icy cyan for comet markers + orbits
+const INTERSTELLAR_COLOR = Color.fromCssColorString('#C9A6FF');   // violet for the interstellar visitors
 
 // Per-moon physical data for the click-to-inspect panel and the little spheres:
 // r = mean radius (km), disc = discovery year (or 'antiquity'), by = discoverer,
@@ -777,7 +806,7 @@ function addBody(name) {
     // scale even Jupiter is sub-pixel; up close the textured sphere dwarfs it).
     // Depth-tested, so flying in close hides it behind the body's own sphere.
     point: {
-      pixelSize: isSun ? 18 : ((BODIES[name].dwarf || BODIES[name].comet) ? 7 : 9),
+      pixelSize: isSun ? 18 : ((BODIES[name].dwarf || BODIES[name].comet || BODIES[name].interstellar) ? 7 : 9),
       color: Color.fromCssColorString(BODIES[name].color),
       outlineColor: Color.BLACK.withAlpha(0.5),
       outlineWidth: 1,
@@ -801,7 +830,7 @@ function addBody(name) {
       show: !isSun,
     },
   });
-  if (!BODIES[name].comet) buildSphere(name);   // comets are a marker + orbit, no sphere
+  if (!BODIES[name].comet && !BODIES[name].interstellar) buildSphere(name);   // comets/interstellar: marker + orbit, no sphere
 
   if (isSun) {
     viewer.entities.add({
@@ -901,6 +930,18 @@ function rebuildOrbits() {
     });
     orbitEntities.push({ name, entity });
   }
+  // Interstellar trajectories: open violet arcs (not closed loops) — they arrive,
+  // whip once around the Sun, and leave forever.
+  for (const name of INTERSTELLARS) {
+    const positions = elemHyperbolaSamples(INTERSTELLAR_ELEMENTS[name]).map((p) => scenePosition(p, new Cartesian3()));
+    const entity = viewer.entities.add({
+      polyline: {
+        positions, width: 2, arcType: ArcType.NONE,
+        material: new PolylineGlowMaterialProperty({ color: INTERSTELLAR_COLOR.withAlpha(0.7), glowPower: 0.3 }),
+      },
+    });
+    orbitEntities.push({ name, entity });
+  }
 }
 
 // The night sky: NASA's Deep Star Map 2020 (real Tycho + Gaia star positions and
@@ -973,6 +1014,12 @@ function bodyFacts(name) {
     const years = COMET_ELEMENTS[name].periodDays / 365.25;
     return { type: 'Comet', dist: `${fmt(distAu, 2)} AU`, diameter: fmt(diameterKm, 1), day: dayOut, year: `${fmt(years, 0)} yr` };
   }
+  if (b.interstellar) {
+    interstellarPos(name, T * 36525, _real);
+    const distAu = Cartesian3.magnitude(_real) / AU_METERS;
+    const e = INTERSTELLAR_ELEMENTS[name].e;
+    return { type: 'Interstellar object', dist: `${fmt(distAu, 1)} AU`, diameter: `~${fmt(diameterKm, 1)}`, day: b.day ? dayOut : '—', year: `unbound · e ${e.toFixed(2)}` };
+  }
   planetPosition(name, T, _real);
   const distAu = Cartesian3.magnitude(_real) / AU_METERS;
   const years = orbitalPeriodCenturies(name) * 100;
@@ -984,16 +1031,21 @@ function bodyFacts(name) {
   };
 }
 
-// A comet is really its orbit — so selecting one pulls the camera back to frame
-// the whole ellipse (Sun-centred, out to the compressed aphelion), tilted so the
-// wild inclination reads.  No anchor: you're free to fly the sweep.
-function frameCometOrbit(name) {
-  const el = COMET_ELEMENTS[name];
-  scenePosition(new Cartesian3(el.a * (1 + el.e), 0, 0), _pos);   // aphelion → scene units
-  // Fit the orbit, but cap at ~1.5× the planetary system so the giant long-period
-  // orbits (Hale-Bopp, NEOWISE) keep the planets in view and sweep off the edge
-  // rather than zooming out to a faint thread.
-  const R = Math.min(Cartesian3.magnitude(_pos), systemExtent() * 1.5);
+// A comet or interstellar visitor is really its orbit — so selecting one pulls
+// the camera back to frame the sweep (Sun-centred), tilted so the wild
+// inclination reads.  No anchor: you're free to fly the path.
+function frameOpenOrbit(name) {
+  let R;
+  if (BODIES[name].interstellar) {
+    R = systemExtent() * 1.3;   // frame the near-Sun swing of the unbound hyperbola
+  } else {
+    const el = COMET_ELEMENTS[name];
+    scenePosition(new Cartesian3(el.a * (1 + el.e), 0, 0), _pos);   // aphelion → scene units
+    // Cap at ~1.5× the planetary system so the giant long-period orbits (Hale-Bopp,
+    // NEOWISE) keep the planets in view and sweep off the edge rather than zooming
+    // out to a faint thread.
+    R = Math.min(Cartesian3.magnitude(_pos), systemExtent() * 1.5);
+  }
   const range = Math.min(R * 2.2, skyRadius() * 0.85);            // never past the zoom cap
   releaseAnchor();
   viewer.camera.flyToBoundingSphere(new BoundingSphere(Cartesian3.ZERO, R), {
@@ -1019,7 +1071,7 @@ function selectBody(name) {
   $('sys-earth-actions').hidden = name !== 'Earth';
   // Every planet but Earth can be entered as its own navigable globe.
   const enterBtn = $('sys-enter-planet');
-  const enterable = name !== 'Sun' && name !== 'Earth' && !BODIES[name].dwarf && !BODIES[name].comet;
+  const enterable = name !== 'Sun' && name !== 'Earth' && !BODIES[name].dwarf && !BODIES[name].comet && !BODIES[name].interstellar;
   enterBtn.hidden = !enterable;
   if (enterable) {
     enterBtn.textContent = ROCKY.has(name) ? 'Descend to the surface ▸' : 'Explore the globe ▸';
@@ -1031,7 +1083,7 @@ function selectBody(name) {
   $('system-panel').hidden = false;
   expandCard('system-panel');
   writeHash({ body: name });
-  if (BODIES[name].comet) { frameCometOrbit(name); return; }   // a comet: frame its whole orbit
+  if (BODIES[name].comet || BODIES[name].interstellar) { frameOpenOrbit(name); return; }   // frame the open orbit
   // Frame the body so its whole entourage — moons AND spacecraft — fits, looking
   // down at a steeper angle so they ring the planet instead of hiding edge-on.
   const r = bodyRadius(BODIES[name].radius);
@@ -1283,6 +1335,7 @@ function createViewer() {
   for (const name of PLANETS) addBody(name);
   for (const name of DWARFS) addBody(name);
   for (const name of COMETS) addBody(name);
+  for (const name of INTERSTELLARS) addBody(name);
   buildMoons();
   buildMoonSpheres();
   buildMoonOrbits();
@@ -1549,6 +1602,7 @@ export function initSystemView(earthViewer, moonView, onReturn) {
       ...PLANETS.map((name) => ({ name, kind: 'planet' })),
       ...DWARFS.map((name) => ({ name, kind: 'dwarf planet' })),
       ...COMETS.map((name) => ({ name, kind: 'comet' })),
+      ...INTERSTELLARS.map((name) => ({ name, kind: 'interstellar' })),
     ],
     get viewer() { return viewer; },
     select: (name) => selectBody(name),     // debug
