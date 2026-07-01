@@ -93,6 +93,12 @@ export const BODIES = {
   Haumea:   { radius: 7.8e5,    tilt: 126,    day: 3.92,    color: '#D8D2C8', dwarf: true },
   Makemake: { radius: 7.15e5,   tilt: 0,      day: 22.83,   color: '#C0705A', dwarf: true },
   Eris:     { radius: 1.163e6,  tilt: 78,     day: 378,     color: '#D5D0C6', dwarf: true },
+  // Famous comets — no sphere (the nucleus is a speck); the value is the orbit.
+  // radius is the nucleus mean radius, only used for the info panel's diameter.
+  Halley:      { radius: 5.5e3, tilt: 0, day: 52.8, color: '#BFE8FF', comet: true },
+  Encke:       { radius: 2.4e3, tilt: 0, day: 11.0, color: '#BFE8FF', comet: true },
+  'Hale-Bopp': { radius: 3.0e4, tilt: 0, day: 11.3, color: '#BFE8FF', comet: true },
+  NEOWISE:     { radius: 2.5e3, tilt: 0, day: 7.6,  color: '#BFE8FF', comet: true },
 };
 
 export const PLANETS = Object.keys(ELEMENTS); // Mercury … Neptune, in order
