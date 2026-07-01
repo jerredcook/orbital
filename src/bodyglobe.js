@@ -3,10 +3,11 @@
 // "Entering" a planet from the solar-system view spins up a Cesium globe scoped
 // to that planet's own ellipsoid (so the camera math, tiling and zoom limits are
 // the planet's), clad in real imagery you can zoom into:
-//   • Mars & Mercury — NASA Solar System Treks tile pyramids (Viking / MESSENGER),
-//     high-resolution all the way down to the surface;
-//   • Venus and the gas giants — their equirectangular map as a single-tile
-//     globe (no rocky surface to descend to, but a navigable world all the same).
+//   • Mars, Mercury & Ceres — NASA Solar System Treks tile pyramids (Viking /
+//     MESSENGER / Dawn HAMO), high-resolution down toward the surface;
+//   • Venus, the gas giants and Pluto — their equirectangular map as a single-
+//     tile globe (a navigable world all the same; Pluto's 2k New Horizons map
+//     is the best global data that exists).
 //
 // One globe lives at a time on a shared container: switching planets destroys the
 // old viewer and builds the new one, keeping the WebGL-context count low (Earth,
@@ -46,8 +47,20 @@ const TREKS = {
     url: 'https://trek.nasa.gov/tiles/Mercury/EQ/Mercury_MESSENGER_MDIS_Basemap_LOI_Mosaic_Global_166m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
     maxLevel: 7, credit: 'Mercury: NASA/JHUAPL/Carnegie MESSENGER MDIS · NASA Solar System Treks',
   },
+  Ceres: {
+    // The FC photo mosaic (59 ppd ≈ 140 m/px) — NOT the _ClrShade_ sibling,
+    // which is a rainbow-tinted elevation map.
+    url: 'https://trek.nasa.gov/tiles/Ceres/EQ/Ceres_Dawn_FC_DLR_global_59ppd_Feb2016/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
+    maxLevel: 5, credit: 'Ceres: NASA/JPL/MPS/DLR Dawn FC mosaic · NASA Solar System Treks',
+  },
 };
 const LOCAL_CREDIT = 'Surface map © Solar System Scope (CC BY 4.0)';
+// Bodies whose local map comes from Steve Albers' compilations instead.
+const CREDIT_OVERRIDE = {
+  Pluto: 'Surface map S. Albers (NASA New Horizons data)',
+  Ceres: 'Surface map S. Albers (NASA Dawn data)',
+};
+const localCredit = (name) => CREDIT_OVERRIDE[name] || LOCAL_CREDIT;
 
 let viewer = null;        // the single live body globe
 let activeName = null;
@@ -109,7 +122,7 @@ function makeViewer(name) {
   if (!treks) {
     v.imageryLayers.add(ImageryLayer.fromProviderAsync(
       SingleTileImageryProvider.fromUrl(`${BASE}textures/planets/${BODIES[name].texture}`,
-        { credit: new Credit(LOCAL_CREDIT) }), {}));
+        { credit: new Credit(localCredit(name)) }), {}));
   }
 
   const ctrl = v.scene.screenSpaceCameraController;
@@ -133,7 +146,7 @@ function show(name, onExit) {
   const treks = TREKS[name];
   $('body-attr').textContent = treks
     ? (treks.hires ? `${treks.credit} · ${treks.hires.credit}` : treks.credit)
-    : `${name}: ${LOCAL_CREDIT}`;
+    : `${name}: ${localCredit(name)}`;
   viewer.useDefaultRenderLoop = true;
   viewer.resize();
 }

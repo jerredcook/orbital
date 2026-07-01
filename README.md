@@ -52,7 +52,7 @@ left to the network).
 | Visit the Moon | `◐ Moon` in the top bar — a separate lunar globe you can rotate and zoom down to the surface; `← Back to Earth` or `Esc` returns |
 | Fly the solar system | `☉ System` in the top bar — a heliocentric view of the Sun, all eight planets on their real orbits, the five dwarf planets (Ceres, Pluto, Haumea, Makemake, Eris) on their real tilted/eccentric paths (dashed orbits), famous comets (Halley, Encke, Hale-Bopp, NEOWISE) on their real plunges (glowing orbits — select one to frame its whole sweep), the three known interstellar visitors (ʻOumuamua, Borisov, 3I/ATLAS) on their unbound hyperbolic paths (open violet arcs), the asteroid belt, the two Jupiter Trojan clouds (~60° ahead of and behind Jupiter), the Hilda group's 3:2-resonance triangle, the major asteroid families as coloured rings (toggle + legend, top-right), major moons, Saturn's rings, and an accurate NASA star sky; click anything — planet, dwarf planet, moon, or robotic spacecraft — to fly to it and orbit/zoom around it (like the tracker does Earth), down to just above its surface; a moon opens a panel with its size, orbit, discovery and a fact, and a spacecraft opens one with its operator, arrival, status and mission; a planet's panel has a **Show moon orbits** button to ring it with its natural satellites' paths; toggle **True scale**; from Earth drop into the satellite tracker or the Moon; `Esc` / exit returns |
 | See moons & rings | In the system view, click a planet — the camera frames its moons (Galilean, Titan, Luna, Triton…) and, for Saturn, its rings |
-| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury in NASA high-res, others as their map); on Mars, keep zooming and the colour Viking overview gives way to the ~5 m/px CTX mosaic — ~46× sharper, real craters and channels under every landing site; landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
+| Descend to a planet | Select a planet → **Descend to the surface** (Mars/Mercury/Ceres in NASA high-res Trek tiles, others — including Pluto — as their map); on Mars, keep zooming and the colour Viking overview gives way to the ~5 m/px CTX mosaic — ~46× sharper, real craters and channels under every landing site; landing sites are pinned at their real coordinates — gold = crewed, orange = rover, cyan = lander; `← Back` / `Esc` returns |
 | Landing sites | Mars rovers & landers (Viking → Perseverance, Zhurong), the Moon's Apollo + Luna/Lunokhod/Surveyor/Chang'e/Chandrayaan sites, and Venus's Venera landers — visible on the surface globes, near-side only as you rotate |
 | Planetary spacecraft | Fly to a planet to see its robotic orbiters alongside its moons, colored by status (a legend, top-right, explains them): **bright cyan** = operating, **dim slate** = derelict (dead but still in orbit), and craft that **deorbited fade out** (orange) and are gone. The **Spacecraft timeline** (bottom-left) plays/scrubs from 1971 by arrival year — with the deorbit fades animating live — and flashes its own era banners |
 
@@ -320,9 +320,17 @@ Design notes for the 3D close-up view:
   (verified <0.02° vs Horizons) with dashed orbit rings — Pluto crossing
   Neptune's path, Eris out past 90 AU at 44° inclination.  Pluto and Ceres are
   textured globes (real New Horizons / Dawn maps); Haumea, Makemake and Eris
-  stay solid-tinted.  Pluto carries **Charon** (elements from Horizons, 0.0° vs
-  fresh vectors) — half Pluto's size on its steeply-tipped 6.4-day orbit, a
-  true binary, with its real New Horizons map.  Four
+  stay solid-tinted.  Pluto carries **all five moons**: Charon (elements from
+  Horizons, 0.0° vs fresh vectors) — half Pluto's size on its steeply-tipped
+  6.4-day orbit, a true binary, with its real New Horizons map — plus the four
+  chaotic-tumbling moonlets Styx, Nix, Kerberos and Hydra.  The small moons use
+  **barycentric** Horizons elements (Pluto-centred osculating elements are
+  wrecked by Charon's pull — Styx shows e≈0.5!) and their published sidereal
+  periods (the binary's 6.4-day forcing aliases the two-epoch derivation);
+  verified within ~2° of Horizons vectors across 18 months.  Both Pluto
+  ("Explore the globe", its 2k New Horizons map — the best global data that
+  exists) and Ceres ("Descend to the surface", the real Dawn FC photo-mosaic
+  tile pyramid from NASA Treks, ~140 m/px) can be entered as navigable globes.  Four
   famous comets (Halley, Encke, Hale-Bopp, NEOWISE) trace their real plunges
   (verified <0.1° vs Horizons) as cyan glowing orbits — no sphere (the nucleus is
   a speck); selecting one frames its whole sweep, capped so the giant long-period

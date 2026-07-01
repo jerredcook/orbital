@@ -129,6 +129,7 @@ body.moon-mode .topbar-right { display: none; }
   pointer-events: none;
 }
 body.system-mode #system-attr { display: block; }
+body.system-mode.body-mode #system-attr { display: none; }   /* inside a body globe, its own credit line rules */
 
 /* The body info panel reuses the Earth info-panel look (see #infopanel rules). */
 #system-panel {

@@ -30,9 +30,23 @@ const MOONS = [
   ['Umbriel', 702, 'Uranus'], ['Titania', 703, 'Uranus'], ['Oberon', 704, 'Uranus'],
   ['Larissa', 807, 'Neptune'], ['Proteus', 808, 'Neptune'], ['Triton', 801, 'Neptune'],
   ['Nereid', 802, 'Neptune'],
+  // Charon is the relative orbit (Pluto-centred).  The four small moons orbit
+  // the Pluto–Charon BARYCENTRE ('9'): Pluto-centred osculating elements are
+  // wrecked by Charon's pull (Styx shows e≈0.5!), while barycentric ones are
+  // the clean textbook orbits.  The ~2,100 km Pluto↔barycentre offset is
+  // invisible at render scale.
   ['Charon', 901, 'Pluto'],
+  ['Styx', 905, 'Pluto', '9'], ['Nix', 902, 'Pluto', '9'],
+  ['Kerberos', 904, 'Pluto', '9'], ['Hydra', 903, 'Pluto', '9'],
 ];
 const CENTER = { Earth: '399', Mars: '499', Jupiter: '599', Saturn: '699', Uranus: '799', Neptune: '899', Pluto: '999' };
+
+// Pluto's small moons: the binary's 6.4-day forcing wobbles their osculating
+// node/peri/M so hard that the two-epoch mean-longitude derivation aliases
+// (Styx came out 4% long → 159° position error within a year).  Their sidereal
+// periods are published to five digits (Showalter & Hamilton / New Horizons),
+// so use those directly.
+const PERIOD_OVERRIDE = { Styx: 20.16155, Nix: 24.85463, Kerberos: 32.16756, Hydra: 38.20177 };
 
 // Keys are whitespace-separated (" A = …", " MA= …"), so require a boundary
 // before the key — otherwise "A" matches the A inside "MA".
@@ -41,10 +55,10 @@ const num = (s, key) => {
   return m ? parseFloat(m[1]) : null;
 };
 
-async function fetchEls(id, planet, dateStr) {
+async function fetchEls(id, center, dateStr) {
   const p = new URLSearchParams({
     format: 'text', COMMAND: `'${id}'`, OBJ_DATA: 'NO', MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'ELEMENTS', CENTER: `'500@${CENTER[planet]}'`,
+    EPHEM_TYPE: 'ELEMENTS', CENTER: `'500@${center}'`,
     REF_PLANE: 'ECLIPTIC', REF_SYSTEM: 'J2000', TLIST: `'${dateStr}'`, OUT_UNITS: 'KM-S',
   });
   const txt = await (await fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${p}`)).text();
@@ -70,11 +84,11 @@ const dateAfter = (days) => new Date(Date.UTC(2026, 0, 1) + days * 86400000).toI
 // the integer turn count over a long baseline.  So two steps: a SHORT baseline
 // (~25 turns) gives an unambiguous coarse rate; a LONG baseline (~300 turns), with
 // turns counted using that *coarse mean* rate, gives the precise rate.
-async function meanPeriod(id, planet, e0) {
+async function meanPeriod(id, center, e0) {
   const lam0 = norm360(e0.node + e0.peri + e0.M0);
   const sample = async (turns, predictRate) => {
     const days = Math.min(1600, Math.max(6, Math.round(turns * e0.Posc)));
-    const e = await fetchEls(id, planet, dateAfter(days));
+    const e = await fetchEls(id, center, dateAfter(days));
     await sleep(300);
     const base = e.epochJd - e0.epochJd;
     const frac = norm360(norm360(e.node + e.peri + e.M0) - lam0);
@@ -87,13 +101,14 @@ async function meanPeriod(id, planet, e0) {
 
 const out = {};
 let epoch = null;
-for (const [name, id, planet] of MOONS) {
+for (const [name, id, planet, centerOverride] of MOONS) {
+  const center = centerOverride || CENTER[planet];
   process.stdout.write(`${name.padEnd(11)} `);
   try {
-    const e0 = await fetchEls(id, planet, EPOCH_DATE);
+    const e0 = await fetchEls(id, center, EPOCH_DATE);
     await sleep(300);
     epoch = e0.epochJd;
-    const periodDays = await meanPeriod(id, planet, e0);
+    const periodDays = PERIOD_OVERRIDE[name] ?? await meanPeriod(id, center, e0);
     out[name] = { a: e0.a * 1000, e: e0.e, i: e0.i, node: e0.node, peri: e0.peri, M0: e0.M0, periodDays };
     console.log(`a=${e0.a.toFixed(0)}km  P=${periodDays.toFixed(5)}d (osc ${e0.Posc.toFixed(5)})  i=${e0.i.toFixed(2)}°`);
   } catch (err) { console.log(`FAILED ${err.message}`); }

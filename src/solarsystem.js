@@ -44,7 +44,7 @@ import { initBodyGlobes } from './bodyglobe.js';
 import { writeHash } from './deeplink.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
-const ROCKY = new Set(['Mercury', 'Venus', 'Mars']);
+const ROCKY = new Set(['Mercury', 'Venus', 'Mars', 'Ceres']);
 
 const $ = (id) => document.getElementById(id);
 // Asset paths are base-relative so they resolve under the GitHub Pages subpath
@@ -318,7 +318,9 @@ const MOONS = {
             ['Titania', 4.358e8, 8.706, 3.4, 0.34, 280], ['Oberon', 5.835e8, 13.46, 4.0, 0.06, 340]],
   Neptune: [['Larissa', 7.35e7, 0.555, 1.5, 0.20, 0], ['Proteus', 1.176e8, 1.122, 1.9, 0.52, 60],
             ['Triton', 3.548e8, 5.877, 2.9, 157, 180], ['Nereid', 5.513e9, 360.1, 4.8, 7.09, 320]],
-  Pluto:   [['Charon', 1.9596e7, 6.387, 2.6, 112.9, 227]],
+  Pluto:   [['Charon', 1.9596e7, 6.387, 2.6, 112.9, 227],
+            ['Styx', 4.3024e7, 20.16, 3.3, 112.9, 350], ['Nix', 4.9593e7, 24.85, 3.7, 112.9, 350],
+            ['Kerberos', 5.8409e7, 32.17, 4.2, 113.3, 350], ['Hydra', 6.5120e7, 38.20, 4.7, 112.6, 350]],
 };
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 const COMET_COLOR = Color.fromCssColorString('#BFE8FF');   // icy cyan for comet markers + orbits
@@ -354,6 +356,10 @@ const MOON_FACTS = {
   Titania: { r: 789, disc: 1787, by: 'William Herschel', tint: '#a89e92', fact: 'The largest moon of Uranus, split by enormous canyons up to 1,500 km long.' },
   Oberon: { r: 761, disc: 1787, by: 'William Herschel', tint: '#9a8f84', fact: "Uranus's outermost large moon — ancient and cratered, with dark material pooled on some crater floors." },
   Charon: { r: 606, disc: 1978, by: 'James Christy', tint: '#a89f96', fact: "Half Pluto's size — so large the pair orbit a point in the space between them, making Pluto–Charon a true binary. A dark red polar cap, Mordor Macula, stains its north." },
+  Styx: { r: 6, disc: 2012, by: 'Hubble (M. Showalter)', tint: '#c4c4c0', fact: 'The smallest and faintest of Pluto’s moons, spotted during the search for hazards ahead of the New Horizons flyby; named for the river of the underworld.' },
+  Nix: { r: 20, disc: 2005, by: 'Hubble (Weaver & Stern)', tint: '#cbc5bd', fact: 'Tumbles chaotically — the shifting pull of the Pluto–Charon binary means its day length is unpredictable and its poles can flip; one large crater wears a reddish stain.' },
+  Kerberos: { r: 6, disc: 2011, by: 'Hubble (M. Showalter)', tint: '#b8b4ae', fact: 'A double-lobed moonlet — two icy chunks gently stuck together. Predicted to be coal-dark before the flyby, New Horizons found it bright instead.' },
+  Hydra: { r: 21, disc: 2005, by: 'Hubble (Weaver & Stern)', tint: '#d0d3d6', fact: 'The outermost moon of Pluto, coated in nearly pure water ice, and spinning chaotically once every ~10 hours — faster than any other moon of Pluto.' },
   Larissa: { r: 97, disc: 1989, by: 'Voyager 2', tint: '#7a716a', fact: 'A small, irregular inner moon racing around Neptune in well under a day.' },
   Proteus: { r: 210, disc: 1989, by: 'Voyager 2', tint: '#5e5a54', fact: 'One of the darkest objects in the Solar System, and about as big as a body can get while staying lumpy rather than round.' },
   Triton: { r: 1353, disc: 1846, by: 'William Lassell', tint: '#d6cfc0', fact: 'Orbits backward — a captured Kuiper Belt world — with nitrogen geysers and one of the coldest surfaces ever measured (~38 K).' },
@@ -1073,7 +1079,9 @@ function selectBody(name) {
   $('sys-earth-actions').hidden = name !== 'Earth';
   // Every planet but Earth can be entered as its own navigable globe.
   const enterBtn = $('sys-enter-planet');
-  const enterable = name !== 'Sun' && name !== 'Earth' && !BODIES[name].dwarf && !BODIES[name].comet && !BODIES[name].interstellar;
+  // Dwarfs with a real surface map (Pluto, Ceres) are enterable globes too.
+  const enterable = name !== 'Sun' && name !== 'Earth' && !BODIES[name].comet && !BODIES[name].interstellar
+    && (!BODIES[name].dwarf || !!BODIES[name].texture);
   enterBtn.hidden = !enterable;
   if (enterable) {
     enterBtn.textContent = ROCKY.has(name) ? 'Descend to the surface ▸' : 'Explore the globe ▸';
