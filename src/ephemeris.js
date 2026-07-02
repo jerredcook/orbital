@@ -118,8 +118,11 @@ export function centuriesSinceJ2000(julianDate) {
 
 // Solve Kepler's equation M = E - e·sinE (all radians) by Newton iteration.
 function solveKepler(M, e) {
-  let E = M; // good seed for the low eccentricities here (Mercury e≈0.21 worst)
-  for (let i = 0; i < 8; i++) {
+  // E=M is a fine Newton seed at planetary eccentricities, but it DIVERGES for
+  // the near-parabolic comets (e≈0.995: thousands of degrees of error at some
+  // anomalies).  E₀ = ±π is the classic globally-convergent seed for high e.
+  let E = e > 0.8 ? (M >= 0 ? Math.PI : -Math.PI) : M;
+  for (let i = 0; i < 32; i++) {
     const dE = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
     E -= dE;
     if (Math.abs(dE) < 1e-12) break;

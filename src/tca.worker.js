@@ -22,11 +22,13 @@
 //
 // Screening (one target vs thousands of candidates) can't afford 30 s
 // everywhere.  Three stages per candidate: 120 s coarse grid against
-// precomputed target positions; where the pair dips under 950 km (the
-// worst-case excursion a 120 s gap can hide at LEO crossing speeds is
-// ~840 km), a 15 s fine scan; then ternary refinement on fine minima under
-// 300 km.  Screening runs in ~200 ms time slices via setTimeout so cancel
-// messages and TCA batches interleave cleanly.
+// precomputed target positions; where the pair dips under 1,150 km, a 15 s
+// fine scan; then ternary refinement on fine minima under 300 km.  The gate
+// must cover the worst excursion a 120 s gap can hide: retrograde-geometry
+// encounters (e.g. GTO/Molniya perigees at LEO altitude) close at 17–18 km/s,
+// ~1,080 km in the 60 s half-gap — a tighter gate silently drops those.
+// Screening runs in ~200 ms time slices via setTimeout so cancel messages and
+// TCA batches interleave cleanly.
 
 import * as satellite from 'satellite.js';
 
@@ -89,7 +91,7 @@ function startScreen(msg) {
   const startMs = new Date(msg.startIso).getTime();
   const horizonMs = msg.horizonHours * 3.6e6;
   const COARSE_MS = 120_000, FINE_MS = 15_000;
-  const COARSE_GATE_M = 950_000, REFINE_GATE_M = 300_000;
+  const COARSE_GATE_M = 1_150_000, REFINE_GATE_M = 300_000;
   const reportM = msg.reportKm * 1000;
 
   const target = satellite.twoline2satrec(msg.targetL1, msg.targetL2);

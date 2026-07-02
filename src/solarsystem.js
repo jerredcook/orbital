@@ -360,7 +360,7 @@ const MOON_FACTS = {
   Nix: { r: 20, disc: 2005, by: 'Hubble (Weaver & Stern)', tint: '#cbc5bd', fact: 'Tumbles chaotically — the shifting pull of the Pluto–Charon binary means its day length is unpredictable and its poles can flip; one large crater wears a reddish stain.' },
   Kerberos: { r: 6, disc: 2011, by: 'Hubble (M. Showalter)', tint: '#b8b4ae', fact: 'A double-lobed moonlet — two icy chunks gently stuck together. Predicted to be coal-dark before the flyby, New Horizons found it bright instead.' },
   Hydra: { r: 21, disc: 2005, by: 'Hubble (Weaver & Stern)', tint: '#d0d3d6', fact: 'The outermost moon of Pluto, coated in nearly pure water ice, and spinning chaotically once every ~10 hours — faster than any other moon of Pluto.' },
-  Larissa: { r: 97, disc: 1989, by: 'Voyager 2', tint: '#7a716a', fact: 'A small, irregular inner moon racing around Neptune in well under a day.' },
+  Larissa: { r: 97, disc: 1981, by: 'H. Reitsema et al.', tint: '#7a716a', fact: 'A small, irregular inner moon racing around Neptune in well under a day — first glimpsed from the ground during a 1981 star occultation, then confirmed by Voyager 2.' },
   Proteus: { r: 210, disc: 1989, by: 'Voyager 2', tint: '#5e5a54', fact: 'One of the darkest objects in the Solar System, and about as big as a body can get while staying lumpy rather than round.' },
   Triton: { r: 1353, disc: 1846, by: 'William Lassell', tint: '#d6cfc0', fact: 'Orbits backward — a captured Kuiper Belt world — with nitrogen geysers and one of the coldest surfaces ever measured (~38 K).' },
   Nereid: { r: 170, disc: 1949, by: 'Gerard Kuiper', tint: '#8a857c', fact: 'Follows one of the most lopsided orbits of any moon, swinging far out from Neptune and back.' },
@@ -559,16 +559,16 @@ function setMoonOrbits(on) {
 //  so it fades out and is gone; false = derelict, still orbiting but dead)].
 const PROBES = {
   Mercury: [['MESSENGER', 1.6, 0.5, 82, 30, 2011, 2015, true],
-            ['BepiColombo', 1.4, 0.10, 88, 0, 2026, null, false]],
-  Venus:   [['Venera 15', 1.8, 1.0, 87, 60, 1983, 1984, true],
+            ['BepiColombo', 1.4, 0.10, 88, 0, 2026.9, null, false]],   // orbit insertion Nov 2026
+  Venus:   [['Venera 15', 1.8, 1.0, 87, 60, 1983, 1984, false],
             ['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, 1992, true],
             ['Magellan', 1.6, 0.157, 86, 90, 1990, 1994, true],
             ['Venus Express', 2.2, 1.0, 89, 130, 2006, 2015, true],
             ['Akatsuki', 2.6, 10.5, 9, 0, 2015, 2024, false]],
-  Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, 2022, true],
-            ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, 2019, true],
-            ['Viking 2 Orbiter', 2.2, 1.5, 55, 220, 1976, 1979, true],
-            ['Mars Global Surveyor', 1.5, 0.078, 93, 60, 1997, 2006, true],
+  Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, 1972, false],       // mission ended Oct 1972; still a derelict in orbit
+            ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, 1980, false],
+            ['Viking 2 Orbiter', 2.2, 1.5, 55, 220, 1976, 1978, false],
+            ['Mars Global Surveyor', 1.5, 0.078, 93, 60, 1997, 2006, false],
             ['Mars Odyssey', 1.30, 0.082, 93, 0, 2001, null, false],
             ['Mars Express', 1.7, 0.30, 86, 150, 2003, null, false],
             ['MRO', 1.45, 0.075, 93, 250, 2006, null, false],
@@ -752,7 +752,9 @@ function addProbe(planet, probe, idx) {
     },
   });
   probeList.push({ entity, ring, arrival, end, deorbited });
-  probeInfo[name] = { planet, entity, ring, periodDays: orbPeriod, inclDeg: orbInc, ecc: e,
+  // ecc shows the REAL eccentricity (Juno 0.977, not the render-capped 0.8) —
+  // the cap is a display device, not data.
+  probeInfo[name] = { planet, entity, ring, periodDays: orbPeriod, inclDeg: orbInc, ecc: el ? el.e : 0,
     apo: aRender * (1 + e), arrival, end, deorbited };
 }
 
@@ -1613,7 +1615,7 @@ export function initSystemView(earthViewer, moonView, onReturn) {
     if (inBodyGlobe) return;   // the body globe handles its own Esc (and exits to here)
     if (e.key === 'Escape' && visible) {
       e.stopPropagation();   // don't also clear the hidden Earth selection
-      if (selectedName) deselect();
+      if (selectedName || selectedMoonName || selectedProbeName) deselect();   // step back one level
       else hide(earthViewer);
     }
   }, true);
