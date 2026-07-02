@@ -2,3 +2,7 @@ node_modules/
 dist/
 .DS_Store
 *.local
+
+# Private local copy of the expert review (never publish)
+orbital-review.local.html
+public/review/

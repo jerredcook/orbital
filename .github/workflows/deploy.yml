@@ -11,10 +11,14 @@ permissions:
   pages: write
   id-token: write
 
-# One deploy at a time; newer pushes supersede in-flight runs.
+# One deploy at a time.  cancel-in-progress MUST be false (this matches GitHub's
+# own Pages starter workflow): cancelling a Pages *deployment* mid-flight leaves
+# the deployment record in a bad state, which makes the NEXT run fail at the
+# deploy-pages step with "Deployment failed, try again later."  A newer push
+# waits for the in-flight one to finish instead of killing it.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -46,3 +50,10 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Ride out transient Pages/CDN hiccups instead of giving up after the
+          # default 10 status-check errors — this step (never the build) was the
+          # one that intermittently reported "try again later".
+          timeout: 900000          # 15 min ceiling for a pending deployment
+          error_count: 25          # tolerate more transient status errors
+          reporting_interval: 10000 # poll every 10 s

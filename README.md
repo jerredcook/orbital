@@ -4,11 +4,6 @@ A 3D real-time visualization of every active satellite in the public catalog
 plus the three big fragmentation-event debris clouds (~18,000 objects),
 rendered on a CesiumJS globe with live SGP4 propagation.
 
-> **Expert review console** — a browsable audit of the project (88 adversarially-
-> verified findings across seven dimensions, runtime measurements, and what
-> shipped) lives at [`/review/`](https://jerredcook.github.io/orbital/review/)
-> (source: [`public/review/index.html`](public/review/index.html)).
-
 ## Quick start
 
 ```bash
