@@ -28,7 +28,7 @@ import {
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
-  orbitalPeriodCenturies, AU_METERS, eclipticFromElements,
+  orbitalPeriodCenturies, AU_METERS, eclipticFromElements, POLES,
   hyperbolicFromElements, hyperbolaPosFromH,
 } from './ephemeris.js';
 import { MOON_ELEMENTS, MOON_EPOCH_JD } from './moon-elements.js';
@@ -184,15 +184,38 @@ function scenePosOf(name, out) {
   return scenePosition(_real, out);
 }
 
-// Body orientation: axial tilt × spin, so time-warp visibly rotates it.
+// Body orientation: real IAU pole × spin, so time-warp visibly rotates it.
+// Precompute each body's pole-alignment quaternion (rotate scene +Z onto the
+// pole from ephemeris.POLES); bodies with no IAU pole (Haumea, Makemake, Eris)
+// fall back to the simple about-X tilt.  This is what keeps Saturn's rings in
+// the same plane its moons (real Horizons nodes) actually orbit in.
+const _poleAxis = new Cartesian3();
+const POLE_QUAT = {};
+function poleQuat(name) {
+  let q = POLE_QUAT[name];
+  if (q) return q;
+  q = new Quaternion();
+  const pole = POLES[name];
+  if (pole) {
+    Cartesian3.cross(Cartesian3.UNIT_Z, pole, _poleAxis);
+    const s = Cartesian3.magnitude(_poleAxis);
+    if (s < 1e-9) Quaternion.clone(Quaternion.IDENTITY, q);   // pole ≈ +Z (or −Z, unused here)
+    else {
+      Cartesian3.divideByScalar(_poleAxis, s, _poleAxis);
+      Quaternion.fromAxisAngle(_poleAxis, Math.acos(CMath.clamp(Cartesian3.dot(Cartesian3.UNIT_Z, pole), -1, 1)), q);
+    }
+  } else {
+    Quaternion.fromAxisAngle(Cartesian3.UNIT_X, BODIES[name].tilt * Math.PI / 180, q);
+  }
+  POLE_QUAT[name] = q;
+  return q;
+}
 function quatOf(name, out) {
-  const tilt = BODIES[name].tilt * Math.PI / 180;
   const periodSec = BODIES[name].day * 3600;     // signed: retrograde spins negate
   const sec = centuriesSinceJ2000(earthClock.currentTime) * 36525 * 86400;
   const spin = (sec / periodSec) * 2 * Math.PI;
   Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, spin, _qSpin);
-  Quaternion.fromAxisAngle(Cartesian3.UNIT_X, tilt, _qTilt);
-  return Quaternion.multiply(_qTilt, _qSpin, out);
+  return Quaternion.multiply(poleQuat(name), _qSpin, out);
 }
 
 // position Property for the marker/label entity to follow.
@@ -973,8 +996,12 @@ function buildSky() {
   const img = new Image();
   img.onload = () => {
     if (!viewer) return;
+    // −ε: Cesium's fromRotationX(θ) sends +Z to (0, −sinθ, cosθ), and the
+    // celestial north pole belongs at ecliptic (0, +sinε, cosε) — the +ε form
+    // mirrored the whole sky, putting Polaris on the wrong side of the ecliptic
+    // (and disagreeing with the bodies' real IAU poles).
     const tilt = Matrix4.fromRotationTranslation(
-      Matrix3.fromRotationX(OBLIQUITY), Cartesian3.ZERO, new Matrix4());
+      Matrix3.fromRotationX(-OBLIQUITY), Cartesian3.ZERO, new Matrix4());
     const sky = new Primitive({
       geometryInstances: new GeometryInstance({
         geometry: new EllipsoidGeometry({

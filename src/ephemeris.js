@@ -109,6 +109,35 @@ export const BODIES = {
 
 export const PLANETS = Object.keys(ELEMENTS); // Mercury … Neptune, in order
 
+// IAU north-pole directions (RA/Dec, J2000 equatorial, IAU WG values near
+// epoch J2000).  The old renderer tilted every body about the scene X-axis,
+// which points each pole at the wrong azimuth — Saturn's rings sat ~54° out of
+// the plane its own moons (real Horizons nodes) orbit in.  These give every
+// body its true axis; bodies not listed (Haumea, Makemake, Eris — poles poorly
+// constrained) fall back to the simple tilt.
+const POLE_RADEC = {
+  Sun:     [286.13, 63.87],
+  Mercury: [281.0103, 61.4155],
+  Venus:   [272.76, 67.16],
+  Earth:   [0.0, 90.0],
+  Mars:    [317.68143, 52.88650],
+  Jupiter: [268.056595, 64.495303],
+  Saturn:  [40.589, 83.537],
+  Uranus:  [257.311, -15.175],
+  Neptune: [299.36, 43.46],
+  Pluto:   [132.993, -6.163],
+  Ceres:   [291.42, 66.76],
+};
+
+// Equatorial J2000 → ecliptic J2000 is a rotation by the obliquity about +X
+// (the shared vernal-equinox direction).
+const OBLIQ = 23.43928 * DEG;
+export const POLES = Object.fromEntries(Object.entries(POLE_RADEC).map(([name, [raDeg, decDeg]]) => {
+  const ra = raDeg * DEG, dec = decDeg * DEG;
+  const xq = Math.cos(dec) * Math.cos(ra), yq = Math.cos(dec) * Math.sin(ra), zq = Math.sin(dec);
+  return [name, new Cartesian3(xq, yq * Math.cos(OBLIQ) + zq * Math.sin(OBLIQ), -yq * Math.sin(OBLIQ) + zq * Math.cos(OBLIQ))];
+}));
+
 const norm360 = (d) => ((d % 360) + 360) % 360;
 
 // Julian centuries past J2000 for a Cesium JulianDate.
