@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22   # Cesium 1.142's engines want >=22; also keeps npm in step with the lockfile
+          node-version: 24   # match the npm major that writes package-lock.json (npm 11 optionals choke npm 10)
           cache: npm
       - run: npm ci
       - run: npm test
