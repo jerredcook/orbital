@@ -22,6 +22,36 @@ const TLE_GROUPS = [
 
 const SATCAT_URL = 'https://celestrak.org/pub/satcat.csv';
 export const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const SATCAT_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // metadata changes slowly — a week is fine
+
+// Big bodies (element sets ~2.7 MB, parsed SATCAT ~1.5 MB) live in the Cache
+// Storage API: localStorage's ~5 MB quota silently rejected them (Safari/Firefox
+// always, Chrome once both were present), so every visit re-downloaded
+// everything.  A tiny localStorage stamp keeps the timestamp so the sync
+// cacheExpiresInMs() below still works.
+const DATA_CACHE = 'orbital-data-v1';
+const bodyUrl = (key) => `/__data/${key}`;
+async function cachePut(key, body) {
+  try {
+    const c = await caches.open(DATA_CACHE);
+    await c.put(bodyUrl(key), new Response(body));
+    localStorage.setItem(key, JSON.stringify({ t: Date.now() }));
+  } catch { /* private mode / no Cache API — skip caching */ }
+}
+async function cacheBody(key) {
+  try {
+    const c = await caches.open(DATA_CACHE);
+    const hit = await c.match(bodyUrl(key));
+    return hit ? await hit.text() : null;
+  } catch { return null; }
+}
+function cacheAgeOk(key, ttl) {
+  try {
+    const s = localStorage.getItem(key);
+    if (!s) return false;
+    return Date.now() - JSON.parse(s).t < ttl;
+  } catch { return false; }
+}
 
 /** Milliseconds until the oldest cached element set expires (0 = stale now). */
 export function cacheExpiresInMs() {
@@ -54,16 +84,15 @@ function markCelestrak(down) {
   } catch { /* ignore */ }
 }
 
-async function cachedFetch(key, url, fallbackUrl) {
+async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
   let stale = null;
-  try {
-    const hit = localStorage.getItem(key);
-    if (hit) {
-      const { t, body } = JSON.parse(hit);
-      if (Date.now() - t < CACHE_TTL_MS) return body;
+  {
+    const body = await cacheBody(key);
+    if (body !== null) {
+      if (cacheAgeOk(key, ttl)) return body;
       stale = body;   // expired — keep as fallback if the refetch fails
     }
-  } catch { /* cache miss or corrupt — fall through */ }
+  }
 
   // Bound the request: a rate-limited CelesTrak doesn't always answer with a
   // quick 403 — it can just hang the connection, which without a timeout would
@@ -79,9 +108,7 @@ async function cachedFetch(key, url, fallbackUrl) {
     if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
     const body = await res.text();
     if (isCelestrak(url)) markCelestrak(false);   // it's back — clear the breaker
-    try {
-      localStorage.setItem(key, JSON.stringify({ t: Date.now(), body }));
-    } catch { /* quota exceeded — fine, just skip caching */ }
+    if (ttl > 0) await cachePut(key, body);   // ttl 0 = pass-through (raw SATCAT is cached parsed, not raw)
     return body;
   } catch (err) {
     // Trip the breaker on a real failure (not on a cooldown-skip, which mustn't
@@ -197,8 +224,36 @@ export function classifyRegime(meta, meanMotion) {
   return 'MEO';
 }
 
+// SATCAT metadata: the raw CSV is 6.6 MB and only ~15k rows / 9 fields matter,
+// so what gets cached is the PARSED subset (~1.5 MB, 7-day TTL — launch dates
+// don't churn).  The CSV download, when needed, starts in parallel with the
+// element sets instead of after them, so it's off the cold-load critical path.
+const SATCAT_KEY = 'orbital.satcat.parsed';
+async function loadSatcat(ids, csvPromise) {
+  if (cacheAgeOk(SATCAT_KEY, SATCAT_TTL_MS)) {
+    const body = await cacheBody(SATCAT_KEY);
+    if (body) {
+      try { return new Map(JSON.parse(body)); } catch { /* corrupt — refetch */ }
+    }
+  }
+  const csv = await csvPromise;
+  if (!csv) {
+    const stale = await cacheBody(SATCAT_KEY);   // expired beats absent
+    if (stale) { try { return new Map(JSON.parse(stale)); } catch { /* corrupt */ } }
+    throw new Error('satcat fetch failed');
+  }
+  const map = parseSatcat(csv, ids);
+  await cachePut(SATCAT_KEY, JSON.stringify([...map]));
+  return map;
+}
+
 export async function loadCatalog(onStatus) {
   onStatus?.('fetching element sets…');
+  // If the parsed SATCAT cache is stale, start the (big) CSV download NOW so it
+  // rides alongside the element-set fetches instead of after them.
+  const satcatCsvPromise = cacheAgeOk(SATCAT_KEY, SATCAT_TTL_MS)
+    ? null
+    : cachedFetch('orbital.satcat.csv', SATCAT_URL, null, 0).catch((e) => { console.warn('satcat fetch failed', e); return null; });
   // A group that fails entirely (no cache, fetch refused) is skipped rather
   // than failing the whole load — a partial catalog still renders.
   const texts = await Promise.all(
@@ -226,11 +281,9 @@ export async function loadCatalog(onStatus) {
   }
 
   onStatus?.(`parsing metadata for ${tles.length.toLocaleString()} objects…`);
-  const ids = seen;
   let satcat = new Map();
   try {
-    const satcatCsv = await cachedFetch('orbital.satcat', SATCAT_URL);
-    satcat = parseSatcat(satcatCsv, ids);
+    satcat = await loadSatcat(seen, satcatCsvPromise);
   } catch (e) {
     console.warn('SATCAT unavailable — continuing with TLE-only metadata', e);
   }

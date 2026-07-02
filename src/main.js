@@ -5,7 +5,7 @@ import {
   Credit, Cartesian3, Cartesian2, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
   PolylineCollection, Material, DistanceDisplayCondition, Matrix3, Quaternion,
-  CallbackProperty, LabelCollection, Cartographic,
+  CallbackProperty, LabelCollection, Cartographic, ModelGraphics,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
@@ -684,8 +684,11 @@ for (const sp of SHOWPIECES) {
     orientation: turntable,                            // slow museum turntable
     // Only render a showpiece when the camera is near it (i.e. while you're
     // inspecting it) so the others — billions of km away in other directions —
-    // don't litter the view with stray labels and dots.
-    model: { uri: `${MODELS}${sp.file}.glb`, scale: 1, minimumPixelSize: 64, distanceDisplayCondition: SHOW_NEAR },
+    // don't litter the view with stray labels and dots.  The model graphic is
+    // NOT set here: Cesium downloads a glTF the moment the graphic exists
+    // (DistanceDisplayCondition only gates rendering), which used to pull
+    // ~20 MB of showpiece models on every cold page load.  inspectShowpiece
+    // attaches it on first visit instead.
     point: { pixelSize: 5, color: SHOW_GOLD, distanceDisplayCondition: SHOW_NEAR },
     label: {
       text: sp.name, font: '500 12px Inter, system-ui, sans-serif', fillColor: SHOW_GOLD,
@@ -699,6 +702,12 @@ function inspectShowpiece(id) {
   const sp = showpieceById[id];
   if (!sp) return;
   clearSelection();
+  // Lazy-load the 3D model on first inspect (see the entity-creation note).
+  if (!sp.entity.model) {
+    sp.entity.model = new ModelGraphics({
+      uri: `${MODELS}${sp.file}.glb`, scale: 1, minimumPixelSize: 64, distanceDisplayCondition: SHOW_NEAR,
+    });
+  }
   $('infopanel').hidden = true;
   autoFollowHoldUntil = Date.now() + 8000;
   viewer.trackedEntity = sp.entity;
