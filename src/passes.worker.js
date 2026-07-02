@@ -86,7 +86,7 @@ function look(rec, tMs, gmst, st) {
 }
 
 function startPasses(msg) {
-  const run = { cancelled: false };
+  const run = { cancelled: false, gen: msg.gen };
   activeRun = run;
 
   const { startMs } = msg;
@@ -197,9 +197,9 @@ function startPasses(msg) {
     if (run.cancelled || activeRun !== run) return;
     const sliceStart = Date.now();
     while (idx < total && Date.now() - sliceStart < 200) processCandidate(candidates[idx++]);
-    self.postMessage({ type: 'passes-progress', done: idx, total, passes: found.splice(0) });
+    self.postMessage({ type: 'passes-progress', done: idx, total, passes: found.splice(0), gen: run.gen });
     if (idx < total) setTimeout(chunk, 0);
-    else self.postMessage({ type: 'passes-done' });
+    else self.postMessage({ type: 'passes-done', gen: run.gen });
   }
   chunk();
 }

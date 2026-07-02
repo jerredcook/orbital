@@ -85,7 +85,7 @@ function findTca(recA, recB, startMs, horizonMs) {
 let activeScreen = null;
 
 function startScreen(msg) {
-  const run = { cancelled: false };
+  const run = { cancelled: false, gen: msg.gen };
   activeScreen = run;
 
   const startMs = new Date(msg.startIso).getTime();
@@ -159,9 +159,9 @@ function startScreen(msg) {
     while (idx < total && Date.now() - sliceStart < 200) {
       processCandidate(candidates[idx++]);
     }
-    self.postMessage({ type: 'screen-progress', done: idx, total, found: found.splice(0) });
+    self.postMessage({ type: 'screen-progress', done: idx, total, found: found.splice(0), gen: run.gen });
     if (idx < total) setTimeout(chunk, 0);
-    else self.postMessage({ type: 'screen-done' });
+    else self.postMessage({ type: 'screen-done', gen: run.gen });
   }
   chunk();
 }
@@ -188,5 +188,5 @@ self.onmessage = (e) => {
     if (hit) results.push({ key: p.key, ...hit });
     else results.push({ key: p.key, tcaMs: null, missM: null });
   }
-  self.postMessage({ type: 'tca-results', results });
+  self.postMessage({ type: 'tca-results', results, gen: msg.gen });
 };

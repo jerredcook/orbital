@@ -117,6 +117,11 @@ const worker = new Worker(
 );
 
 let workerBusy = false;
+// Catalog generation: bumped on every hot-swap / in-place element refresh.
+// Stamped on outbound worker requests and echoed back, so a response computed
+// against the previous catalog (indices now point at different satellites) is
+// dropped instead of mis-indexing conjunctions, TCA keys, or pass lists.
+let catalogGen = 0;
 // A crashed worker must never deadlock the tracker: clear the busy latch and
 // tell the user, instead of silently freezing every dot at its last position.
 worker.onerror = worker.onmessageerror = (err) => {
@@ -132,6 +137,7 @@ worker.onmessage = (e) => {
   }
   if (msg.type === 'positions') {
     workerBusy = false;
+    if (msg.gen !== catalogGen) return;   // computed against a now-replaced catalog — drop it
     lastBuf = msg.buf;
     swarm?.updatePositions(msg.buf);
     renderConjunctions(msg.pairs ?? []);
@@ -148,6 +154,7 @@ setInterval(() => {
     type: 'propagate',
     isoTime: JulianDate.toIso8601(viewer.clock.currentTime),
     conjKm: $('toggle-conj').checked ? Number($('conj-range').value) : 0,
+    gen: catalogGen,
   });
 }, 600);
 
@@ -156,6 +163,7 @@ setInterval(() => {
 // Swap in a (new) catalog: rebuild the swarm, re-init the worker, reset
 // everything index-based.  Called at boot and again on auto-refresh.
 function applyCatalog(list) {
+  catalogGen++;   // invalidate any in-flight worker results tied to the old indices
   clearSelection();
   $('infopanel').hidden = true;
   tcaCache.clear();
@@ -278,6 +286,21 @@ async function refreshCatalog() {
     const unchanged = list.length === catalog.length
       && list.every((s, i) => s.norad === catalog[i].norad);
     if (unchanged) {
+      // Same objects, but freshly fetched element sets carry new epochs.  Update
+      // them in place (indices unchanged, so selection / passes / TCA stay valid)
+      // and re-init the worker.  Skipping this let a days-long session keep flying
+      // the boot-time satrecs — SGP4 drifts ~km/day for LEO.
+      for (let i = 0; i < catalog.length; i++) {
+        catalog[i].l1 = list[i].l1;
+        catalog[i].l2 = list[i].l2;
+        catalog[i].launchYear = list[i].launchYear;
+        if (list[i].meta) catalog[i].meta = list[i].meta;
+      }
+      catalogGen++;   // drop any in-flight results propagated from the old elements
+      tcaCache.clear();
+      tcaPending.clear();
+      worker.postMessage({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
+      if (passing && $('toggle-station').checked && station) { cancelPasses(); startPasses(); }
       status(`${catalog.length.toLocaleString()} objects on orbit`);
       return;
     }
@@ -1054,6 +1077,7 @@ tcaWorker.onerror = tcaWorker.onmessageerror = (err) => {
 
 tcaWorker.onmessage = (e) => {
   const msg = e.data;
+  if (msg.gen !== catalogGen) return;   // stale: keys index the previous catalog
   if (msg.type === 'tca-results') {
     for (const r of msg.results) {
       tcaPending.delete(r.key);
@@ -1101,6 +1125,7 @@ function requestTca(pairs) {
   if (batch.length) {
     tcaWorker.postMessage({
       type: 'tca',
+      gen: catalogGen,
       startIso: JulianDate.toIso8601(viewer.clock.currentTime),
       horizonHours: 24,
       pairs: batch,
@@ -1149,6 +1174,7 @@ function startScreening() {
   $('screen-results').innerHTML = '';
   tcaWorker.postMessage({
     type: 'screen',
+    gen: catalogGen,
     targetL1: target.l1, targetL2: target.l2,
     candidates,
     startIso: JulianDate.toIso8601(viewer.clock.currentTime),
@@ -1512,6 +1538,7 @@ function startPasses() {
   passing = { passes: [], active: true };
   passesWorker.postMessage({
     type: 'passes',
+    gen: catalogGen,
     startMs: JulianDate.toDate(viewer.clock.currentTime).getTime(),
     horizonHours: PASS_HORIZON_H,
     minElevDeg: minEl,
@@ -1618,7 +1645,7 @@ function applyDeepLink() { navigateTo(readHash()); }
 
 passesWorker.onmessage = (e) => {
   const msg = e.data;
-  if (!passing) return;
+  if (!passing || msg.gen !== catalogGen) return;   // stale scan (cancelled by a hot-swap) — indices moved
   if (msg.type === 'passes-progress') {
     passing.passes.push(...msg.passes);
     updatePassStatus(`scanning ${msg.total.toLocaleString()} satellites… ${Math.round((msg.done / msg.total) * 100)}%`);

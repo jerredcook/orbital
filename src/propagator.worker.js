@@ -102,6 +102,9 @@ self.onmessage = (e) => {
     }
 
     const pairs = msg.conjKm > 0 ? findConjunctions(buf, msg.conjKm * 1000) : null;
-    self.postMessage({ type: 'positions', isoTime: msg.isoTime, buf, pairs }, [buf.buffer]);
+    // Echo the catalog generation so the main thread can drop a positions
+    // message computed before a hot-swap (its pair indices point at the old
+    // catalog).
+    self.postMessage({ type: 'positions', isoTime: msg.isoTime, buf, pairs, gen: msg.gen }, [buf.buffer]);
   }
 };
