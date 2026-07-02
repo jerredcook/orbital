@@ -28,6 +28,18 @@ import * as satellite from 'satellite.js';
 const RAD = Math.PI / 180, DEG = 180 / Math.PI;
 const RE_KM = 6378.137, E2 = 0.00669437999014;     // WGS84
 const OMEGA_E = 7.2921159e-5;                       // Earth rotation rate, rad/s
+const SUN_DARK = Math.sin(-6 * RAD);                // civil twilight: sky dark enough to spot satellites
+const SHADOW_R_KM = 6371;                           // mean radius for the cylindrical shadow test
+
+// Low-precision solar direction in ECI (unit vector) — same series main.js uses.
+function sunEci(tMs) {
+  const n = (tMs - Date.UTC(2000, 0, 1, 12)) / 86400000;
+  const g = (357.529 + 0.98560028 * n) * RAD;
+  const L = (280.459 + 0.98564736 * n) * RAD;
+  const lam = L + (1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * RAD;
+  const eps = 23.439 * RAD;
+  return [Math.cos(lam), Math.cos(eps) * Math.sin(lam), Math.sin(eps) * Math.sin(lam)];
+}
 
 let activeRun = null;
 
@@ -136,7 +148,23 @@ function startPasses(msg) {
       peakEl: peak ? peak.el : minEl,
       riseAz: rise ? Math.round(rise.az) : null,
       setAz: set ? Math.round(set.az) : null,
+      visible: visibleAt(rec, peakMs),
     };
+  }
+
+  // Naked-eye test at the pass peak: the satellite in sunlight (outside Earth's
+  // cylindrical shadow) while the station sits in civil-twilight-or-darker sky.
+  function visibleAt(rec, tMs) {
+    const eci = eciKm(rec, tMs);
+    if (!eci) return false;
+    const s = sunEci(tMs);
+    const g = gmstAt(tMs), cg = Math.cos(g), sg = Math.sin(g);
+    const sx = s[0] * cg + s[1] * sg, sy = -s[0] * sg + s[1] * cg, sz = s[2];   // sun → ECF
+    if (sx * st.up[0] + sy * st.up[1] + sz * st.up[2] >= SUN_DARK) return false;   // observer's sky too bright
+    const along = eci.x * s[0] + eci.y * s[1] + eci.z * s[2];
+    if (along > 0) return true;                        // sunward of Earth's centre — lit
+    const wx = eci.x - along * s[0], wy = eci.y - along * s[1], wz = eci.z - along * s[2];
+    return wx * wx + wy * wy + wz * wz > SHADOW_R_KM * SHADOW_R_KM;   // clear of the shadow cylinder
   }
 
   const candidates = msg.candidates;

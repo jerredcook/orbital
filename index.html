@@ -79,7 +79,7 @@
         <h3>📍 What flies over your house</h3>
         <ul>
           <li><b>Drop a spot</b> on Earth (or use your location) and Orbital works out which satellites pass over it, and exactly when.</li>
-          <li><b>Naked-eye alerts</b>: for the bright ones (the ISS, Tiangong), Orbital watches for passes you could actually see — the craft sunlit overhead while you're down in darkness — and counts down to the next one.</li>
+          <li><b>Naked-eye passes</b>: every pass is checked for real visibility — the craft sunlit overhead while you're down in darkness. Passes you could actually see are marked 👁, there's a "naked-eye passes only" filter, and for the bright ones (the ISS, Tiangong) Orbital counts down to the next sighting.</li>
           <li><b>The sky chart</b>: a naked-eye map of what's crossing your sky right now, horizon to overhead.</li>
           <li><b>Pass alerts</b> count down to the next good viewing opportunity.</li>
         </ul>
@@ -246,6 +246,7 @@
         <option value="25">≥ 25°</option>
         <option value="50">≥ 50°</option>
       </select>
+      <label class="pass-visrow"><input type="checkbox" id="pass-visonly" /> 👁 naked-eye passes only</label>
     </div>
     <div id="pass-status" class="pass-status" role="status" hidden></div>
     <div id="sky-now" hidden>

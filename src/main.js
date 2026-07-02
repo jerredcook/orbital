@@ -117,6 +117,13 @@ const worker = new Worker(
 );
 
 let workerBusy = false;
+// A crashed worker must never deadlock the tracker: clear the busy latch and
+// tell the user, instead of silently freezing every dot at its last position.
+worker.onerror = worker.onmessageerror = (err) => {
+  workerBusy = false;
+  console.error('propagator worker error', err);
+  status('position engine hiccuped — retrying…');
+};
 worker.onmessage = (e) => {
   const msg = e.data;
   if (msg.type === 'ready') {
@@ -997,7 +1004,8 @@ function renderConjunctions(pairs) {
   if (top.length) requestTca(top);
   const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
   for (const [i, j, meters] of top) {
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'conj-row';
     const sub = fmtTca(`${i}:${j}`, nowMs);
     row.innerHTML =
@@ -1042,6 +1050,10 @@ const tcaWorker = new Worker(
 
 const tcaCache = new Map();    // "i:j" → { tcaMs, missM } (missM null = no result)
 const tcaPending = new Set();  // keys requested but not yet answered
+tcaWorker.onerror = tcaWorker.onmessageerror = (err) => {
+  console.error('tca worker error', err);
+  tcaPending.clear();          // let the rows re-request instead of "computing…" forever
+};
 
 tcaWorker.onmessage = (e) => {
   const msg = e.data;
@@ -1177,7 +1189,8 @@ function renderScreenResults() {
     const when = dt < 90_000 ? 'now'
       : dt < 3.6e6 ? `in ${Math.round(dt / 60_000)} min`
       : `in ${(dt / 3.6e6).toFixed(1)} h`;
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'conj-row';
     row.innerHTML =
       `<div class="conj-main">` +
@@ -1214,6 +1227,10 @@ const passesWorker = new Worker(
   new URL('./passes.worker.js', import.meta.url),
   { type: 'module' },
 );
+passesWorker.onerror = passesWorker.onmessageerror = (err) => {
+  console.error('passes worker error', err);
+  if (passing) { passing.active = false; updatePassStatus('pass scan failed — toggle the station to retry'); }
+};
 
 function drawStation() {
   stationPoints.removeAll();
@@ -1527,8 +1544,9 @@ function renderPasses() {
   const n = passing.passes.length;
   $('pass-count').textContent = !n ? '—' : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
   const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
+  const visOnly = $('pass-visonly')?.checked;
   const upcoming = passing.passes
-    .filter((p) => p.setMs > nowMs)
+    .filter((p) => p.setMs > nowMs && (!visOnly || p.visible))
     .sort((a, b) => a.riseMs - b.riseMs)
     .slice(0, 40);
   for (const p of upcoming) {
@@ -1539,14 +1557,21 @@ function renderPasses() {
         : dt < 3.6e6 ? `in ${Math.round(dt / 60_000)} min`
           : `in ${(dt / 3.6e6).toFixed(1)} h`;
     const durMin = Math.max(1, Math.round((p.setMs - p.riseMs) / 60_000));
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'conj-row';
     row.innerHTML =
       `<div class="conj-main"><span class="cnames">${sat.name}</span>` +
-      `<span class="ckm">${Math.round(p.peakEl)}°</span></div>` +
-      `<div class="conj-sub">${when} · ${durMin} min${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
+      `<span class="ckm">${p.visible ? '👁 ' : ''}${Math.round(p.peakEl)}°</span></div>` +
+      `<div class="conj-sub">${when} · ${durMin} min${p.visible ? ' · visible to the eye' : ''}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
     row.addEventListener('click', () => jumpToPass(p));
     listEl.appendChild(row);
+  }
+  if (visOnly && !upcoming.length) {
+    const note = document.createElement('div');
+    note.className = 'pass-status';
+    note.textContent = 'no naked-eye passes in the scan window';
+    listEl.appendChild(note);
   }
 }
 
@@ -1665,11 +1690,27 @@ $('pass-geoloc').addEventListener('click', () => {
   );
 });
 
+$('pass-visonly').addEventListener('change', renderPasses);
 $('pass-minel').addEventListener('change', () => {
   if ($('toggle-station').checked && station) startPasses();
 });
 
 loadStation();
+// A returning visitor with a saved spot shouldn't have to re-arm the station
+// every day: bring the passes (and sky chart) straight back.
+if (station) {
+  $('toggle-station').checked = true;
+  $('pass-controls').hidden = false;
+  prepStation();
+  $('sky-now').hidden = false;
+  // wait for the catalog before scanning — boot() resolves it below
+  const armWhenReady = setInterval(() => {
+    if (!catalog.length) return;
+    clearInterval(armWhenReady);
+    drawStation();
+    startPasses();
+  }, 500);
+}
 
 function fmtTca(key, nowMs) {
   if (tcaPending.has(key)) return 'computing closest approach…';

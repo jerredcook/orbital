@@ -476,10 +476,19 @@ body:not(.system-mode) #system-legend { display: none; }
   font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 4px;
 }
 #conj-list { max-height: 160px; overflow-y: auto; }
+/* Result rows are real <button>s (keyboard focus + Enter/Space for free) —
+   reset the button chrome so they keep the plain row look. */
 .conj-row {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; color: inherit;
   padding: 3px 0;
   font-family: ui-monospace, monospace; font-size: 10.5px; cursor: pointer;
 }
+.pass-visrow {
+  display: flex; align-items: center; gap: 6px; padding: 4px 0 0;
+  font-size: 11px; color: #AEB9C8; cursor: pointer;
+}
+.pass-visrow input { accent-color: #FFB454; }
 .conj-row .conj-main { display: flex; justify-content: space-between; gap: 6px; }
 .conj-row:hover .cnames { color: #FF6B7A; }
 .conj-row .cnames { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #C9D4E3; }
@@ -597,6 +606,10 @@ body:not(.system-mode) #system-legend { display: none; }
 }
 
 @media (max-width: 760px) {
+  /* comfortable touch targets for the tappable rows (44px guideline) */
+  .conj-row { min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
+  .result-row { min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
+  .legend-row { min-height: 34px; align-items: center; }
   #legend-toggle { display: inline-flex; align-items: center; }
   .tb-label { display: none; }                 /* icon-only System / Moon buttons */
   #topbar { z-index: 31; }                      /* keep the bar (and ☰) above the drawer + scrim */
