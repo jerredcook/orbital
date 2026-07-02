@@ -112,13 +112,8 @@ export function initMoonView(earthViewer) {
     else show(earthViewer);
   });
   $('moon-exit').addEventListener('click', () => hide(earthViewer));
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && visible) {
-      e.stopPropagation();   // don't also clear the (hidden) Earth selection
-      hide(earthViewer);
-    }
-  }, true);
+  // Esc is handled by main.js's single dispatcher (see moonView.visible / hide).
 
   // Expose for debugging, mirroring window.__orbital.viewer.
-  return { show: () => show(earthViewer), hide: () => hide(earthViewer), get viewer() { return moonViewer; } };
+  return { show: () => show(earthViewer), hide: () => hide(earthViewer), get visible() { return visible; }, get viewer() { return moonViewer; } };
 }

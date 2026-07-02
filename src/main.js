@@ -770,10 +770,7 @@ $('guide-close').addEventListener('click', closeGuide);
 $('guide-done').addEventListener('click', closeGuide);
 guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); });   // backdrop tap
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !guide.hidden) { e.stopPropagation(); closeGuide(); return; }
-  if (e.key === 'Escape' && !welcome.hidden) { e.stopPropagation(); closeWelcome(); }
-}, true);
+// (Esc is handled by the single dispatcher near the search wiring below.)
 // First-timers see it — unless they followed a shared deep-link, which lands
 // them straight on the thing the sender pointed at (the flag stays unset, so
 // they still get the intro on a later visit to the bare page).
@@ -1809,16 +1806,21 @@ searchBox.addEventListener('input', () => {
   resultsEl.hidden = resultsEl.children.length === 0;
 });
 
+// Single Esc dispatcher — one keypress, one action, in strict priority order.
+// (Previously four capture-phase listeners across the view modules all fired on
+// the same Esc because stopPropagation doesn't stop siblings on the same node.)
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    resultsEl.hidden = true;
-    if (!leaveShowpiece()) { clearSelection(); $('infopanel').hidden = true; }
-  }
   if (e.key === '/' && document.activeElement !== searchBox) {
-    e.preventDefault();
-    searchBox.focus();
+    e.preventDefault(); searchBox.focus(); return;
   }
-});
+  if (e.key !== 'Escape') return;
+  resultsEl.hidden = true;
+  if (!guide.hidden) { closeGuide(); return; }              // modal overlays first
+  if (!welcome.hidden) { closeWelcome(); return; }
+  if (moonView.visible) { moonView.hide(); return; }         // then the open view
+  if (systemView.visible) { systemView.stepBack(); return; } // (handles body globe + selections)
+  if (!leaveShowpiece()) { clearSelection(); $('infopanel').hidden = true; }   // Earth view
+}, true);
 
 // ----------------------------------------------------------------- debug ----
 

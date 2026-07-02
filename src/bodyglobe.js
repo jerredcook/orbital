@@ -164,8 +164,6 @@ function hide() {
 
 export function initBodyGlobes() {
   $('body-exit').addEventListener('click', hide);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && visible) { e.stopPropagation(); hide(); }
-  }, true);
+  // Esc is handled by main.js's dispatcher (via systemView.stepBack → this hide).
   return { show, hide, get visible() { return visible; } };
 }

@@ -67,6 +67,7 @@ let viewer = null;          // created lazily on first open
 let visible = false;
 let earthClock = null;      // the shared source-of-truth clock (Earth viewer's)
 let onReturnToEarth = null; // main.js hook to re-centre Earth when we exit
+let moonRef = null;         // the Moon view, so show() can close it (one mode at a time)
 const entities = {};        // body name -> marker/label Entity
 const moonInfo = {};        // moon name -> { planet, entity, realR, periodDays, facts }
 const probeInfo = {};       // spacecraft name -> { planet, entity, periodDays, inclDeg, arrival, end, deorbited }
@@ -1440,6 +1441,7 @@ function createViewer() {
 // ------------------------------------------------------------- show / hide ----
 
 function show(earthViewer) {
+  if (moonRef && moonRef.visible) moonRef.hide();   // never stack Moon + System (two render loops)
   if (!viewer) { pendingClock = earthViewer.clock; createViewer(); }
   visible = true;
   $('systemContainer').hidden = false;
@@ -1472,6 +1474,7 @@ function hide(earthViewer, recenter = true) {
   $('system-toggle').classList.remove('active');
   if (viewer) viewer.useDefaultRenderLoop = false;
   earthViewer.useDefaultRenderLoop = true;
+  writeHash(null);   // back to the bare Earth view — don't leave a stale #system/#body= hash
   if (recenter && onReturnToEarth) onReturnToEarth();
 }
 
@@ -1571,6 +1574,7 @@ function buildFamilyLegend() {
 // ------------------------------------------------------------------- init ----
 
 export function initSystemView(earthViewer, moonView, onReturn) {
+  moonRef = moonView;
   pendingClock = earthViewer.clock;
   onReturnToEarth = onReturn;
 
@@ -1639,17 +1643,17 @@ export function initSystemView(earthViewer, moonView, onReturn) {
   bodyGlobes = initBodyGlobes();
   $('sys-enter-planet').addEventListener('click', () => { if (selectedName) enterPlanet(selectedName); });
 
-  document.addEventListener('keydown', (e) => {
-    if (inBodyGlobe) return;   // the body globe handles its own Esc (and exits to here)
-    if (e.key === 'Escape' && visible) {
-      e.stopPropagation();   // don't also clear the hidden Earth selection
-      if (selectedName || selectedMoonName || selectedProbeName) deselect();   // step back one level
-      else hide(earthViewer);
-    }
-  }, true);
-
+  // Esc is routed by main.js's single dispatcher (which calls stepBack below) so
+  // one keypress can't fire four capture-phase handlers at once.
   return {
     show: () => show(earthViewer), hide: () => hide(earthViewer),
+    get visible() { return visible; },
+    // One level back: leave a body globe → drop a selection → exit to Earth.
+    stepBack: () => {
+      if (inBodyGlobe) { bodyGlobes.hide(); return; }
+      if (selectedName || selectedMoonName || selectedProbeName) { deselect(); writeHash({ system: true }); }
+      else hide(earthViewer);
+    },
     focus: (name) => focusByName(name),      // deep-link entry: planet · moon · spacecraft
     // Searchable heliocentric bodies (for the Earth-view search box).
     searchBodies: [
