@@ -42,6 +42,7 @@ import {
 import { createBelt, createTrojans, createFamilies, createHildas } from './belt.js';
 import { initBodyGlobes } from './bodyglobe.js';
 import { writeHash } from './deeplink.js';
+import { flySeconds } from './motion.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
 const ROCKY = new Set(['Mercury', 'Venus', 'Mars', 'Ceres']);
@@ -1059,7 +1060,7 @@ function frameOpenOrbit(name) {
   const range = Math.min(R * 2.2, skyRadius() * 0.85);            // never past the zoom cap
   releaseAnchor();
   viewer.camera.flyToBoundingSphere(new BoundingSphere(Cartesian3.ZERO, R), {
-    duration: 1.6,
+    duration: flySeconds(1.6),
     offset: new HeadingPitchRange(0, CMath.toRadians(-45), range),
   });
 }
@@ -1116,7 +1117,7 @@ function selectBody(name) {
   scenePosOf(name, _pos);
   // …then pivot the camera on the body so scroll/drag orbit around it, and
   // floor the zoom just above its surface (no globe out here to collide with).
-  flyEquatorial(_pos, range, -pitch, 1.5,
+  flyEquatorial(_pos, range, -pitch, flySeconds(1.5),
     () => { if (selectedName === name && !inBodyGlobe) anchorOn(entities[name], r); });
 }
 
@@ -1186,7 +1187,7 @@ function selectMoon(name) {
   const rr = moonRadius(name);
   releaseAnchor();
   info.entity.position.getValue(earthClock.currentTime, _pos);
-  flyEquatorial(_pos, rr * 4.5, 22, 1.3,
+  flyEquatorial(_pos, rr * 4.5, 22, flySeconds(1.3),
     () => { if (selectedMoonName === name && !inBodyGlobe) anchorOn(info.entity, rr); });
 }
 
@@ -1231,7 +1232,7 @@ function selectProbe(name) {
   scenePosOf(info.planet, _pos);
   const frameR = Math.max(info.apo, planetR * 1.6);
   viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, frameR), {
-    duration: 1.3,
+    duration: flySeconds(1.3),
     offset: new HeadingPitchRange(0, CMath.toRadians(-30), frameR * 2.4),
     complete: () => { if (selectedProbeName === name && !inBodyGlobe) anchorOn(info.entity, planetR * 0.25); },
   });

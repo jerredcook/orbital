@@ -15,6 +15,7 @@ import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
 import { initSystemView } from './solarsystem.js';
 import { writeHash, readHash } from './deeplink.js';
+import { flySeconds } from './motion.js';
 
 // ---------------------------------------------------------------- scene ----
 
@@ -1011,7 +1012,7 @@ function flyToPair(i, j) {
     new Cartesian3(),
   );
   autoFollowHoldUntil = Date.now() + 3000;   // don't let auto-follow cancel the flight
-  viewer.camera.flyTo({ destination, duration: 1.6 });
+  viewer.camera.flyTo({ destination, duration: flySeconds(1.6) });
   selectByIndex(i);
 }
 
@@ -1549,7 +1550,7 @@ function flyToSat(i) {
   const dest = Cartesian3.multiplyByScalar(
     Cartesian3.normalize(pos, new Cartesian3()), Cartesian3.magnitude(pos) + range, new Cartesian3());
   autoFollowHoldUntil = Date.now() + 3000;
-  viewer.camera.flyTo({ destination: dest, duration: 1.4 });
+  viewer.camera.flyTo({ destination: dest, duration: flySeconds(1.4) });
 }
 
 // Jump the clock to the pass's peak and fly to the satellite, so it's framed
@@ -1643,7 +1644,7 @@ $('pass-geoloc').addEventListener('click', () => {
       autoFollowHoldUntil = Date.now() + 3000;
       viewer.camera.flyTo({
         destination: Cartesian3.fromDegrees(coords.longitude, coords.latitude, 7.5e6),
-        duration: 1.6,
+        duration: flySeconds(1.6),
       });
     },
     () => {
