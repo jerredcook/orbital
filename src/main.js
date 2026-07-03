@@ -4,7 +4,7 @@ import {
   Viewer, ImageryLayer, UrlTemplateImageryProvider, EllipsoidTerrainProvider,
   Credit, Cartesian3, Cartesian2, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
-  PolylineCollection, Material, DistanceDisplayCondition, Quaternion,
+  PolylineCollection, DistanceDisplayCondition, Quaternion,
   CallbackProperty, LabelCollection, Cartographic,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -20,6 +20,8 @@ import { CAT_COLORS, SELECT_COLOR, CONJ_COLOR, CAT_CSS } from './palette.js';
 import { modelFor, orientationFor } from './models.js';
 import { DEG2RAD, RE_KM, EARTH_R, SUN_DARK, NAKED_EYE, sunEcefDir, compass } from './astro.js';
 import { initShowpieces } from './showpieces.js';
+import { altBandOf } from './orbit.js';
+import { initConjunctions } from './conjunctions.js';
 
 // ---------------------------------------------------------------- scene ----
 
@@ -133,7 +135,7 @@ worker.onmessage = (e) => {
     if (msg.gen !== catalogGen) return;   // computed against a now-replaced catalog — drop it
     lastBuf = msg.buf;
     swarm?.updatePositions(msg.buf);
-    renderConjunctions(msg.pairs ?? []);
+    conj.render(msg.pairs ?? []);
     renderSky();
   }
 };
@@ -178,8 +180,7 @@ function applyCatalog(list) {
   catalogGen++;   // invalidate any in-flight worker results tied to the old indices
   clearSelection();
   $('infopanel').hidden = true;
-  tcaCache.clear();
-  tcaPending.clear();
+  conj.onCatalogSwap();
   if (swarm) viewer.scene.primitives.remove(swarm);   // destroys GL resources
 
   catalog = list;
@@ -311,8 +312,7 @@ async function refreshCatalog() {
       }
       catalogGen++;   // drop any in-flight results propagated from the old elements
       catalogEpochMs = medianEpochMs(catalog);
-      tcaCache.clear();
-      tcaPending.clear();
+      conj.onCatalogSwap();
       worker.postMessage({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
       if (passing && $('toggle-station').checked && station) { cancelPasses(); startPasses(); }
       status(`${catalog.length.toLocaleString()} objects on orbit`);
@@ -407,8 +407,8 @@ function selectByIndex(index) {
 
 function clearSelection() {
   if (!selected) return;
-  cancelScreening();
-  resetScreenUi();
+  conj.cancelScreening();
+  conj.resetScreenUi();
   swarm.setSuppressed(-1);
   overlay.removeAll();
   viewer.entities.removeAll();
@@ -836,251 +836,18 @@ $('toggle-orbit').addEventListener('change', () => {
   if (selected && $('toggle-orbit').checked) drawOrbitTrack(selected.satrec);
 });
 
-// ----------------------------------------------------------- conjunctions ----
-
-const bufPos = (i) => new Cartesian3(lastBuf[i * 3], lastBuf[i * 3 + 1], lastBuf[i * 3 + 2]);
-
-// Update the conjunction overlays and legend list from one worker tick's
-// pairs.  Positions come from the same buffer the swarm just drew, so the
-// markers sit exactly on their dots.
-function renderConjunctions(pairs) {
-  const n = pairs.length;
-  while (conjLines.length < n) {
-    conjLines.add({
-      positions: [], width: 2, show: false,
-      material: Material.fromType('Color', { color: CONJ_COLOR.withAlpha(0.8) }),
-    });
-  }
-  while (conjMarkers.length < n * 2) {
-    conjMarkers.add({ pixelSize: 5, color: CONJ_COLOR, show: false });
-  }
-  for (let k = 0; k < conjLines.length; k++) {
-    const line = conjLines.get(k);
-    if (k < n && lastBuf) {
-      const [i, j] = pairs[k];
-      line.positions = [bufPos(i), bufPos(j)];
-      line.show = true;
-      const ma = conjMarkers.get(k * 2), mb = conjMarkers.get(k * 2 + 1);
-      ma.position = bufPos(i); ma.id = i; ma.show = true;
-      mb.position = bufPos(j); mb.id = j; mb.show = true;
-    } else {
-      line.show = false;
-      conjMarkers.get(k * 2).show = false;
-      conjMarkers.get(k * 2 + 1).show = false;
-    }
-  }
-
-  const listEl = $('conj-list');
-  listEl.innerHTML = '';
-  $('conj-count').textContent = $('toggle-conj').checked ? String(n) : '—';
-  const top = pairs.slice(0, 10);
-  if (top.length) requestTca(top);
-  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
-  for (const [i, j, meters] of top) {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'conj-row';
-    const sub = fmtTca(`${i}:${j}`, nowMs);
-    row.innerHTML =
-      `<div class="conj-main">` +
-      `<span class="cnames">${catalog[i].name} × ${catalog[j].name}</span>` +
-      `<span class="ckm">${(meters / 1000).toFixed(1)} km</span></div>` +
-      (sub ? `<div class="conj-sub">${sub}</div>` : '');
-    row.addEventListener('click', () => flyToPair(i, j));
-    listEl.appendChild(row);
-  }
-}
-
-function flyToPair(i, j) {
-  if (!lastBuf) return;
-  const a = bufPos(i), b = bufPos(j);
-  const mid = Cartesian3.midpoint(a, b, new Cartesian3());
-  const range = Math.max(Cartesian3.distance(a, b) * 6, 100_000);
-  const destination = Cartesian3.multiplyByScalar(
-    Cartesian3.normalize(mid, new Cartesian3()),
-    Cartesian3.magnitude(mid) + range,
-    new Cartesian3(),
-  );
-  autoFollowHoldUntil = Date.now() + 3000;   // don't let auto-follow cancel the flight
-  viewer.camera.flyTo({ destination, duration: flySeconds(1.6) });
-  selectByIndex(i);
-}
-
-$('toggle-conj').addEventListener('change', () => {
-  if (!$('toggle-conj').checked) renderConjunctions([]);
-  // turning it on: the next worker tick (≤ 600 ms) delivers pairs
-});
-
-// --------------------------------------------------- conjunction forecast ----
-// For listed pairs, a second worker searches the next 24 h for the time of
-// closest approach and miss distance.  Results are cached per pair and shown
-// as a subline; the cache entry drops once its TCA has passed.
-
-const tcaWorker = new Worker(
-  new URL('./tca.worker.js', import.meta.url),
-  { type: 'module' },
-);
-
-const tcaCache = new Map();    // "i:j" → { tcaMs, missM } (missM null = no result)
-const tcaPending = new Set();  // keys requested but not yet answered
-tcaWorker.onerror = tcaWorker.onmessageerror = (err) => {
-  console.error('tca worker error', err);
-  tcaPending.clear();          // let the rows re-request instead of "computing…" forever
-};
-
-tcaWorker.onmessage = (e) => {
-  const msg = e.data;
-  if (msg.gen !== catalogGen) return;   // stale: keys index the previous catalog
-  if (msg.type === 'tca-results') {
-    for (const r of msg.results) {
-      tcaPending.delete(r.key);
-      tcaCache.set(r.key, r);
-    }
-    // The next worker tick (≤ 600 ms) re-renders the list with the new data.
-    return;
-  }
-  if (msg.type === 'screen-progress' && screening) {
-    screening.done = msg.done;
-    screening.found.push(...msg.found);
-    const pct = Math.round((msg.done / msg.total) * 100);
-    $('info-screen').textContent = `Screening ${msg.total.toLocaleString()} candidates… ${pct}%`;
-    if (msg.found.length) renderScreenResults();
-    return;
-  }
-  if (msg.type === 'screen-done' && screening) {
-    screening.active = false;
-    $('info-screen').textContent =
-      `${screening.found.length} within ${SCREEN_REPORT_KM} km · screen again`;
-    $('info-screen').classList.remove('active');
-    renderScreenResults();
-  }
-};
-
-function requestTca(pairs) {
-  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
-  const batch = [];
-  for (const [i, j] of pairs) {
-    const key = `${i}:${j}`;
-    const cached = tcaCache.get(key);
-    if (cached && cached.tcaMs !== null && cached.tcaMs < nowMs - 60_000) {
-      tcaCache.delete(key);          // TCA has passed — recompute
-    } else if (cached || tcaPending.has(key)) {
-      continue;
-    }
-    tcaPending.add(key);
-    batch.push({
-      key,
-      l1a: catalog[i].l1, l2a: catalog[i].l2,
-      l1b: catalog[j].l1, l2b: catalog[j].l2,
-    });
-  }
-  if (tcaCache.size > 500) tcaCache.clear();
-  if (batch.length) {
-    tcaWorker.postMessage({
-      type: 'tca',
-      gen: catalogGen,
-      startIso: JulianDate.toIso8601(viewer.clock.currentTime),
-      horizonHours: 24,
-      pairs: batch,
-    });
-  }
-}
-
-// ---------------------------------------------------- catalog screening ----
-// On demand for the selected satellite: prefilter the catalog by altitude
-// band (an object whose perigee–apogee band can never overlap the target's
-// can never come close), then hand the survivors to the TCA worker for a
-// 24 h close-approach sweep.  Results stream in sorted by miss distance.
-
-const SCREEN_REPORT_KM = 25;
-const SCREEN_BAND_MARGIN_KM = 75;
-
-let screening = null;   // { targetIndex, found: [{i, tcaMs, missM}], done, active }
-
-// [perigee, apogee] altitude band in km — SATCAT when present, else derived
-// from the TLE's mean motion and eccentricity.
-function altBandOf(sat) {
-  const m = sat.meta;
-  if (m?.apogee != null && m?.perigee != null) return [m.perigee, m.apogee];
-  const ecc = parseFloat(`0.${sat.l2.slice(26, 33).trim()}`) || 0;
-  const revsPerDay = parseFloat(sat.l2.slice(52, 63));
-  if (!revsPerDay) return [0, Infinity];
-  const a = Math.cbrt(398600.4418 / ((revsPerDay * 2 * Math.PI / 86400) ** 2));
-  return [a * (1 - ecc) - 6371, a * (1 + ecc) - 6371];
-}
-
-function startScreening() {
-  if (!selected) return;
-  cancelScreening();
-  const target = catalog[selected.index];
-  const [tPer, tApo] = altBandOf(target);
-  const candidates = [];
-  for (let i = 0; i < catalog.length; i++) {
-    if (i === selected.index) continue;
-    const [per, apo] = altBandOf(catalog[i]);
-    if (per > tApo + SCREEN_BAND_MARGIN_KM || apo < tPer - SCREEN_BAND_MARGIN_KM) continue;
-    candidates.push({ i, l1: catalog[i].l1, l2: catalog[i].l2 });
-  }
-  screening = { targetIndex: selected.index, found: [], done: 0, active: true };
-  $('info-screen').textContent = `Screening ${candidates.length.toLocaleString()} candidates… 0%`;
-  $('info-screen').classList.add('active');
-  $('screen-results').innerHTML = '';
-  tcaWorker.postMessage({
-    type: 'screen',
-    gen: catalogGen,
-    targetL1: target.l1, targetL2: target.l2,
-    candidates,
-    startIso: JulianDate.toIso8601(viewer.clock.currentTime),
-    horizonHours: 24,
-    reportKm: SCREEN_REPORT_KM,
-  });
-}
-
-function cancelScreening() {
-  if (!screening) return;
-  if (screening.active) tcaWorker.postMessage({ type: 'screen-cancel' });
-  screening = null;
-}
-
-function resetScreenUi() {
-  $('info-screen').textContent = 'Screen close approaches · 24 h';
-  $('info-screen').classList.remove('active');
-  $('screen-results').innerHTML = '';
-}
-
-function renderScreenResults() {
-  if (!screening) return;
-  const listEl = $('screen-results');
-  listEl.innerHTML = '';
-  if (screening.found.length === 0) return;
-  screening.found.sort((a, b) => a.missM - b.missM);
-  const head = document.createElement('div');
-  head.className = 'screen-head';
-  head.textContent = `closest approaches · next 24 h`;
-  listEl.appendChild(head);
-  const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
-  for (const r of screening.found.slice(0, 20)) {
-    const sat = catalog[r.i];
-    const dt = r.tcaMs - nowMs;
-    const when = dt < 90_000 ? 'now'
-      : dt < 3.6e6 ? `in ${Math.round(dt / 60_000)} min`
-      : `in ${(dt / 3.6e6).toFixed(1)} h`;
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'conj-row';
-    row.innerHTML =
-      `<div class="conj-main">` +
-      `<span class="cnames">${sat.name}</span>` +
-      `<span class="ckm">${(r.missM / 1000).toFixed(2)} km</span></div>` +
-      `<div class="conj-sub">${when}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
-    row.addEventListener('click', () => selectByIndex(r.i));
-    listEl.appendChild(row);
-  }
-}
-
-$('info-screen').addEventListener('click', () => {
-  if (screening?.active) { cancelScreening(); resetScreenUi(); return; }
-  startScreening();
+// ------------------------------------------------- conjunctions + screening ----
+// Live conjunctions, the 24 h forecast, and on-demand catalog screening all
+// live in src/conjunctions.js (they share one TCA worker).  main feeds it each
+// propagator tick's pairs via conj.render() and the lifecycle hooks below.
+const conj = initConjunctions({
+  viewer, conjLines, conjMarkers,
+  getCatalog: () => catalog,
+  getSelected: () => selected,
+  getLastBuf: () => lastBuf,
+  getGen: () => catalogGen,
+  selectByIndex,
+  holdAutoFollow,
 });
 
 // ------------------------------------------------- ground-station passes ----
@@ -1565,20 +1332,6 @@ if (station) {
     drawStation();
     startPasses();
   }, 500);
-}
-
-function fmtTca(key, nowMs) {
-  if (tcaPending.has(key)) return 'computing closest approach…';
-  const c = tcaCache.get(key);
-  if (!c || c.tcaMs === null) return '';
-  const dt = c.tcaMs - nowMs;
-  if (dt < -60_000) return '';
-  const km = (c.missM / 1000).toFixed(2);
-  if (dt < 90_000) return `closest approach ≈ now · ${km} km`;
-  const when = dt < 3.6e6
-    ? `${Math.round(dt / 60_000)} min`
-    : `${(dt / 3.6e6).toFixed(1)} h`;
-  return `min ${km} km in ${when}`;
 }
 
 // ------------------------------------------------------------------ time ----
