@@ -450,29 +450,42 @@ function clearSelection() {
   if (!m.contains('system-mode') && !m.contains('moon-mode')) writeHash(null);
 }
 
-// Closed-ellipse orbit track: sample one full period in ECI, project to the
-// fixed frame at the current GMST so it renders as the classic orbital ring.
+// Closed-ellipse orbit track: sample one full period in ECI *once* (the inertial
+// shape barely changes over a session), then project to the Earth-fixed frame at
+// the current GMST.  The frame rotates ~15°/hr — fast under time-warp — so the
+// projection is refreshed as the clock advances (renderOrbitTrack below);
+// otherwise the satellite visibly drifts off its own ring (AST-10).
 function drawOrbitTrack(satrec) {
   if (!$('toggle-orbit').checked || !selected) return;
   const now = JulianDate.toDate(viewer.clock.currentTime);
-  const gmst = satellite.gstime(now);
   const periodMin = (2 * Math.PI) / satrec.no; // satrec.no = rad/min
   const samples = 240;
-  const positions = [];
+  const eci = [];
   for (let s = 0; s <= samples; s++) {
     const t = new Date(now.getTime() + (s / samples) * periodMin * 60_000);
     const pv = satellite.propagate(satrec, t);
-    if (!pv?.position) continue;
-    const ecf = satellite.eciToEcf(pv.position, gmst);
-    positions.push(new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000));
+    if (pv?.position) eci.push(pv.position);
   }
-  selected.trackEntity = viewer.entities.add({
-    polyline: {
-      positions,
-      width: 1.3,
-      material: SELECT_COLOR.withAlpha(0.55),
-    },
-  });
+  selected.trackEci = eci;   // km, inertial — re-rotated to the current GMST on draw
+  renderOrbitTrack();
+}
+
+// Rotate the stored ECI samples into the Earth-fixed frame at the current GMST
+// and (re)draw the ring.  Cheap: a per-point Z-rotation, no re-propagation.
+function renderOrbitTrack() {
+  if (!selected?.trackEci) return;
+  const gmst = satellite.gstime(JulianDate.toDate(viewer.clock.currentTime));
+  const cg = Math.cos(gmst), sg = Math.sin(gmst);
+  const positions = selected.trackEci.map((p) =>   // ECI → ECF (rotate by −gmst about Z), km → m
+    new Cartesian3((p.x * cg + p.y * sg) * 1000, (-p.x * sg + p.y * cg) * 1000, p.z * 1000));
+  if (selected.trackEntity) {
+    selected.trackEntity.polyline.positions = positions;
+  } else {
+    selected.trackEntity = viewer.entities.add({
+      polyline: { positions, width: 1.3, material: SELECT_COLOR.withAlpha(0.55) },
+    });
+  }
+  selected.trackGmst = gmst;
 }
 
 // Per-frame smooth motion + live readout for the selected satellite only.
@@ -485,6 +498,10 @@ viewer.clock.onTick.addEventListener((clock) => {
   const ecf = satellite.eciToEcf(pv.position, gmst);
   const pos = new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
   selected.highlight.position = pos;
+
+  // Keep the orbit ring aligned as the Earth turns under it (~0.5° steps; fast
+  // under time-warp) so the satellite stays on its own track (AST-10).
+  if (selected.trackEntity && Math.abs(gmst - selected.trackGmst) > 0.0087) renderOrbitTrack();
 
   // Inside model range a free camera loses a 7.6 km/s satellite in seconds —
   // lock on automatically so zooming in "just works".  Release is manual
