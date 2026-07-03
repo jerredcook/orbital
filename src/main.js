@@ -117,6 +117,7 @@ let workerBusy = false;
 // against the previous catalog (indices now point at different satellites) is
 // dropped instead of mis-indexing conjunctions, TCA keys, or pass lists.
 let catalogGen = 0;
+let posTicks = 0;   // debug: count of applied full-catalog updates (idle-pause verification)
 // A crashed worker must never deadlock the tracker: clear the busy latch and
 // tell the user, instead of silently freezing every dot at its last position.
 worker.onerror = worker.onmessageerror = (err) => {
@@ -134,6 +135,7 @@ worker.onmessage = (e) => {
     workerBusy = false;
     if (msg.gen !== catalogGen) return;   // computed against a now-replaced catalog — drop it
     lastBuf = msg.buf;
+    posTicks++;                           // debug: applied full-catalog updates (idle-pause check)
     swarm?.updatePositions(msg.buf);
     conj.render(msg.pairs ?? []);
     groundStation.renderSky();
@@ -144,6 +146,14 @@ worker.onmessage = (e) => {
 // evaluated at the simulation clock's current moment.
 setInterval(() => {
   if (workerBusy || catalog.length === 0) return;
+  // Don't propagate the whole catalog when the Earth view isn't on screen — a
+  // System / Moon view is up (its own render loop drives the shared clock), or
+  // the tab is backgrounded.  The swarm, conjunctions and sky chart are all
+  // hidden then; propagation resumes on the next tick (≤ 600 ms) once Earth is
+  // showing again.  This is the big idle-battery / thermal saver.
+  if (document.hidden) return;
+  const mode = document.body.classList;
+  if (mode.contains('system-mode') || mode.contains('moon-mode')) return;
   workerBusy = true;
   worker.postMessage({
     type: 'propagate',
@@ -891,5 +901,6 @@ window.__orbital = {
   get swarm() { return swarm; },
   get selected() { return selected; },
   get skyPlotted() { return groundStation.skyPlotted; },   // debug: dots in the overhead chart
+  get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
 };

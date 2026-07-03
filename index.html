@@ -6,6 +6,15 @@
   <title>Orbital — live satellite tracker</title>
   <meta name="description" content="Every satellite orbiting Earth, live — and the whole solar system to fly through." />
 
+  <!-- Warm the connections on the critical path: the CelesTrak catalog and the
+       Esri Earth imagery both load during boot.  The NASA Trek / ArcGIS globe
+       imagery is only fetched when you open the Moon or a planet, so it gets the
+       lighter dns-prefetch. -->
+  <link rel="preconnect" href="https://celestrak.org" crossorigin />
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin />
+  <link rel="dns-prefetch" href="https://trek.nasa.gov" />
+  <link rel="dns-prefetch" href="https://astro.arcgis.com" />
+
   <!-- Installable app (PWA): add to home screen on Android (Chrome) or iOS (Safari). -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#05070C" />
