@@ -46,14 +46,46 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      # Whichever attempt landed the deployment carries the live URL.
+      url: ${{ steps.deploy1.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
     steps:
-      - id: deployment
+      # GitHub's Pages backend intermittently flips a healthy deployment to
+      # "failure" ~15 s in, with an empty description — the SAME artifact and
+      # config that deploys green on a re-run (verified: the failed deployments
+      # had an identical waiting→queued→in_progress→terminal timing profile to
+      # successful ones). actions/deploy-pages treats that terminal "failure" as
+      # fatal and does NOT retry, so a good build was surfacing as a red run and
+      # only a manual re-run fixed it. error_count only rides out transient
+      # *polling* errors, not a definitive backend "failure" — so retry the
+      # whole deploy up to 3× with a backoff. A transient flake now self-heals
+      # inside the run; a genuine, persistent failure still fails the job.
+      - id: deploy1
         uses: actions/deploy-pages@v4
+        continue-on-error: true
         with:
-          # Ride out transient Pages/CDN hiccups instead of giving up after the
-          # default 10 status-check errors — this step (never the build) was the
-          # one that intermittently reported "try again later".
-          timeout: 900000          # 15 min ceiling for a pending deployment
-          error_count: 25          # tolerate more transient status errors
+          timeout: 600000           # 10 min ceiling (the action caps here anyway)
+          error_count: 25           # tolerate transient status-poll errors
           reporting_interval: 10000 # poll every 10 s
+
+      - name: Attempt 1 flaked — back off before retry
+        if: steps.deploy1.outcome == 'failure'
+        run: echo "Pages deploy attempt 1 returned a transient failure; waiting for the backend to settle." && sleep 60
+      - id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        with:
+          timeout: 600000
+          error_count: 25
+          reporting_interval: 10000
+
+      - name: Attempt 2 flaked — back off before final retry
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: echo "Pages deploy attempt 2 also flaked; waiting before the final retry." && sleep 90
+      - id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        uses: actions/deploy-pages@v4   # no continue-on-error: a third failure is real, let the run go red
+        with:
+          timeout: 600000
+          error_count: 25
+          reporting_interval: 10000
