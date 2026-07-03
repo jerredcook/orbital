@@ -341,7 +341,6 @@ function rebuildMoonSpheres() {
 function addMoon(planet, moon) {
   const [name, realR, periodDays, factor] = moon;   // position now comes from real elements
   const tint = Color.fromCssColorString(MOON_FACTS[name]?.tint ?? '#b8b2a6');
-  const _rad = new Cartesian3();
   const entity = viewer.entities.add({
     name,
     position: new CallbackProperty((time, result) => {
@@ -1133,8 +1132,8 @@ function selectProbe(name) {
   selectedName = null;
   selectedMoonName = null;
   selectedProbeName = name;
-  hideProbeRings();                                 // reveal just this probe's orbit ring (if it's up)
-  info.ring.show = info.entity.show;
+  hideProbeRings();                                 // reveal just this probe's orbit ring
+  info.ring.show = true;                             // show the orbit even if the craft itself is faded/hidden (deorbited, not-yet-arrived) so there's something to see
   $('system-panel').hidden = true;
   $('moon-panel').hidden = true;
   fillProbePanel(name, info);
@@ -1152,7 +1151,12 @@ function selectProbe(name) {
   viewer.camera.flyToBoundingSphere(new BoundingSphere(_pos, frameR), {
     duration: flySeconds(1.3),
     offset: new HeadingPitchRange(0, CMath.toRadians(-30), frameR * 2.4),
-    complete: () => { if (selectedProbeName === name && !inBodyGlobe) anchorOn(info.entity, planetR * 0.25); },
+    complete: () => {
+      if (selectedProbeName !== name || inBodyGlobe) return;
+      // A deorbited / not-yet-arrived probe isn't drawn — pivot on its planet so
+      // zooming still has something real to orbit, not an invisible point (BUG-09).
+      anchorOn(info.entity.show ? info.entity : entities[info.planet], planetR * 0.25);
+    },
   });
 }
 

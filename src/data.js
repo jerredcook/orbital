@@ -239,7 +239,7 @@ export function classifyRegime(meta, meanMotion) {
   if (period == null) return 'LEO';
   if (period < 128) return 'LEO';          // < ~2000 km circular
   if (period > 1300 && period < 1560) return 'GEO';
-  if (period >= 1560 || (apo != null && per != null && apo - per > 10000)) return 'HEO';
+  if (period >= 1560) return 'HEO';   // the apo−per HEO case is already caught above
   return 'MEO';
 }
 

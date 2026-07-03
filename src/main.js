@@ -187,6 +187,13 @@ function updateDriftBadge() {
 // Swap in a (new) catalog: rebuild the swarm, re-init the worker, reset
 // everything index-based.  Called at boot and again on auto-refresh.
 function applyCatalog(list) {
+  // A hot-swap renumbers every index, so the current selection is about to be
+  // torn down.  Remember which satellite (by NORAD) and whether it was being
+  // followed, so an auto-refresh doesn't yank the user off the object they were
+  // watching — it's re-selected below if it survived into the new catalog.
+  const keepNorad = selected ? catalog[selected.index]?.norad : null;
+  const wasFollowing = following;
+
   catalogGen++;   // invalidate any in-flight worker results tied to the old indices
   clearSelection();
   $('infopanel').hidden = true;
@@ -217,6 +224,13 @@ function applyCatalog(list) {
   // A hot-swap renumbers every index, so any pass results point at the wrong
   // satellites now — drop them and re-scan if the station feature is live.
   groundStation.onCatalogSwap();
+
+  // Restore the user's selection if their satellite is still on orbit (it may
+  // have decayed out of the catalog, in which case diffAndToast already said so).
+  if (keepNorad != null) {
+    const i = catalog.findIndex((c) => c.norad === keepNorad);
+    if (i >= 0) { selectByIndex(i); if (wasFollowing) engageFollow(); }
+  }
 }
 
 async function boot() {
@@ -897,6 +911,7 @@ window.__orbital = {
   systemView,
   selectByIndex,
   refreshCatalog,
+  applyCatalog,   // debug: force a full hot-swap (e.g. to check selection survival)
   get catalog() { return catalog; },
   get swarm() { return swarm; },
   get selected() { return selected; },
