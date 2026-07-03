@@ -230,6 +230,11 @@ export function parseSatcat(csv, wantedIds) {
   return map;
 }
 
+// TLE line-2 fixed-column fields (NORAD 2-line element format).
+export const tleMeanMotion = (l2) => parseFloat(l2.slice(52, 63));                  // revs/day
+export const tleInclination = (l2) => parseFloat(l2.slice(8, 16));                  // degrees
+export const tleEccentricity = (l2) => parseFloat(`0.${l2.slice(26, 33).trim()}`); // leading decimal point implied
+
 /** Classify orbit regime from period (minutes) / eccentricity-ish apsis spread. */
 export function classifyRegime(meta, meanMotion) {
   // meanMotion: revs/day from TLE line 2 — fallback when SATCAT has no period.
@@ -309,7 +314,7 @@ export async function loadCatalog(onStatus) {
 
   return tles.map((t) => {
     const meta = satcat.get(t.norad) || null;
-    const meanMotion = parseFloat(t.l2.slice(52, 63)) || null;
+    const meanMotion = tleMeanMotion(t.l2) || null;
     return { ...t, meta, regime: classifyRegime(meta, meanMotion) };
   });
 }

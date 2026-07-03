@@ -11,7 +11,8 @@
 
 import { Cartesian3, Cartesian2, Color, Cartographic, JulianDate } from 'cesium';
 import * as satellite from 'satellite.js';
-import { DEG2RAD, RE_KM, EARTH_R, SUN_DARK, NAKED_EYE, sunEcefDir, compass } from './astro.js';
+import { DEG2RAD, RE_KM, SUN_DARK, NAKED_EYE, sunEcefDir, compass, isSunlit } from './astro.js';
+import { tleMeanMotion, tleInclination } from './data.js';
 import { CAT_CSS } from './palette.js';
 import { altBandOf } from './orbit.js';
 import { flySeconds } from './motion.js';
@@ -111,14 +112,8 @@ export function initStation({
       if (elDeg < minEl) continue;
       const az = Math.atan2(e, nn), r = (1 - elDeg / 90) * R;
       const x = cx + r * Math.sin(az), y = cy - r * Math.cos(az);
-      // Sunlit? — outside Earth's cylindrical shadow.  On the dark side, lit only
-      // if its offset from the Earth–Sun axis clears the planet's radius.
-      const along = px * sun.x + py * sun.y + pz * sun.z;
-      let sunlit = along > 0;
-      if (!sunlit) {
-        const wx = px - along * sun.x, wy = py - along * sun.y, wz = pz - along * sun.z;
-        sunlit = (wx * wx + wy * wy + wz * wz) > EARTH_R * EARTH_R;
-      }
+      // Sunlit? — outside Earth's cylindrical shadow (see astro.isSunlit).
+      const sunlit = isSunlit(px, py, pz, sun);
       if (sunlit && dark) {
         sunCount++;
         const nm = NAKED_EYE.get(catalog[i].norad);
@@ -189,12 +184,7 @@ export function initStation({
         az = Math.atan2(e, nn) * 180 / Math.PI;
         const sun = sunEcefDir(t);
         const dark = (sun.x * o.ux + sun.y * o.uy + sun.z * o.uz) < SUN_DARK;
-        const along = px * sun.x + py * sun.y + pz * sun.z;
-        let sunlit = along > 0;
-        if (!sunlit) {
-          const wx = px - along * sun.x, wy = py - along * sun.y, wz = pz - along * sun.z;
-          sunlit = (wx * wx + wy * wy + wz * wz) > EARTH_R * EARTH_R;
-        }
+        const sunlit = isSunlit(px, py, pz, sun);
         visible = elDeg >= 10 && sunlit && dark;
       }
       if (visible) {
@@ -273,9 +263,9 @@ export function initStation({
     const out = [];
     for (let i = 0; i < catalog.length; i++) {
       const sat = catalog[i];
-      const revsPerDay = parseFloat(sat.l2.slice(52, 63));
+      const revsPerDay = tleMeanMotion(sat.l2);
       if (revsPerDay && revsPerDay < 1.2) continue;   // near-geostationary: no discrete passes
-      const incl = parseFloat(sat.l2.slice(8, 16)) || 0;
+      const incl = tleInclination(sat.l2) || 0;
       const maxSubLat = incl <= 90 ? incl : 180 - incl;
       const apo = altBandOf(sat)[1];
       const apoKm = Number.isFinite(apo) ? apo : 40_000;

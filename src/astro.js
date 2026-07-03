@@ -27,3 +27,14 @@ export function sunEcefDir(date) {
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 export const compass = (az) => COMPASS[Math.round(((az % 360) + 360) % 360 / 45) % 8];
+
+// Is a point (Earth-fixed metres) in sunlight? — sunward of Earth's centre, or
+// its offset from the Earth–Sun axis clears the planet's radius (i.e. outside the
+// cylindrical shadow).  `sun` is a unit direction in the same ECF frame (see
+// sunEcefDir).  Shared by the overhead sky chart and the visible-pass check.
+export function isSunlit(x, y, z, sun) {
+  const along = x * sun.x + y * sun.y + z * sun.z;
+  if (along > 0) return true;                       // sunward of Earth's centre — lit
+  const wx = x - along * sun.x, wy = y - along * sun.y, wz = z - along * sun.z;
+  return (wx * wx + wy * wy + wz * wz) > EARTH_R * EARTH_R;   // clear of the shadow cylinder
+}
