@@ -126,26 +126,32 @@ function startPasses(msg) {
     return (tBelow + tAbove) / 2;
   }
 
+  // Given an above-HORIZON run (firstK..lastK), find the peak, and — only if it
+  // clears the elevation filter — the exact minEl rise/set crossings on either
+  // side of it.  Detecting runs at the horizon (not at minEl) means a short pass
+  // that pops above a high filter for less than one grid step is never straddled
+  // and lost: its above-horizon run always spans several samples (AST-11).
+  // Returns null for a run whose peak never reaches minEl.
   function closeRun(rec, firstK, lastK) {
-    // exact rise: below sample (firstK-1) → above sample (firstK)
-    const riseMs = firstK > 0 ? crossing(rec, startMs + (firstK - 1) * STEP, startMs + firstK * STEP)
-      : startMs;
-    // exact set: below sample (lastK+1) → above sample (lastK)
-    const setMs = lastK < nT ? crossing(rec, startMs + (lastK + 1) * STEP, startMs + lastK * STEP)
-      : startMs + nT * STEP;
-    // peak: ternary search across the run window
-    let lo = riseMs, hi = setMs;
+    const runStart = firstK > 0 ? startMs + (firstK - 1) * STEP : startMs;   // last below-horizon sample (or window start)
+    const runEnd = lastK < nT ? startMs + (lastK + 1) * STEP : startMs + nT * STEP;
+    // peak: ternary search across the whole above-horizon window
+    let lo = runStart, hi = runEnd;
     while (hi - lo > 1000) {
       const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
       if (elAt(rec, m1) < elAt(rec, m2)) lo = m1; else hi = m2;
     }
     const peakMs = (lo + hi) / 2;
     const peak = look(rec, peakMs, gmstAt(peakMs), st);
+    if (!peak || peak.el < minEl) return null;   // never cleared the elevation filter
+    // exact minEl crossings bracketing the peak (crossing() is direction-agnostic)
+    const riseMs = crossing(rec, runStart, peakMs);   // up-crossing on the way in
+    const setMs = crossing(rec, runEnd, peakMs);       // down-crossing on the way out
     const rise = look(rec, riseMs, gmstAt(riseMs), st);
     const set = look(rec, setMs, gmstAt(setMs), st);
     return {
       riseMs, peakMs, setMs,
-      peakEl: peak ? peak.el : minEl,
+      peakEl: peak.el,
       riseAz: rise ? Math.round(rise.az) : null,
       setAz: set ? Math.round(set.az) : null,
       visible: visibleAt(rec, peakMs),
@@ -178,7 +184,7 @@ function startPasses(msg) {
     let firstK = -1, lastK = -1;
     for (let k = 0; k <= nT; k++) {
       const el = elK(rec, k);
-      const up = !Number.isNaN(el) && el >= minEl;
+      const up = !Number.isNaN(el) && el >= 0;   // above the geometric horizon — the minEl gate is applied per-run in closeRun
       if (up) { if (firstK < 0) firstK = k; lastK = k; }
       // close a run when we drop below the horizon or reach the end
       if (firstK >= 0 && (!up || k === nT)) {
@@ -186,7 +192,7 @@ function startPasses(msg) {
         // (geostationary-like) object isn't a discrete pass.
         if (!(firstK === 0 && lastK === nT)) {
           const pass = closeRun(rec, firstK, lastK);
-          if (pass.peakEl >= minEl) found.push({ i: c.i, ...pass });
+          if (pass) found.push({ i: c.i, ...pass });   // null → the run's peak never reached minEl
         }
         firstK = -1; lastK = -1;
       }
