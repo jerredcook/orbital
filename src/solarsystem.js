@@ -347,6 +347,18 @@ const MOONS = {
             ['Styx', 4.3024e7, 20.16, 3.3, 112.9, 350], ['Nix', 4.9593e7, 24.85, 3.7, 112.9, 350],
             ['Kerberos', 5.8409e7, 32.17, 4.2, 113.3, 350], ['Hydra', 6.5120e7, 38.20, 4.7, 112.6, 350]],
 };
+
+// Boot assert (ARC-06): every moon in the registry needs real elements, or
+// moonRelPos silently collapses it onto its planet centre.  A gap means someone
+// added a moon here but didn't re-run tools/fetch-moon-elements.mjs.  Fail loudly
+// in dev; the live page keeps the graceful zero-guard fallback.
+const missingMoonEls = Object.values(MOONS).flat().map((m) => m[0]).filter((n) => !MOON_ELEMENTS[n]);
+if (missingMoonEls.length) {
+  const msg = `moon-elements.js is missing: ${missingMoonEls.join(', ')} — re-run tools/fetch-moon-elements.mjs`;
+  console.error(`[solarsystem] ${msg}`);
+  if (import.meta.env.DEV) throw new Error(msg);
+}
+
 const MOON_COLOR = Color.fromCssColorString('#CFC7B8');
 const COMET_COLOR = Color.fromCssColorString('#BFE8FF');   // icy cyan for comet markers + orbits
 const INTERSTELLAR_COLOR = Color.fromCssColorString('#C9A6FF');   // violet for the interstellar visitors
