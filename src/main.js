@@ -4,7 +4,7 @@ import {
   Viewer, ImageryLayer, UrlTemplateImageryProvider, EllipsoidTerrainProvider,
   Credit, Cartesian3, Cartesian2, Color, PointPrimitiveCollection, JulianDate,
   ScreenSpaceEventHandler, ScreenSpaceEventType, Moon, defined,
-  PolylineCollection, Material, DistanceDisplayCondition, Matrix3, Quaternion,
+  PolylineCollection, Material, DistanceDisplayCondition, Quaternion,
   CallbackProperty, LabelCollection, Cartographic, ModelGraphics,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -16,20 +16,11 @@ import { initMoonView } from './moon.js';
 import { initSystemView } from './solarsystem.js';
 import { writeHash, readHash } from './deeplink.js';
 import { flySeconds } from './motion.js';
+import { CAT_COLORS, SELECT_COLOR, CONJ_COLOR, CAT_CSS } from './palette.js';
+import { MODELS, modelFor, orientationFor } from './models.js';
+import { DEG2RAD, RE_KM, EARTH_R, SUN_DARK, NAKED_EYE, sunEcefDir, compass } from './astro.js';
 
 // ---------------------------------------------------------------- scene ----
-
-// Display categories: the four orbit regimes for payloads, DEB for debris.
-const CAT_COLORS = {
-  LEO: Color.fromCssColorString('#5EC8E5'),
-  MEO: Color.fromCssColorString('#C9A0FF'),
-  GEO: Color.fromCssColorString('#FFD166'),
-  HEO: Color.fromCssColorString('#FF8C66'),
-  DEB: Color.fromCssColorString('#8B93A1'),
-};
-const SELECT_COLOR = Color.fromCssColorString('#FFB454');
-const CONJ_COLOR = Color.fromCssColorString('#FF4D5E');
-const CAT_CSS = Object.fromEntries(Object.entries(CAT_COLORS).map(([k, v]) => [k, v.toCssColorString()]));
 
 // Esri World Imagery: global high-resolution satellite imagery, street-level
 // (~0.3 m/px) in populated areas, served keylessly with attribution.  Swap in
@@ -350,75 +341,6 @@ setInterval(() => {
 // generics (built by tools/make-models.mjs) for everything else.
 
 const MODEL_SWAP_M = 150_000;
-
-// Spacecraft with real published models (NASA solarsystem.nasa.gov and
-// github.com/nasa/NASA-3D-Resources), keyed by NORAD ID — exact IDs because
-// catalog names are full of traps (SAOCOM contains "OCO", TERRASAR-X
-// contains "TERRA").  GRACE-FO reuses the GRACE bus; Landsat 9 is a
-// near-copy of Landsat 8; Sentinel-6B matches 6A.
-// Scale maps each model's true rendered extent (accessor bounds pushed
-// through the node hierarchy — see the audit in tools/) to the spacecraft's
-// real deployed size in meters.  The published GLBs are wildly inconsistent:
-// Terra renders 26 km long, TDRS 0.9 m, while ISS (112 m), Chandra (19.5 m)
-// and Sentinel-6 (5.1 m) are already true to life.
-const REAL_MODELS = new Map([
-  [25544, { file: 'iss', scale: 1 }],
-  [20580, { file: 'hubble', scale: 1 }],
-  [25994, { file: 'terra', scale: 0.00035 }],
-  [27424, { file: 'aqua', scale: 0.0385 }],
-  [28376, { file: 'aura', scale: 0.34 }],
-  [43613, { file: 'icesat2', scale: 1 }],
-  [39084, { file: 'landsat8', scale: 1 }],
-  [49260, { file: 'landsat8', scale: 1 }],
-  [46984, { file: 'sentinel6', scale: 1 }],
-  [66514, { file: 'sentinel6', scale: 1 }],
-  [40059, { file: 'oco2', scale: 0.23 }],
-  [37849, { file: 'suominpp', scale: 1 }],
-  [28485, { file: 'swift', scale: 0.143 }],
-  [33053, { file: 'fermi', scale: 0.24 }],     // FGRST (GLAST)
-  [25867, { file: 'chandra', scale: 1 }],      // CXO
-  [43476, { file: 'grace', scale: 1 }],
-  [43477, { file: 'grace', scale: 1 }],
-  [43435, { file: 'tess', scale: 0.11 }],      // not in 'active' today
-  [50463, { file: 'jwst', scale: 0.74 }],      // not in 'active' today
-]);
-
-// Base-relative so model URLs resolve under the GitHub Pages subpath (/orbital/)
-// as well as at the dev-server root.
-const MODELS = `${import.meta.env.BASE_URL}models/`;
-
-function modelFor(sat) {
-  const real = REAL_MODELS.get(sat.norad);
-  if (real) return { uri: `${MODELS}${real.file}.glb`, scale: real.scale };
-  if (/^TDRS \d/.test(sat.name)) return { uri: `${MODELS}tdrs.glb`, scale: 19.6 };
-  if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return { uri: `${MODELS}debris.glb`, scale: 1 };
-  if (/\bR\/B\b/.test(sat.name)) return { uri: `${MODELS}rocketbody.glb`, scale: 1 };
-  if (sat.name.startsWith('STARLINK')) return { uri: `${MODELS}starlink.glb`, scale: 1 };
-  // Nav constellations (Galileo keyed off the GALILEO token, not GSAT — that
-  // also names ISRO's comms birds; GPS BIIx/BIII and NAVSTAR are the same GPS).
-  if (/GALILEO|NAVSTAR|BEIDOU/.test(sat.name) || /^GPS\b/.test(sat.name)) {
-    return { uri: `${MODELS}navsat.glb`, scale: 1 };
-  }
-  // Sentinel EO/SAR (1/2/3/5P); Sentinel-6 has a real model and is caught above.
-  if (/^SENTINEL-[1235]/.test(sat.name)) return { uri: `${MODELS}sar.glb`, scale: 1 };
-  return { uri: `${MODELS}generic-sat.glb`, scale: 1 };
-}
-
-// Orientation from the propagated state: +X along velocity, +Z zenith.
-const scrX = new Cartesian3(), scrY = new Cartesian3(), scrZ = new Cartesian3();
-const scrM = new Matrix3(), scrQ = new Quaternion();
-function orientationFor(posEcf, velEcf) {
-  Cartesian3.normalize(Cartesian3.fromElements(velEcf.x, velEcf.y, velEcf.z, scrX), scrX);
-  Cartesian3.normalize(posEcf, scrZ);
-  Cartesian3.normalize(Cartesian3.cross(scrZ, scrX, scrY), scrY);
-  Cartesian3.cross(scrY, scrZ, scrX);
-  Matrix3.fromArray([
-    scrX.x, scrX.y, scrX.z,
-    scrY.x, scrY.y, scrY.z,
-    scrZ.x, scrZ.y, scrZ.z,
-  ], 0, scrM); // column-major: columns are the model axes in world space
-  return Quaternion.fromRotationMatrix(scrM, scrQ);
-}
 
 // ECF position of a satrec at the sim clock's current time, or null.
 function currentPosition(satrec) {
@@ -1263,8 +1185,6 @@ $('info-screen').addEventListener('click', () => {
 // streams in sorted by rise time.  Click a pass to jump the clock to its peak
 // and watch the satellite ride over the station.
 
-const DEG2RAD = Math.PI / 180;
-const RE_KM = 6378.137;
 const PASS_HORIZON_H = 24;
 const PASS_STORE_KEY = 'orbital.station';
 
@@ -1317,24 +1237,6 @@ function prepStation() {
     ux: cLa * cLo, uy: cLa * sLo, uz: sLa,           // up (zenith)
   };
 }
-
-// Low-precision Sun direction (unit vector, Earth-fixed frame) — enough to tell
-// day from night and which satellites are catching the sunlight.
-function sunEcefDir(date) {
-  const n = (date.getTime() - Date.UTC(2000, 0, 1, 12)) / 86400000;          // days since J2000
-  const g = (357.529 + 0.98560028 * n) * DEG2RAD;                            // mean anomaly
-  const L = (280.459 + 0.98564736 * n) * DEG2RAD;                            // mean longitude
-  const lam = L + (1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * DEG2RAD; // ecliptic longitude
-  const eps = 23.439 * DEG2RAD;
-  const eci = { x: Math.cos(lam), y: Math.cos(eps) * Math.sin(lam), z: Math.sin(eps) * Math.sin(lam) };
-  return satellite.eciToEcf(eci, satellite.gstime(date));
-}
-const SUN_DARK = Math.sin(-6 * Math.PI / 180);   // sky dark enough to spot satellites
-const EARTH_R = 6.371e6;
-// The handful bright enough to actually catch the naked eye when sunlit — these
-// get a ring + name on the sky chart (the ~hundreds of other sunlit craft are
-// real but far too faint to see, so they're only reported as a count).
-const NAKED_EYE = new Map([[25544, 'ISS'], [48274, 'Tiangong']]);
 
 function renderSky() {
   const panel = $('sky-now');
@@ -1434,8 +1336,6 @@ initSkyChart();
 // While a station is set, give a heads-up before the bright naked-eye craft
 // (ISS, Tiangong) make a *visible* pass — sunlit, in a dark sky, clear of the
 // horizon — so you can step outside in time.
-const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-const compass = (az) => COMPASS[Math.round(((az % 360) + 360) % 360 / 45) % 8];
 const PASS_LEAD_MS = 7 * 60_000;     // announce up to ~7 min ahead
 const alertedPasses = new Set();
 
