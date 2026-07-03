@@ -163,6 +163,25 @@ export function parseTLEs(text) {
   return out;
 }
 
+/** Epoch of a TLE line 1 as ms since the Unix epoch (UTC).  Columns 19–32:
+ *  2-digit year (1957 pivot) + fractional day-of-year. */
+export function tleEpochMs(l1) {
+  const yy = parseInt(l1.slice(18, 20), 10);
+  const doy = parseFloat(l1.slice(20, 32));
+  if (Number.isNaN(yy) || Number.isNaN(doy)) return null;
+  const year = yy < 57 ? 2000 + yy : 1900 + yy;
+  return Date.UTC(year, 0, 1) + (doy - 1) * 86400000;
+}
+
+/** Median TLE epoch (ms) across a catalog — a robust "how fresh is this data". */
+export function medianEpochMs(list) {
+  const es = [];
+  for (const s of list) { const e = tleEpochMs(s.l1); if (e != null) es.push(e); }
+  if (!es.length) return null;
+  es.sort((a, b) => a - b);
+  return es[es.length >> 1];
+}
+
 /** Minimal CSV row parser that honors quoted fields. */
 function splitCSV(line) {
   const out = [];

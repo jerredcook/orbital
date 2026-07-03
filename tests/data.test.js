@@ -1,6 +1,6 @@
 // TLE parsing + orbit-regime classification (pure functions from data.js).
 import { describe, it, expect } from 'vitest';
-import { parseTLEs, classifyRegime } from '../src/data.js';
+import { parseTLEs, classifyRegime, tleEpochMs } from '../src/data.js';
 
 const ISS = `ISS (ZARYA)
 1 25544U 98067A   26001.50000000  .00016717  00000-0  10270-3 0  9002
@@ -18,6 +18,20 @@ describe('parseTLEs', () => {
   it('skips malformed entries without derailing', () => {
     const out = parseTLEs(`garbage line\n${ISS}\ntrailing junk`);
     expect(out).toHaveLength(1);
+  });
+});
+
+describe('tleEpochMs', () => {
+  it('parses the epoch (year pivot + fractional day-of-year)', () => {
+    // ISS TLE above: epoch 26001.50000000 → 2026 day 1.5 → 2026-01-01T12:00Z
+    const l1 = ISS.split('\n')[1];
+    expect(tleEpochMs(l1)).toBe(Date.UTC(2026, 0, 1) + 0.5 * 86400000);
+  });
+  it('applies the 1957 two-digit-year pivot', () => {
+    const y99 = '1 00005U 58002B   99001.00000000  .0 0  0 0';
+    const y01 = '1 00005U 58002B   01001.00000000  .0 0  0 0';
+    expect(tleEpochMs(y99)).toBe(Date.UTC(1999, 0, 1));
+    expect(tleEpochMs(y01)).toBe(Date.UTC(2001, 0, 1));
   });
 });
 

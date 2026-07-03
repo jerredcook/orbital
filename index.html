@@ -134,6 +134,7 @@
   <div id="body-attr">NASA Solar System Treks</div>
   <button id="system-exit" hidden>✕ Exit solar system</button>
   <label id="system-scale" hidden><input type="checkbox" /> True scale</label>
+  <button id="system-legend-toggle" type="button" aria-label="What's in orbit — legend">☰ Legend</button>
   <div id="probe-timeline" hidden>
     <label class="ptl-row"><input id="ptl-toggle" type="checkbox" /> Spacecraft timeline</label>
     <div id="ptl-controls" hidden>
@@ -277,20 +278,25 @@
     <div class="eyebrow" id="info-regime">—</div>
     <h2 id="info-name">—</h2>
     <dl class="readout">
-      <div><dt>NORAD ID</dt><dd id="info-norad">—</dd></div>
-      <div><dt>Int'l designator</dt><dd id="info-intl">—</dd></div>
-      <div><dt>Owner / operator</dt><dd id="info-owner">—</dd></div>
-      <div><dt>Launched</dt><dd id="info-launch">—</dd></div>
-      <div><dt>Launch site</dt><dd id="info-site">—</dd></div>
-      <div><dt>Time on orbit</dt><dd id="info-age">—</dd></div>
+      <div class="live"><dt>Altitude now</dt><dd id="info-alt">—</dd></div>
+      <div class="live"><dt>Speed now</dt><dd id="info-speed">—</dd></div>
       <div><dt>Period</dt><dd id="info-period">—</dd></div>
       <div><dt>Inclination</dt><dd id="info-incl">—</dd></div>
       <div><dt>Apogee × Perigee</dt><dd id="info-apsis">—</dd></div>
-      <div class="live"><dt>Altitude now</dt><dd id="info-alt">—</dd></div>
-      <div class="live"><dt>Speed now</dt><dd id="info-speed">—</dd></div>
+      <div><dt>Owner / operator</dt><dd id="info-owner">—</dd></div>
     </dl>
     <button id="info-track" class="action">Follow this satellite</button>
     <button id="info-screen" class="action">Screen close approaches · 24 h</button>
+    <details class="info-more">
+      <summary>Catalog details</summary>
+      <dl class="readout">
+        <div><dt>NORAD ID</dt><dd id="info-norad">—</dd></div>
+        <div><dt>Int'l designator</dt><dd id="info-intl">—</dd></div>
+        <div><dt>Launched</dt><dd id="info-launch">—</dd></div>
+        <div><dt>Launch site</dt><dd id="info-site">—</dd></div>
+        <div><dt>Time on orbit</dt><dd id="info-age">—</dd></div>
+      </dl>
+    </details>
     <button class="copy-link" type="button">🔗 Copy link to this satellite</button>
     <div id="screen-results"></div>
   </aside>
@@ -306,6 +312,7 @@
     <button id="time-faster" title="Speed up">+</button>
     <span id="time-clock">—</span>
   </footer>
+  <div id="drift-badge" role="status" hidden></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

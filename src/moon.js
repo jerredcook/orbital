@@ -36,6 +36,10 @@ let visible = false;
 
 function createMoonViewer() {
   const v = new Viewer('moonContainer', {
+    // A still scene (no rotation, no animated entities), so render only when the
+    // camera moves or a tile arrives instead of a continuous 60 fps loop — a real
+    // battery/thermal saving on phones.
+    requestRenderMode: true,
     // `ellipsoid` is what sets scene.ellipsoid — the surface the camera
     // controller collides and clamps against.  Passing only a Moon `globe`
     // renders a Moon-sized sphere but leaves the controller fenced off at

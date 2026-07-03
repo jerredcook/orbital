@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, cacheExpiresInMs } from './data.js';
+import { loadCatalog, cacheExpiresInMs, medianEpochMs } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
@@ -104,6 +104,7 @@ let autoFollowDisabled = false; // set when the user manually stops following
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
 let catTotals = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };   // full counts, to restore after the timeline
+let catalogEpochMs = null;   // median TLE epoch — how far the propagation is being extrapolated
 const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
 
 const $ = (id) => document.getElementById(id);
@@ -156,7 +157,26 @@ setInterval(() => {
     conjKm: $('toggle-conj').checked ? Number($('conj-range').value) : 0,
     gen: catalogGen,
   });
+  updateDriftBadge();
 }, 600);
+
+// SGP4 accuracy decays as the propagation time moves away from the element
+// epoch (~km/day for LEO).  Warn once the sim clock — under time-warp, or just a
+// stale bundled fallback whose epochs are already old — is more than a few days
+// off the catalog's median epoch, so extrapolated positions aren't mistaken for
+// live truth.
+const DRIFT_WARN_DAYS = 3;
+function updateDriftBadge() {
+  const el = $('drift-badge');
+  if (catalogEpochMs == null) { el.hidden = true; return; }
+  const days = (JulianDate.toDate(viewer.clock.currentTime).getTime() - catalogEpochMs) / 86400000;
+  if (Math.abs(days) < DRIFT_WARN_DAYS) { el.hidden = true; return; }
+  const n = Math.round(Math.abs(days));
+  el.textContent = days > 0
+    ? `⚠ positions extrapolated ~${n} day${n === 1 ? '' : 's'} past the latest elements — accuracy degrades`
+    : `⚠ positions computed ~${n} day${n === 1 ? '' : 's'} before the elements' epoch`;
+  el.hidden = false;
+}
 
 // ----------------------------------------------------------------- boot ----
 
@@ -181,6 +201,7 @@ function applyCatalog(list) {
   refreshVisibility();   // apply category toggles + any active launch timeline
   viewer.scene.primitives.add(swarm);
   catTotals = { ...counts };
+  catalogEpochMs = medianEpochMs(catalog);   // freshness reference for the drift badge
   for (const c of Object.keys(counts)) {
     $(`count-${c}`).textContent = counts[c].toLocaleString();
   }
@@ -297,6 +318,7 @@ async function refreshCatalog() {
         if (list[i].meta) catalog[i].meta = list[i].meta;
       }
       catalogGen++;   // drop any in-flight results propagated from the old elements
+      catalogEpochMs = medianEpochMs(catalog);
       tcaCache.clear();
       tcaPending.clear();
       worker.postMessage({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
@@ -765,7 +787,12 @@ document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
 const setLegendOpen = (open) => document.body.classList.toggle('legend-open', open);
 $('legend-toggle').addEventListener('click', () =>
   setLegendOpen(!document.body.classList.contains('legend-open')));
-$('legend-scrim').addEventListener('click', () => setLegendOpen(false));
+// The solar-system legend gets its own mobile drawer (the topbar ☰ is hidden in
+// system-mode); it shares the scrim.
+const setSysLegendOpen = (open) => document.body.classList.toggle('system-legend-open', open);
+$('system-legend-toggle').addEventListener('click', () =>
+  setSysLegendOpen(!document.body.classList.contains('system-legend-open')));
+$('legend-scrim').addEventListener('click', () => { setLegendOpen(false); setSysLegendOpen(false); });
 $('system-toggle').addEventListener('click', () => setLegendOpen(false));
 $('moon-toggle').addEventListener('click', () => setLegendOpen(false));
 

@@ -212,6 +212,20 @@ body.body-mode #probe-timeline { display: none; }
   max-height: calc(100vh - 24px); overflow-y: auto;
 }
 #system-legend[hidden] { display: none; }
+#system-legend-toggle { display: none; }   /* mobile system-mode only (see breakpoint) */
+
+/* Extrapolation warning — sits just above the time bar when the sim clock is
+   far from the elements' epoch (time-warp, or a stale bundled fallback). */
+#drift-badge {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 12; max-width: min(92vw, 520px);
+  padding: 5px 12px; border-radius: 6px; text-align: center;
+  background: rgba(40,26,10,0.94); border: 1px solid #6B4A1E; color: #FFCE88;
+  font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.3;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5); pointer-events: none;
+}
+#drift-badge[hidden] { display: none; }
+body.system-mode #drift-badge, body.moon-mode #drift-badge, body.body-mode #drift-badge { display: none; }
 /* belt-and-suspenders: this legend belongs to the solar-system view only, so it
    can never linger over the Earth view's search / info panel again */
 body:not(.system-mode) #system-legend { display: none; }
@@ -528,6 +542,20 @@ body:not(.system-mode) #system-legend { display: none; }
   color: #E8EFF8; letter-spacing: 0.02em;
 }
 .readout { margin: 0; }
+
+/* Catalog metadata folded away — casual users see live data + orbit + actions
+   first; the bureaucracy (NORAD id, int'l designator, launch site…) is one tap. */
+.info-more { margin: 10px 0 0; }
+.info-more > summary {
+  cursor: pointer; list-style: none; user-select: none;
+  font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.04em;
+  color: #8595A8; padding: 4px 0; display: flex; align-items: center; gap: 6px;
+}
+.info-more > summary::-webkit-details-marker { display: none; }
+.info-more > summary::before { content: "▸"; font-size: 9px; transition: transform 0.15s; }
+.info-more[open] > summary::before { transform: rotate(90deg); }
+.info-more > summary:hover { color: #AEB9C8; }
+.info-more .readout { margin-top: 4px; }
 .readout > div {
   display: flex; justify-content: space-between; gap: 12px;
   padding: 6px 0; border-bottom: 1px solid #131B27;
@@ -680,9 +708,25 @@ body:not(.system-mode) #system-legend { display: none; }
   .body-card.collapsed .action,
   .body-card.collapsed .copy-link { display: none; }
 
-  /* the "what's in orbit" reference legend collides with the panels and the
-     top controls on a narrow screen — hide it here */
-  #system-legend { display: none; }
+  /* On a narrow screen the "what's in orbit" legend collides with the panels,
+     so it becomes a slide-in drawer from the right, opened by its own button
+     (the topbar ☰ is hidden in system-mode). */
+  body.system-mode #system-legend-toggle {
+    display: inline-flex; align-items: center;
+    position: absolute; top: 46px; right: 12px; z-index: 33;
+    padding: 6px 10px; background: rgba(13,19,29,0.92); color: #C9D4E3;
+    border: 1px solid #1E2A3A; border-radius: 4px;
+    font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; cursor: pointer;
+  }
+  body.system-mode #system-legend-toggle:hover { border-color: #FFB454; color: #FFB454; }
+  body.system-mode.body-mode #system-legend-toggle { display: none; }   /* not inside a surface globe */
+  #system-legend {
+    top: 0; right: 0; bottom: 0; left: auto; width: min(86vw, 300px);
+    max-height: 100dvh; border-radius: 0; border-right: none; border-top: none; overflow-y: auto;
+    transform: translateX(105%); transition: transform 0.22s ease; z-index: 32;
+  }
+  body.system-legend-open #system-legend { transform: translateX(0); box-shadow: -4px 0 24px rgba(0,0,0,0.55); }
+  body.system-legend-open #legend-scrim { display: block; z-index: 31; }
 
   /* exit (top-left) and True-scale (top-right) to opposite corners so they
      never overlap each other or a panel */

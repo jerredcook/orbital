@@ -82,6 +82,7 @@ function makeViewer(name) {
   // Passing the ellipsoid to the Viewer (not just its Globe) is what scopes the
   // camera controller to this body — see moon.js for the gory detail.
   const v = new Viewer('bodyContainer', {
+    requestRenderMode: true,   // a still surface globe — render on camera move / tile load only (battery)
     ellipsoid,
     globe: new Globe(ellipsoid),
     mapProjection: new GeographicProjection(ellipsoid),
