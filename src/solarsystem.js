@@ -911,6 +911,16 @@ function buildSky() {
 
 const fmt = (n, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 
+// Long-period comets have wildly uncertain periods, so an exact integer reads as
+// false precision (NEOWISE is not known to be 8,177 yr).  Show ~2 significant
+// figures with a ~ once we're past a century; short, well-determined orbits
+// (Halley, Encke) keep their integer.
+const cometYears = (yrs) => {
+  if (yrs < 100) return `${fmt(yrs, 0)} yr`;
+  const mag = 10 ** (Math.floor(Math.log10(yrs)) - 1);
+  return `~${fmt(Math.round(yrs / mag) * mag, 0)} yr`;
+};
+
 function bodyFacts(name) {
   const b = BODIES[name];
   const diameterKm = b.radius * 2 / 1000;
@@ -920,7 +930,7 @@ function bodyFacts(name) {
     return { type: 'Star · G2V', dist: '—', diameter: fmt(diameterKm), day: dayStr, year: '—' };
   }
   const T = centuriesSinceJ2000(earthClock.currentTime);
-  const dayOut = `${dayStr}${b.day < 0 ? ' (retro)' : ''}`;
+  const dayOut = `${dayStr}${b.day < 0 ? ' (retrograde)' : ''}`;
   if (b.dwarf) {
     dwarfPos(name, T * 36525, _real);
     const distAu = Cartesian3.magnitude(_real) / AU_METERS;
@@ -931,7 +941,7 @@ function bodyFacts(name) {
     cometPos(name, T * 36525, _real);
     const distAu = Cartesian3.magnitude(_real) / AU_METERS;
     const years = COMET_ELEMENTS[name].periodDays / 365.25;
-    return { type: 'Comet', dist: `${fmt(distAu, 2)} AU`, diameter: fmt(diameterKm, 1), day: dayOut, year: `${fmt(years, 0)} yr` };
+    return { type: 'Comet', dist: `${fmt(distAu, 2)} AU`, diameter: fmt(diameterKm, 1), day: dayOut, year: cometYears(years) };
   }
   if (b.interstellar) {
     interstellarPos(name, T * 36525, _real);

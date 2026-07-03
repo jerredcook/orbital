@@ -214,10 +214,13 @@ async function boot() {
     const list = await loadCatalog(status);
     diffAndToast(list);
     applyCatalog(list);
-    applyDeepLink();
   } catch (err) {
     status('catalog fetch failed — see console');
     console.error(err);
+  } finally {
+    // Always restore the shared view: a #system / #luna / #guide / #show link
+    // needs no Earth catalog, so it must still open even if the catalog failed.
+    applyDeepLink();
   }
 }
 boot();
@@ -570,11 +573,11 @@ function inspectSat(i) {
   autoFollowHoldUntil = Date.now() + 6000;
   engageFollow();
 }
-function inspectByNorad(norad) {
+function inspectByNorad(norad, tries = 0) {
   const i = catalog.findIndex((c) => String(c.norad) === String(norad));
-  if (i >= 0) inspectSat(i);
-  else if (!catalog.length) setTimeout(() => inspectByNorad(norad), 400);   // catalog still loading
-  else toast(`That satellite isn’t in today’s catalog (NORAD ${norad}).`, 5000);
+  if (i >= 0) { inspectSat(i); return; }
+  if (!catalog.length && tries < 30) { setTimeout(() => inspectByNorad(norad, tries + 1), 400); return; }   // catalog still loading (give up after ~12 s)
+  if (catalog.length) toast(`That satellite isn’t in today’s catalog (NORAD ${norad}).`, 5000);
 }
 
 // Showpieces (JWST, the Voyagers, SOHO…) live in src/showpieces.js: their own
@@ -757,12 +760,12 @@ function flyToSat(i) {
 // on-load hash restore (applyDeepLink) and the welcome overlay's quick-jump
 // chips.  A #sat= target needs the catalog; if it isn't in yet (a chip tapped
 // during boot), retry until it loads.
-function navigateTo(s) {
+function navigateTo(s, tries = 0) {
   if (!s) return;
   if (s.sat != null) {
     const i = catalog.findIndex((c) => String(c.norad) === String(s.sat));
     if (i >= 0) { selectByIndex(i); flyToSat(i); }
-    else if (!catalog.length) setTimeout(() => navigateTo(s), 400);
+    else if (!catalog.length && tries < 30) setTimeout(() => navigateTo(s, tries + 1), 400);   // give up after ~12 s
     return;
   }
   if (s.guide) { openGuide(); return; }

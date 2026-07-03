@@ -39,7 +39,9 @@ export function readHash() {
   const eq = h.indexOf('=');
   if (eq < 0) return { show: h };   // a bare word is a showpiece id (jwst, voyager1, soho…)
   const k = h.slice(0, eq);
-  const v = decodeURIComponent(h.slice(eq + 1));
+  let v;
+  try { v = decodeURIComponent(h.slice(eq + 1)); }
+  catch { return null; }   // malformed %-encoding in a shared link — ignore, don't abort boot
   if (!v) return null;
   if (k === 'sat' || k === 'body' || k === 'moon' || k === 'probe') return { [k]: v };
   return null;
