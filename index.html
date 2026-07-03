@@ -29,7 +29,8 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <div id="cesiumContainer"></div>
+  <h1 class="sr-only">Orbital — live satellite tracker and solar-system explorer</h1>
+  <div id="cesiumContainer" role="main" aria-label="3D globe and solar-system view"></div>
 
   <div id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
     <div class="welcome-card">
@@ -225,8 +226,8 @@
     <button id="moon-toggle" title="Fly to the Moon" aria-label="Moon view">◐ <span class="tb-label">Moon</span></button>
     <button id="help-toggle" title="What is this?" aria-label="What is this?">?</button>
     <div class="topbar-right">
-      <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" aria-label="Search satellites, planets and spacecraft by name or NORAD ID" />
-      <div id="search-results" hidden></div>
+      <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" aria-label="Search satellites, planets and spacecraft by name or NORAD ID" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" />
+      <div id="search-results" role="listbox" aria-label="Search results" hidden></div>
     </div>
   </header>
 
@@ -261,7 +262,7 @@
     <div id="pass-status" class="pass-status" role="status" hidden></div>
     <div id="sky-now" hidden>
       <div class="sky-head">Overhead now · <span id="sky-count">—</span></div>
-      <canvas id="sky-canvas"></canvas>
+      <canvas id="sky-canvas" role="img" aria-label="Overhead sky chart: satellites currently above your ground station, zenith at centre. The live summary is shown above; use the search box to select any satellite by name."></canvas>
       <div class="sky-foot">zenith at centre, horizon at the rim · in a dark sky, sunlit craft stay bright (shadowed ones dim); the ISS is ringed when you can spot it · tap a dot to track</div>
     </div>
     <div id="pass-list"></div>

@@ -831,60 +831,87 @@ setInterval(() => {
 const searchBox = $('search');
 const resultsEl = $('search-results');
 
+// ARIA 1.2 combobox: the input keeps focus, options are navigated with the arrow
+// keys via aria-activedescendant, Enter activates the highlighted one.
+const options = [];       // { el, go } for the currently-listed results
+let activeOpt = -1;
+
+function closeResults() {
+  resultsEl.hidden = true;
+  searchBox.setAttribute('aria-expanded', 'false');
+  searchBox.removeAttribute('aria-activedescendant');
+  activeOpt = -1;
+}
+
+function setActiveOpt(i) {
+  if (!options.length) return;
+  activeOpt = (i + options.length) % options.length;
+  options.forEach((o, k) => {
+    const on = k === activeOpt;
+    o.el.classList.toggle('active', on);
+    o.el.setAttribute('aria-selected', String(on));
+  });
+  const el = options[activeOpt].el;
+  searchBox.setAttribute('aria-activedescendant', el.id);
+  el.scrollIntoView({ block: 'nearest' });
+}
+
+// Append one result row wired for both pointer (click) and keyboard (Enter on the
+// highlighted option); `action` performs the navigation, then the list is cleared.
+function addOption(innerHTML, action) {
+  const row = document.createElement('div');
+  row.className = 'result-row';
+  row.id = `search-opt-${options.length}`;
+  row.setAttribute('role', 'option');
+  row.setAttribute('aria-selected', 'false');
+  row.tabIndex = -1;
+  row.innerHTML = innerHTML;
+  const go = () => { action(); closeResults(); searchBox.value = ''; };
+  row.addEventListener('click', go);
+  resultsEl.appendChild(row);
+  options.push({ el: row, go });
+}
+
 searchBox.addEventListener('input', () => {
   const q = searchBox.value.trim().toUpperCase();
-  if (q.length < 2) { resultsEl.hidden = true; return; }
+  options.length = 0;
+  activeOpt = -1;
+  resultsEl.innerHTML = '';
+  if (q.length < 2) { closeResults(); return; }
   const hits = [];
   for (let i = 0; i < catalog.length && hits.length < 12; i++) {
     if (catalog[i].name.toUpperCase().includes(q) || String(catalog[i].norad) === q) {
       hits.push(i);
     }
   }
-  resultsEl.innerHTML = '';
   // Showpieces (JWST, Voyager, SOHO…) aren't in the catalog — they don't orbit
   // Earth — so surface any that match and fly out to them, searchable like a sat.
   // Match on word boundaries so "ace" finds ACE without also matching "sp-ACE".
   const qWord = new RegExp('\\b' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   for (const sp of showpieces.list) {
     if (!qWord.test(sp.kw) && !qWord.test(sp.name.toUpperCase())) continue;
-    const row = document.createElement('div');
-    row.className = 'result-row';
-    row.tabIndex = 0;
     const [name, tag] = sp.name.split(' · ');
-    row.innerHTML = `<span>${name}</span><span class="rid">${tag || ''}</span>`;
-    const go = () => { inspectShowpiece(sp.id); resultsEl.hidden = true; searchBox.value = ''; };
-    row.addEventListener('click', go);
-    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-    resultsEl.appendChild(row);
+    addOption(`<span>${name}</span><span class="rid">${tag || ''}</span>`, () => inspectShowpiece(sp.id));
   }
   // Solar-system bodies (the Sun, planets, dwarf planets) — fly out to them in
   // the system view, searchable by name like everything else.
   for (const b of systemView.searchBodies) {
     if (!b.name.toUpperCase().includes(q)) continue;
-    const row = document.createElement('div');
-    row.className = 'result-row';
-    row.tabIndex = 0;
-    row.innerHTML = `<span>${b.name}</span><span class="rid">${b.kind}</span>`;
-    const go = () => { navigateTo({ body: b.name }); resultsEl.hidden = true; searchBox.value = ''; };
-    row.addEventListener('click', go);
-    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-    resultsEl.appendChild(row);
+    addOption(`<span>${b.name}</span><span class="rid">${b.kind}</span>`, () => navigateTo({ body: b.name }));
   }
   for (const i of hits) {
-    const row = document.createElement('div');
-    row.className = 'result-row';
-    row.tabIndex = 0;
-    row.innerHTML = `<span>${catalog[i].name}</span><span class="rid">${catalog[i].norad}</span>`;
-    const go = () => {
-      selectByIndex(i);
-      resultsEl.hidden = true;
-      searchBox.value = '';
-    };
-    row.addEventListener('click', go);
-    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-    resultsEl.appendChild(row);
+    addOption(`<span>${catalog[i].name}</span><span class="rid">${catalog[i].norad}</span>`, () => selectByIndex(i));
   }
-  resultsEl.hidden = resultsEl.children.length === 0;
+  const has = options.length > 0;
+  resultsEl.hidden = !has;
+  searchBox.setAttribute('aria-expanded', String(has));
+});
+
+searchBox.addEventListener('keydown', (e) => {
+  if (resultsEl.hidden || !options.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); setActiveOpt(activeOpt + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveOpt(activeOpt - 1); }
+  else if (e.key === 'Enter' && activeOpt >= 0) { e.preventDefault(); options[activeOpt].go(); }
 });
 
 // Single Esc dispatcher — one keypress, one action, in strict priority order.
@@ -895,7 +922,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); searchBox.focus(); return;
   }
   if (e.key !== 'Escape') return;
-  resultsEl.hidden = true;
+  closeResults();
   if (!guide.hidden) { closeGuide(); return; }              // modal overlays first
   if (!welcome.hidden) { closeWelcome(); return; }
   if (moonView.visible) { moonView.hide(); return; }         // then the open view

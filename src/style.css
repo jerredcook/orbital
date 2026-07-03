@@ -13,6 +13,14 @@
 
 * { box-sizing: border-box; }
 
+/* Visually hidden but available to screen readers (the h1, off-screen labels). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+/* Keyboard highlight for the active search result (combobox aria-activedescendant). */
+#search-results .result-row.active { background: rgba(255, 180, 84, 0.16); }
+
 /* One consistent, high-contrast keyboard-focus ring across the dark chrome
    (buttons, checkboxes, sliders, rows).  :focus-visible only — pointer users
    never see it. */
