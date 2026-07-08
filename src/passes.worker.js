@@ -86,7 +86,7 @@ function look(rec, tMs, gmst, st) {
 }
 
 function startPasses(msg) {
-  const run = { cancelled: false, gen: msg.gen };
+  const run = { cancelled: false, gen: msg.gen, scanId: msg.scanId };
   activeRun = run;
 
   const { startMs } = msg;
@@ -126,27 +126,25 @@ function startPasses(msg) {
     return (tBelow + tAbove) / 2;
   }
 
-  // Given an above-HORIZON run (firstK..lastK), find the peak, and — only if it
-  // clears the elevation filter — the exact minEl rise/set crossings on either
-  // side of it.  Detecting runs at the horizon (not at minEl) means a short pass
-  // that pops above a high filter for less than one grid step is never straddled
-  // and lost: its above-horizon run always spans several samples (AST-11).
-  // Returns null for a run whose peak never reaches minEl.
-  function closeRun(rec, firstK, lastK) {
-    const runStart = firstK > 0 ? startMs + (firstK - 1) * STEP : startMs;   // last below-horizon sample (or window start)
-    const runEnd = lastK < nT ? startMs + (lastK + 1) * STEP : startMs + nT * STEP;
-    // peak: ternary search across the whole above-horizon window
-    let lo = runStart, hi = runEnd;
-    while (hi - lo > 1000) {
-      const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
-      if (elAt(rec, m1) < elAt(rec, m2)) lo = m1; else hi = m2;
+  // Peak time within [a, b] by ternary search (elevation is unimodal within one
+  // above-minEl hump).
+  function ternaryPeak(rec, a, b) {
+    while (b - a > 1000) {
+      const m1 = a + (b - a) / 3, m2 = b - (b - a) / 3;
+      if (elAt(rec, m1) < elAt(rec, m2)) a = m1; else b = m2;
     }
-    const peakMs = (lo + hi) / 2;
+    return (a + b) / 2;
+  }
+
+  // One pass from a single above-minEl hump: peak by ternary between the first
+  // and last above-minEl sub-samples; exact minEl rise/set by bisection against
+  // the below-minEl brackets on either side.
+  function refinePass(rec, tBelowRise, tAboveRise, tAboveSet, tBelowSet) {
+    const peakMs = ternaryPeak(rec, tAboveRise, tAboveSet);
     const peak = look(rec, peakMs, gmstAt(peakMs), st);
-    if (!peak || peak.el < minEl) return null;   // never cleared the elevation filter
-    // exact minEl crossings bracketing the peak (crossing() is direction-agnostic)
-    const riseMs = crossing(rec, runStart, peakMs);   // up-crossing on the way in
-    const setMs = crossing(rec, runEnd, peakMs);       // down-crossing on the way out
+    if (!peak || peak.el < minEl) return null;
+    const riseMs = crossing(rec, tBelowRise, tAboveRise);   // up-crossing on the way in
+    const setMs = crossing(rec, tBelowSet, tAboveSet);       // down-crossing on the way out
     const rise = look(rec, riseMs, gmstAt(riseMs), st);
     const set = look(rec, setMs, gmstAt(setMs), st);
     return {
@@ -156,6 +154,45 @@ function startPasses(msg) {
       setAz: set ? Math.round(set.az) : null,
       visible: visibleAt(rec, peakMs),
     };
+  }
+
+  // Given an above-HORIZON run (firstK..lastK), return EVERY minimum-elevation
+  // pass inside it.  Detecting runs at the geometric horizon (not at minEl) means
+  // a short pass that pops above a high filter for less than one 60 s grid step
+  // is never straddled and lost (AST-11).  But one horizon run can contain more
+  // than one minEl window: eccentric HEO objects (Molniya, GTO) make two separate
+  // apparitions per orbit without ever dropping below the horizon between them, so
+  // sub-scan the run at 15 s and refine each above-minEl segment independently
+  // rather than assuming a single peak.  Falls back to the whole-run peak for the
+  // ultra-short pop that clears minEl between two sub-samples.
+  const SUB = 15_000;
+  function closeRun(rec, firstK, lastK) {
+    const runStart = firstK > 0 ? startMs + (firstK - 1) * STEP : startMs;   // last below-horizon sample (or window start)
+    const runEnd = lastK < nT ? startMs + (lastK + 1) * STEP : startMs + nT * STEP;
+    const ts = [], ab = [];
+    for (let t = runStart; t < runEnd; t += SUB) { ts.push(t); ab.push(elAt(rec, t) >= minEl); }
+    ts.push(runEnd); ab.push(elAt(rec, runEnd) >= minEl);
+
+    const out = [];
+    let a = -1;   // index of the first above-minEl sub-sample of the current segment
+    for (let s = 0; s < ts.length; s++) {
+      if (ab[s] && a < 0) a = s;
+      if ((!ab[s] || s === ts.length - 1) && a >= 0) {
+        const b = ab[s] ? s : s - 1;   // last above-minEl sub-sample of the segment
+        const p = refinePass(rec, a > 0 ? ts[a - 1] : runStart, ts[a], ts[b], ab[s] ? runEnd : ts[s]);
+        if (p) out.push(p);
+        a = -1;
+      }
+    }
+    if (!out.length) {   // short-pop fallback: peak clears minEl between 15 s samples
+      const peakMs = ternaryPeak(rec, runStart, runEnd);
+      const peak = look(rec, peakMs, gmstAt(peakMs), st);
+      if (peak && peak.el >= minEl) {
+        const p = refinePass(rec, runStart, peakMs, peakMs, runEnd);
+        if (p) out.push(p);
+      }
+    }
+    return out;
   }
 
   // Naked-eye test at the pass peak: the satellite in sunlight (outside Earth's
@@ -191,8 +228,7 @@ function startPasses(msg) {
         // Skip a run that spans the whole window — a continuously-visible
         // (geostationary-like) object isn't a discrete pass.
         if (!(firstK === 0 && lastK === nT)) {
-          const pass = closeRun(rec, firstK, lastK);
-          if (pass) found.push({ i: c.i, ...pass });   // null → the run's peak never reached minEl
+          for (const pass of closeRun(rec, firstK, lastK)) found.push({ i: c.i, ...pass });
         }
         firstK = -1; lastK = -1;
       }
@@ -203,9 +239,9 @@ function startPasses(msg) {
     if (run.cancelled || activeRun !== run) return;
     const sliceStart = Date.now();
     while (idx < total && Date.now() - sliceStart < 200) processCandidate(candidates[idx++]);
-    self.postMessage({ type: 'passes-progress', done: idx, total, passes: found.splice(0), gen: run.gen });
+    self.postMessage({ type: 'passes-progress', done: idx, total, passes: found.splice(0), gen: run.gen, scanId: run.scanId });
     if (idx < total) setTimeout(chunk, 0);
-    else self.postMessage({ type: 'passes-done', gen: run.gen });
+    else self.postMessage({ type: 'passes-done', gen: run.gen, scanId: run.scanId });
   }
   chunk();
 }

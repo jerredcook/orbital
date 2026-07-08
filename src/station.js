@@ -32,7 +32,8 @@ export function initStation({
 
   let station = null;        // { lat, lon } in degrees
   let stationPlacing = false;
-  let passing = null;        // { passes: [...], active }
+  let passing = null;        // { passes: [...], active, scanId }
+  let passScanId = 0;        // bumped each scan so a restart's stale in-flight batch is dropped
   let lastPassRenderMs = 0;  // throttle the streaming re-render (sort cost grows)
   const sky = { canvas: null, ctx: null, obs: null, plotted: [] };
   const alertedPasses = new Set();
@@ -201,6 +202,10 @@ export function initStation({
     if (!station || !sky.obs || !$('toggle-station').checked) return;
     if (Math.abs(viewer.clock.multiplier) > 4) return;          // not during fast time-warp
     const now = JulianDate.toDate(viewer.clock.currentTime);
+    // "Go look up!" only makes sense when the sim clock tracks the real sky —
+    // after jumping to a pass (or scrubbing) the clock can sit hours off, so a
+    // pass "in ~1 min" wouldn't actually be overhead now.
+    if (Math.abs(now.getTime() - Date.now()) > 120_000) return;
     for (const [norad, label] of NAKED_EYE) {
       const idx = catalog.findIndex((c) => c.norad === norad);
       if (idx < 0) continue;
@@ -284,10 +289,15 @@ export function initStation({
     cancelPasses();
     const minEl = Number($('pass-minel').value);
     const candidates = passCandidates(minEl);
-    passing = { passes: [], active: true };
+    // A restart keeps the same catalog gen (same objects), so gen tagging can't
+    // tell a cancelled scan's in-flight batch from the new one — a per-scan id
+    // does (e.g. changing the min-elevation filter mid-scan).
+    const scanId = ++passScanId;
+    passing = { passes: [], active: true, scanId };
     passesWorker.postMessage({
       type: 'passes',
       gen: getGen(),
+      scanId,
       startMs: JulianDate.toDate(viewer.clock.currentTime).getTime(),
       horizonHours: PASS_HORIZON_H,
       minElevDeg: minEl,
@@ -363,7 +373,7 @@ export function initStation({
 
   passesWorker.onmessage = (e) => {
     const msg = e.data;
-    if (!passing || msg.gen !== getGen()) return;   // stale scan (cancelled by a hot-swap) — indices moved
+    if (!passing || msg.gen !== getGen() || msg.scanId !== passing.scanId) return;   // stale scan (hot-swap or a restart) — drop it
     if (msg.type === 'passes-progress') {
       passing.passes.push(...msg.passes);
       updatePassStatus(`scanning ${msg.total.toLocaleString()} satellites… ${Math.round((msg.done / msg.total) * 100)}%`);
@@ -471,6 +481,10 @@ export function initStation({
   // ---- boot ----
   initSkyChart();
   setInterval(checkPassAlerts, 60_000);
+  // The pass list is rendered once when a scan finishes, but its "in 47 min" /
+  // "up now" labels age; re-render a finished scan periodically so they stay true
+  // (skipped while a keyboard user is on a row, see renderPasses).
+  setInterval(() => { if (passing && !passing.active) renderPasses(); }, 30_000);
   loadStation();
   // A returning visitor with a saved spot shouldn't have to re-arm the station
   // every day: bring the passes (and sky chart) straight back.
