@@ -11,6 +11,7 @@
 
 import { Cartesian3, Material, JulianDate } from 'cesium';
 import { CONJ_COLOR } from './palette.js';
+import { esc } from './esc.js';
 import { altBandOf } from './orbit.js';
 import { flySeconds } from './motion.js';
 
@@ -141,10 +142,13 @@ export function initConjunctions({
     }
 
     const listEl = $('conj-list');
-    listEl.innerHTML = '';
     $('conj-count').textContent = $('toggle-conj').checked ? String(n) : '—';
     const top = pairs.slice(0, 10);
     if (top.length) requestTca(top);
+    // Don't tear the rows out from under a keyboard user mid-interaction — this
+    // list rebuilds every ~600 ms tick and would otherwise drop their focus.
+    if (listEl.contains(document.activeElement)) return;
+    listEl.innerHTML = '';
     const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
     for (const [i, j, meters] of top) {
       const row = document.createElement('button');
@@ -153,7 +157,7 @@ export function initConjunctions({
       const sub = fmtTca(`${i}:${j}`, nowMs);
       row.innerHTML =
         `<div class="conj-main">` +
-        `<span class="cnames">${catalog[i].name} × ${catalog[j].name}</span>` +
+        `<span class="cnames">${esc(catalog[i].name)} × ${esc(catalog[j].name)}</span>` +
         `<span class="ckm">${(meters / 1000).toFixed(1)} km</span></div>` +
         (sub ? `<div class="conj-sub">${sub}</div>` : '');
       row.addEventListener('click', () => flyToPair(i, j));
@@ -242,7 +246,7 @@ export function initConjunctions({
       row.className = 'conj-row';
       row.innerHTML =
         `<div class="conj-main">` +
-        `<span class="cnames">${sat.name}</span>` +
+        `<span class="cnames">${esc(sat.name)}</span>` +
         `<span class="ckm">${(r.missM / 1000).toFixed(2)} km</span></div>` +
         `<div class="conj-sub">${when}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
       row.addEventListener('click', () => selectByIndex(r.i));

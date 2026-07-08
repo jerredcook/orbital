@@ -14,6 +14,7 @@ import * as satellite from 'satellite.js';
 import { DEG2RAD, RE_KM, SUN_DARK, NAKED_EYE, sunEcefDir, compass, isSunlit } from './astro.js';
 import { tleMeanMotion, tleInclination } from './data.js';
 import { CAT_CSS } from './palette.js';
+import { esc } from './esc.js';
 import { altBandOf } from './orbit.js';
 import { flySeconds } from './motion.js';
 
@@ -312,10 +313,13 @@ export function initStation({
   function renderPasses() {
     const catalog = getCatalog();
     const listEl = $('pass-list');
-    listEl.innerHTML = '';
-    if (!passing) { $('pass-count').textContent = '—'; return; }
+    if (!passing) { listEl.innerHTML = ''; $('pass-count').textContent = '—'; return; }
     const n = passing.passes.length;
     $('pass-count').textContent = !n ? '—' : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+    // Don't rebuild the rows while a keyboard user is on one (this streams during
+    // a scan and would drop their focus).
+    if (listEl.contains(document.activeElement)) return;
+    listEl.innerHTML = '';
     const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
     const visOnly = $('pass-visonly')?.checked;
     const upcoming = passing.passes
@@ -334,7 +338,7 @@ export function initStation({
       row.type = 'button';
       row.className = 'conj-row';
       row.innerHTML =
-        `<div class="conj-main"><span class="cnames">${sat.name}</span>` +
+        `<div class="conj-main"><span class="cnames">${esc(sat.name)}</span>` +
         `<span class="ckm">${p.visible ? '👁 ' : ''}${Math.round(p.peakEl)}°</span></div>` +
         `<div class="conj-sub">${when} · ${durMin} min${p.visible ? ' · visible to the eye' : ''}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
       row.addEventListener('click', () => jumpToPass(p));

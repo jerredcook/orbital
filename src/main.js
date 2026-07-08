@@ -22,6 +22,7 @@ import { initShowpieces } from './showpieces.js';
 import { initConjunctions } from './conjunctions.js';
 import { initStation } from './station.js';
 import { initTimeline } from './timeline.js';
+import { esc } from './esc.js';
 
 // ---------------------------------------------------------------- scene ----
 
@@ -287,7 +288,7 @@ function diffAndToast(list) {
 }
 
 function toastCatalogDiff(addedNames, removedNames, sinceMs) {
-  const fmtList = (names) => names.slice(0, 4).join(', ')
+  const fmtList = (names) => names.slice(0, 4).map(esc).join(', ')
     + (names.length > 4 ? ` +${names.length - 4} more` : '');
   const h = (Date.now() - sinceMs) / 3.6e6;
   const ago = h < 1.5 ? `${Math.round(h * 60)} min` : `${h.toFixed(1)} h`;
@@ -432,7 +433,12 @@ function clearSelection() {
   conj.resetScreenUi();
   swarm.setSuppressed(-1);
   overlay.removeAll();
-  viewer.entities.removeAll();
+  // Remove ONLY what this selection added — not viewer.entities.removeAll(), which
+  // would also destroy the showpiece entities (JWST, Voyagers, SOHO…) that share
+  // this viewer's entity collection and are never re-added (they'd fly to empty
+  // space forever after the first deselect).
+  if (selected.modelEntity) viewer.entities.remove(selected.modelEntity);
+  if (selected.trackEntity) viewer.entities.remove(selected.trackEntity);
   viewer.trackedEntity = undefined;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = MIN_ZOOM_GROUND_M;
   following = false;
@@ -651,23 +657,52 @@ $('legend-scrim').addEventListener('click', () => { setLegendOpen(false); setSys
 $('system-toggle').addEventListener('click', () => setLegendOpen(false));
 $('moon-toggle').addEventListener('click', () => setLegendOpen(false));
 
-// First-run welcome / how-to overlay — shown once, re-openable from the ? button.
+// Modal focus management for the two aria-modal dialogs: on open, remember where
+// focus was and move it into the dialog; keep Tab inside it; on close, restore.
 const welcome = $('welcome');
+const guide = $('guide');
+let modalReturn = null;
+const focusablesIn = (el) => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+  .filter((x) => !x.hidden && x.offsetParent !== null);
+function openModal(el, focusEl) {
+  if (welcome.hidden && guide.hidden) modalReturn = document.activeElement;   // capture only when entering from the app
+  el.hidden = false;
+  (focusEl || focusablesIn(el)[0])?.focus();
+}
+function closeModal(el) {
+  el.hidden = true;
+  if (welcome.hidden && guide.hidden) {   // no dialog left open → hand focus back to the app
+    if (modalReturn && modalReturn.focus && modalReturn.isConnected) modalReturn.focus();
+    modalReturn = null;
+  }
+}
+// Trap Tab within whichever dialog is open (guide sits above welcome).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const modal = !guide.hidden ? guide : (!welcome.hidden ? welcome : null);
+  if (!modal) return;
+  const f = focusablesIn(modal);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+// First-run welcome / how-to overlay — shown once, re-openable from the ? button.
 const closeWelcome = () => {
-  welcome.hidden = true;
+  closeModal(welcome);
   try { localStorage.setItem('orbital.welcomed', '1'); } catch { /* ignore */ }
 };
 $('welcome-go').addEventListener('click', closeWelcome);
 welcome.addEventListener('click', (e) => { if (e.target === welcome) closeWelcome(); });   // backdrop tap
-$('help-toggle').addEventListener('click', () => { welcome.hidden = false; });
+$('help-toggle').addEventListener('click', () => openModal(welcome, $('welcome-go')));
 
 // The full guide — its own page, opened from the welcome (or a #guide link),
 // floating over whatever view you're in.  It never owns the hash; we only clear
 // a stale #guide on close so a reload doesn't reopen it.
-const guide = $('guide');
-const openGuide = () => { welcome.hidden = true; guide.hidden = false; guide.scrollTop = 0; };
+const openGuide = () => { openModal(guide, $('guide-close')); welcome.hidden = true; guide.scrollTop = 0; };
 const closeGuide = () => {
-  guide.hidden = true;
+  closeModal(guide);
   if (location.hash === '#guide') history.replaceState(null, '', location.pathname + location.search);
 };
 $('welcome-guide').addEventListener('click', () => { closeWelcome(); openGuide(); });
@@ -679,8 +714,8 @@ guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); }
 // First-timers see it — unless they followed a shared deep-link, which lands
 // them straight on the thing the sender pointed at (the flag stays unset, so
 // they still get the intro on a later visit to the bare page).
-try { if (!location.hash && !localStorage.getItem('orbital.welcomed')) welcome.hidden = false; }
-catch { if (!location.hash) welcome.hidden = false; }
+try { if (!location.hash && !localStorage.getItem('orbital.welcomed')) openModal(welcome, $('welcome-go')); }
+catch { if (!location.hash) openModal(welcome, $('welcome-go')); }
 
 // Installable-app (PWA) plumbing.  Register the service worker, and when Chrome
 // decides the app is installable, reveal the welcome's "Install" button and use
@@ -917,7 +952,7 @@ searchBox.addEventListener('input', () => {
     addOption(`<span>${b.name}</span><span class="rid">${b.kind}</span>`, () => navigateTo({ body: b.name }));
   }
   for (const i of hits) {
-    addOption(`<span>${catalog[i].name}</span><span class="rid">${catalog[i].norad}</span>`, () => selectByIndex(i));
+    addOption(`<span>${esc(catalog[i].name)}</span><span class="rid">${catalog[i].norad}</span>`, () => selectByIndex(i));
   }
   const has = options.length > 0;
   resultsEl.hidden = !has;
