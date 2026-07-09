@@ -8,7 +8,7 @@
 // category toggles and the timeline year filter to the swarm — because both the
 // legend handler and applyCatalog need it too; they call timeline.refreshVisibility().
 
-export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTotals }) {
+export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTotals, passesGroup = () => true }) {
   const $ = (id) => document.getElementById(id);
 
   let timelineYear = null;                       // null = timeline off (show all)
@@ -23,7 +23,7 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
       const s = catalog[i];
       const byYear = timelineYear === null
         || (s.launchYear ?? 9999) <= timelineYear;
-      swarm.setVisible(i, catVisible[catOf(s)] && byYear);
+      swarm.setVisible(i, catVisible[catOf(s)] && byYear && passesGroup(s));
     }
   }
 

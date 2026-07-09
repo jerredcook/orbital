@@ -243,6 +243,14 @@
     <label class="legend-row"><input type="checkbox" data-cat="HEO" checked /><span class="swatch heo"></span>HEO <span class="count" id="count-HEO"></span></label>
     <label class="legend-row"><input type="checkbox" data-cat="DEB" checked /><span class="swatch deb"></span>Debris <span class="count" id="count-DEB"></span></label>
     <div class="legend-divider"></div>
+    <div class="legend-title">Focus a group <span class="legend-hint">tap to isolate</span></div>
+    <div id="group-filter"></div>
+    <label class="legend-row"><input type="checkbox" id="toggle-coverage" /><span class="swatch cov"></span>Starlink in view <span class="count" id="cov-count">—</span></label>
+    <div id="cov-scale" class="cov-scale" hidden>
+      <span class="cov-bar" aria-hidden="true"></span>
+      <span>fewer → more above 25° in view · line of sight, not service quality</span>
+    </div>
+    <div class="legend-divider"></div>
     <label class="legend-row"><input type="checkbox" id="toggle-conj" /><span class="swatch conj"></span>Conjunctions <span class="count" id="conj-count">—</span></label>
     <label class="legend-row conj-range-row">pairs within <select id="conj-range" aria-label="Conjunction distance threshold">
       <option value="5">5 km</option>

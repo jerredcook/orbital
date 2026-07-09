@@ -12,6 +12,7 @@
 //   #probe=Juno   a robotic spacecraft in the system view
 //   #luna         the Moon globe
 //   #jwst         a showpiece craft, up close (also #voyager1, #soho, …)
+//   #group=starlink  the Earth view focused on a group (constellation / operator)
 //   #guide        the full guide overlay (read-only; never written during use)
 
 export function writeHash(state) {
@@ -24,6 +25,7 @@ export function writeHash(state) {
     else if (state.luna) h = 'luna';
     else if (state.show) h = state.show;
     else if (state.system) h = 'system';
+    else if (state.group) h = `group=${encodeURIComponent(state.group)}`;
   }
   if (location.hash.replace(/^#/, '') === h) return;            // already there
   const target = h ? `#${h}` : `${location.pathname}${location.search}`;
@@ -43,6 +45,6 @@ export function readHash() {
   try { v = decodeURIComponent(h.slice(eq + 1)); }
   catch { return null; }   // malformed %-encoding in a shared link — ignore, don't abort boot
   if (!v) return null;
-  if (k === 'sat' || k === 'body' || k === 'moon' || k === 'probe') return { [k]: v };
+  if (k === 'sat' || k === 'body' || k === 'moon' || k === 'probe' || k === 'group') return { [k]: v };
   return null;
 }

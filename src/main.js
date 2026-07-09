@@ -22,6 +22,8 @@ import { initShowpieces } from './showpieces.js';
 import { initConjunctions } from './conjunctions.js';
 import { initStation } from './station.js';
 import { initTimeline } from './timeline.js';
+import { initGroups } from './groups.js';
+import { initCoverage } from './coverage.js';
 import { esc } from './esc.js';
 
 // ---------------------------------------------------------------- scene ----
@@ -210,7 +212,8 @@ function applyCatalog(list) {
     counts[cat]++;
     swarm.setStyle(i, CAT_COLORS[cat], cat === 'DEB' ? 1.7 : 2.2);
   }
-  timeline.refreshVisibility();   // apply category toggles + any active launch timeline
+  groups.recount();               // group-chip counts + hide groups absent from today's catalog
+  timeline.refreshVisibility();   // apply category toggles + timeline + group focus
   viewer.scene.primitives.add(swarm);
   catTotals = { ...counts };
   catalogEpochMs = medianEpochMs(catalog);   // freshness reference for the drift badge
@@ -827,16 +830,47 @@ document.querySelectorAll('.welcome-chip').forEach((chip) => chip.addEventListen
   else navigateTo(destFromSpec(go));
 }));
 
+// -------------------------------------------------------------- group focus ----
+// "Focus a group" chips (Starlink, OneWeb, GPS…, or an operator/nation) filter
+// the swarm through the same refreshVisibility() pipeline as the regime toggles
+// and the launch timeline, so they compose.  When nothing else owns the URL
+// hash, an active group is shareable as #group=<id>.
+const groups = initGroups({
+  getCatalog: () => catalog,
+  onChange: () => {
+    timeline.refreshVisibility();
+    const m = document.body.classList;
+    if (!selected && !m.contains('system-mode') && !m.contains('moon-mode')) {
+      writeHash(groups.activeId() ? { group: groups.activeId() } : null);
+    }
+  },
+});
+
 // ------------------------------------------------------------ launch timeline ----
 // The launch-history scrubber lives in src/timeline.js.  It owns
 // refreshVisibility() — the one place that applies the legend category toggles +
-// the timeline year filter to the swarm — which the legend handler and
-// applyCatalog() call via timeline.refreshVisibility().
+// the timeline year filter + the group focus to the swarm — which the legend
+// handler and applyCatalog() call via timeline.refreshVisibility().
 const timeline = initTimeline({
   getCatalog: () => catalog,
   getSwarm: () => swarm,
   catVisible, catOf,
   getCatTotals: () => catTotals,
+  passesGroup: (s) => groups.passes(s),
+});
+
+// ------------------------------------------------------- coverage overlay ----
+// "Starlink in view" heat overlay: for every point on Earth, how many Starlink
+// satellites are above 25° elevation right now — line-of-sight density computed
+// from the live propagator buffer, NOT service quality (gateways, licensing and
+// capacity aren't modelled).
+const coverage = initCoverage({
+  viewer,
+  getCatalog: () => catalog,
+  getLastBuf: () => lastBuf,
+  isEarthActive: () => !document.hidden
+    && !document.body.classList.contains('system-mode')
+    && !document.body.classList.contains('moon-mode'),
 });
 
 $('toggle-orbit').addEventListener('change', () => {
@@ -904,6 +938,7 @@ function navigateTo(s, tries = 0) {
   if (s.luna) { moonView.show(); return; }
   if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }
+  if (s.group) { if (groups.has(s.group) && groups.activeId() !== s.group) groups.setActive(s.group); return; }
   const name = s.body || s.moon || s.probe;
   if (name) { systemView.show(); systemView.focus(name); }
 }
@@ -1060,4 +1095,6 @@ window.__orbital = {
   get skyPlotted() { return groundStation.skyPlotted; },   // debug: dots in the overhead chart
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
+  groups,                                                   // debug: group-focus filter
+  coverage,                                                 // debug: Starlink coverage overlay
 };

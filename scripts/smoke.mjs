@@ -177,6 +177,41 @@ try {
   });
   check('timelineScrub', /1965/.test(tl) && /tracked/.test(tl));
 
+  // --- group focus: Starlink chip filters the swarm + is deep-linkable ---
+  const grp = await p.evaluate(() => {
+    const O = window.__orbital;
+    const chip = document.querySelector('.group-chip[data-id=starlink]');
+    const count = chip?.querySelector('.g-count')?.textContent;
+    chip?.click();
+    const r = {
+      hasChip: !!chip, count,
+      active: O.groups.activeId(), hash: location.hash,
+      keepStarlink: O.groups.passes({ name: 'STARLINK-1', meta: {} }),
+      dropOther: O.groups.passes({ name: 'ISS (ZARYA)', meta: { owner: 'US' } }),
+    };
+    chip?.click();   // clear
+    r.clearedActive = O.groups.activeId();
+    return r;
+  });
+  check('groupFocus', grp.hasChip && grp.active === 'starlink' && /group=starlink/.test(grp.hash)
+    && grp.keepStarlink && !grp.dropOther && grp.clearedActive === null);
+  R._group = grp;
+
+  // --- coverage overlay: toggle adds an imagery layer + a peak readout, off removes it ---
+  const cov = await p.evaluate(async () => {
+    const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+    const O = window.__orbital;
+    const before = O.viewer.imageryLayers.length;
+    document.getElementById('toggle-coverage').click();
+    await nap(4500);
+    const on = { layers: O.viewer.imageryLayers.length, enabled: O.coverage.enabled, count: document.getElementById('cov-count').textContent };
+    document.getElementById('toggle-coverage').click();
+    await nap(400);
+    return { before, on, offLayers: O.viewer.imageryLayers.length };
+  });
+  check('coverageOverlay', cov.on.enabled && cov.on.layers > cov.before && /\d/.test(cov.on.count) && cov.offLayers === cov.before);
+  R._cov = cov;
+
   // --- a11y landmarks + combobox ---
   const a11y = await p.evaluate(async () => {
     const nap = (ms) => new Promise((r) => setTimeout(r, ms));
