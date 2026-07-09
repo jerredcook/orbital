@@ -197,6 +197,7 @@ function applyCatalog(list) {
 
   catalogGen++;   // invalidate any in-flight worker results tied to the old indices
   clearSelection();
+  closeResults();   // open search rows hold now-stale indices — drop them
   $('infopanel').hidden = true;
   conj.onCatalogSwap();
   if (swarm) viewer.scene.primitives.remove(swarm);   // destroys GL resources
@@ -234,14 +235,30 @@ function applyCatalog(list) {
   }
 }
 
+// Humane, on-globe failure notice with a Retry — the status line lives in the
+// legend drawer, which is off-screen on phones, so a bare "fetch failed" there
+// leaves a mobile visitor staring at an empty globe with no explanation.
+function bootFailed() {
+  status('couldn’t load the catalog');
+  const el = document.createElement('div');
+  el.className = 'toast boot-error';
+  el.innerHTML = '<div class="t-head">Couldn’t load the satellite catalog</div>'
+    + '<div>Check your connection, then retry.</div>';
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'toast-retry'; btn.textContent = 'Retry';
+  btn.addEventListener('click', () => { el.remove(); status('loading catalog…'); boot(); });
+  el.appendChild(btn);
+  $('toasts').appendChild(el);
+}
+
 async function boot() {
   try {
     const list = await loadCatalog(status);
     diffAndToast(list);
     applyCatalog(list);
   } catch (err) {
-    status('catalog fetch failed — see console');
     console.error(err);
+    bootFailed();
   } finally {
     // Always restore the shared view: a #system / #luna / #guide / #show link
     // needs no Earth catalog, so it must still open even if the catalog failed.
@@ -337,6 +354,11 @@ async function refreshCatalog() {
       conj.onCatalogSwap();
       worker.postMessage({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
       groundStation.onElementsRefresh();
+      // The swarm/passes/TCA now use the fresh elements, but the selected
+      // satellite's satrec (and its model's CallbackProperties, readout, orbit
+      // ring) still close over the boot-time elements — rebuild the selection so
+      // the one object rendered at per-frame precision isn't left drifting.
+      if (selected) { const wasF = following; selectByIndex(selected.index); if (wasF) engageFollow(); }
       status(`${catalog.length.toLocaleString()} objects on orbit`);
       return;
     }
@@ -423,8 +445,14 @@ function selectByIndex(index) {
   swarm.setSuppressed(index);   // the overlay point replaces the swarm dot
   drawOrbitTrack(satrec);
   fillInfoPanel(sat);
-  $('infopanel').hidden = false;
-  writeHash({ sat: sat.norad });
+  // A background reselect (catalog hot-swap / in-place refresh) can fire while a
+  // System or Moon view is up — don't pop the Earth panel or clobber that view's
+  // shareable hash with #sat=… ; those views own the hash while they're open.
+  const m = document.body.classList;
+  if (!m.contains('system-mode') && !m.contains('moon-mode')) {
+    $('infopanel').hidden = false;
+    writeHash({ sat: sat.norad });
+  }
 }
 
 function clearSelection() {
@@ -456,11 +484,12 @@ function clearSelection() {
   if (!m.contains('system-mode') && !m.contains('moon-mode')) writeHash(null);
 }
 
-// Closed-ellipse orbit track: sample one full period in ECI *once* (the inertial
-// shape barely changes over a session), then project to the Earth-fixed frame at
-// the current GMST.  The frame rotates ~15°/hr — fast under time-warp — so the
-// projection is refreshed as the clock advances (renderOrbitTrack below);
-// otherwise the satellite visibly drifts off its own ring (AST-10).
+// Closed-ellipse orbit track: sample one full period in ECI, then project to the
+// Earth-fixed frame at the current GMST.  Two things move it: Earth's spin
+// (~15°/hr — handled cheaply by re-rotating the samples, renderOrbitTrack) and
+// the orbit plane itself (SGP4 secular J2 precession, ~5°/day for LEO — handled
+// by re-sampling when the sim clock drifts an hour off the sample epoch, onTick).
+// Without both, the satellite visibly walks off its own ring under time-warp.
 function drawOrbitTrack(satrec) {
   if (!$('toggle-orbit').checked || !selected) return;
   const now = JulianDate.toDate(viewer.clock.currentTime);
@@ -473,6 +502,7 @@ function drawOrbitTrack(satrec) {
     if (pv?.position) eci.push(pv.position);
   }
   selected.trackEci = eci;   // km, inertial — re-rotated to the current GMST on draw
+  selected.trackSampledMs = now.getTime();   // sim epoch these samples were taken at
   renderOrbitTrack();
 }
 
@@ -505,9 +535,13 @@ viewer.clock.onTick.addEventListener((clock) => {
   const pos = new Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
   selected.highlight.position = pos;
 
-  // Keep the orbit ring aligned as the Earth turns under it (~0.5° steps; fast
-  // under time-warp) so the satellite stays on its own track (AST-10).
-  if (selected.trackEntity && Math.abs(gmst - selected.trackGmst) > 0.0087) renderOrbitTrack();
+  // Keep the orbit ring aligned as time advances: re-sample the ECI shape once
+  // the plane has precessed (>1 h of sim time), otherwise just re-rotate for
+  // Earth's spin (~0.5° steps) — so the satellite stays on its own track.
+  if (selected.trackEntity) {
+    if (Math.abs(date.getTime() - selected.trackSampledMs) > 3_600_000) drawOrbitTrack(selected.satrec);
+    else if (Math.abs(gmst - selected.trackGmst) > 0.0087) renderOrbitTrack();
+  }
 
   // Inside model range a free camera loses a 7.6 km/s satellite in seconds —
   // lock on automatically so zooming in "just works".  Release is manual
@@ -645,14 +679,32 @@ document.querySelectorAll('#legend input[data-cat]').forEach((box) => {
 
 // Mobile: the display-options legend is a ☰-toggled slide-in drawer.  Tapping the
 // scrim closes it, and leaving the Earth view (System / Moon) closes it too.
-const setLegendOpen = (open) => document.body.classList.toggle('legend-open', open);
+// On phones the legends are off-screen drawers; when closed, mark them `inert`
+// so their ~15 controls leave the Tab order (and mirror aria-expanded on the
+// toggle).  On desktop the media query is false, so the always-visible legend
+// never goes inert.
+const drawerMq = window.matchMedia('(max-width: 760px)');
+const setLegendOpen = (open) => {
+  document.body.classList.toggle('legend-open', open);
+  $('legend-toggle').setAttribute('aria-expanded', String(open));
+  $('legend').inert = drawerMq.matches && !open;
+};
 $('legend-toggle').addEventListener('click', () =>
   setLegendOpen(!document.body.classList.contains('legend-open')));
 // The solar-system legend gets its own mobile drawer (the topbar ☰ is hidden in
 // system-mode); it shares the scrim.
-const setSysLegendOpen = (open) => document.body.classList.toggle('system-legend-open', open);
+const setSysLegendOpen = (open) => {
+  document.body.classList.toggle('system-legend-open', open);
+  $('system-legend-toggle').setAttribute('aria-expanded', String(open));
+  $('system-legend').inert = drawerMq.matches && !open;
+};
 $('system-legend-toggle').addEventListener('click', () =>
   setSysLegendOpen(!document.body.classList.contains('system-legend-open')));
+setLegendOpen(false); setSysLegendOpen(false);   // establish the initial inert/expanded state
+drawerMq.addEventListener('change', () => {       // recompute on rotate / resize across the breakpoint
+  setLegendOpen(document.body.classList.contains('legend-open'));
+  setSysLegendOpen(document.body.classList.contains('system-legend-open'));
+});
 $('legend-scrim').addEventListener('click', () => { setLegendOpen(false); setSysLegendOpen(false); });
 $('system-toggle').addEventListener('click', () => setLegendOpen(false));
 $('moon-toggle').addEventListener('click', () => setLegendOpen(false));
@@ -928,6 +980,7 @@ searchBox.addEventListener('input', () => {
   const q = searchBox.value.trim().toUpperCase();
   options.length = 0;
   activeOpt = -1;
+  searchBox.removeAttribute('aria-activedescendant');   // don't leave it pointing at a recycled/removed option
   resultsEl.innerHTML = '';
   if (q.length < 2) { closeResults(); return; }
   const hits = [];
@@ -965,6 +1018,12 @@ searchBox.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveOpt(activeOpt - 1); }
   else if (e.key === 'Enter' && activeOpt >= 0) { e.preventDefault(); options[activeOpt].go(); }
 });
+// Close the popup when focus leaves the combobox (tab away / click the scene) so
+// it doesn't sit open over the globe with aria-expanded stuck true.  The mousedown
+// preventDefault keeps a row click from blurring the input first (which would hide
+// the row before its click fired).
+resultsEl.addEventListener('mousedown', (e) => e.preventDefault());
+searchBox.addEventListener('focusout', (e) => { if (!resultsEl.contains(e.relatedTarget)) closeResults(); });
 
 // Single Esc dispatcher — one keypress, one action, in strict priority order.
 // (Previously four capture-phase listeners across the view modules all fired on
@@ -974,7 +1033,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); searchBox.focus(); return;
   }
   if (e.key !== 'Escape') return;
-  closeResults();
+  if (!resultsEl.hidden) { closeResults(); return; }        // an open search dropdown consumes Esc (one key, one action)
   if (!guide.hidden) { closeGuide(); return; }              // modal overlays first
   if (!welcome.hidden) { closeWelcome(); return; }
   if (moonView.visible) { moonView.hide(); return; }         // then the open view

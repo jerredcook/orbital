@@ -21,6 +21,12 @@
 /* Keyboard highlight for the active search result (combobox aria-activedescendant). */
 #search-results .result-row.active { background: rgba(255, 180, 84, 0.16); }
 
+/* Retry button in the boot-failure toast. */
+.toast-retry {
+  margin-top: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  background: #FFB454; color: #06090F; border: 0; font: 600 13px Inter, system-ui, sans-serif;
+}
+
 /* One consistent, high-contrast keyboard-focus ring across the dark chrome
    (buttons, checkboxes, sliders, rows).  :focus-visible only — pointer users
    never see it. */
