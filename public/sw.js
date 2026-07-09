@@ -28,6 +28,20 @@ self.addEventListener('activate', (e) => {
 
 const HEAVY = (path) => path.includes('/models/') || path.includes('/textures/') || path.includes('/fallback/');
 
+// The bundle name with its content hash stripped (index-Bq2yBMCG.js -> index.js),
+// so we can recognise and drop the previous deploy's copy of the same asset.
+const family = (path) => path.replace(/-[A-Za-z0-9_]+(\.[a-z0-9]+)$/, '$1');
+
+// After caching a fresh hashed asset, delete any older-hash siblings of it —
+// otherwise Cache Storage accrues a full copy of the app (~4 MB) per deploy.
+async function evictOldSiblings(cache, keepPath) {
+  const fam = family(keepPath);
+  for (const r of await cache.keys()) {
+    const p = new URL(r.url).pathname;
+    if (p !== keepPath && p.includes('/assets/') && family(p) === fam) cache.delete(r);
+  }
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -44,8 +58,10 @@ self.addEventListener('fetch', (e) => {
           fetch(req),
           new Promise((_, rej) => setTimeout(() => rej(new Error('nav-timeout')), 3000)),
         ]);
-        const c = res.clone();
-        caches.open(CACHE).then((ca) => ca.put(req, c));
+        if (res.ok) {   // never cache a 404/503/captive-portal page as the app shell
+          const c = res.clone();
+          caches.open(CACHE).then((ca) => ca.put(req, c));
+        }
         return res;
       } catch {
         return (await cached) || fetch(req);   // last resort: let the request run to completion
@@ -57,7 +73,10 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(                                       // hashed assets: stale-while-revalidate
     caches.open(CACHE).then((cache) =>
       cache.match(req).then((hit) => {
-        const net = fetch(req).then((res) => { if (res.ok) cache.put(req, res.clone()); return res; }).catch(() => hit);
+        const net = fetch(req).then((res) => {
+          if (res.ok) cache.put(req, res.clone()).then(() => evictOldSiblings(cache, url.pathname));
+          return res;
+        }).catch(() => hit);
         return hit || net;
       }),
     ),

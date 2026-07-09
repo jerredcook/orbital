@@ -74,7 +74,7 @@ body.body-mode .cesium-credit-container, body.body-mode .cesium-widget-credits {
 #moon-toggle.active { border-color: #FFB454; color: #FFB454; }
 
 #moon-exit {
-  position: absolute; top: 12px; left: 16px; z-index: 11;
+  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; z-index: 11;
   padding: 8px 14px;
   background: rgba(13,19,29,0.9); color: #C9D4E3;
   border: 1px solid #1E2A3A; border-radius: 4px;
@@ -119,7 +119,7 @@ body.moon-mode .topbar-right { display: none; }
 #system-toggle.active { border-color: #FFB454; color: #FFB454; }
 
 #system-exit {
-  position: absolute; top: 12px; left: 16px; z-index: 11;
+  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; z-index: 11;
   padding: 8px 14px;
   background: rgba(13,19,29,0.9); color: #C9D4E3;
   border: 1px solid #1E2A3A; border-radius: 4px;
@@ -129,7 +129,7 @@ body.moon-mode .topbar-right { display: none; }
 #system-exit:hover { border-color: #FFB454; color: #E8EFF8; }
 
 #system-scale {
-  position: absolute; top: 12px; left: 216px; z-index: 11;
+  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: 216px; z-index: 11;
   display: flex; align-items: center; gap: 6px;
   padding: 8px 14px;
   background: rgba(13,19,29,0.9); color: #C9D4E3;
@@ -189,7 +189,7 @@ body.system-mode #infopanel { display: none; }
 #bodyContainer[hidden] { display: none; }
 
 #body-exit {
-  position: absolute; top: 12px; left: 16px; z-index: 12;
+  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; z-index: 12;
   padding: 8px 14px;
   background: rgba(13,19,29,0.9); color: #C9D4E3;
   border: 1px solid #1E2A3A; border-radius: 4px;
@@ -219,7 +219,7 @@ body.body-mode #probe-timeline { display: none; }
 
 /* spacecraft status legend (system view, top-right) */
 #system-legend {
-  position: absolute; top: 12px; right: 16px; z-index: 11;
+  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 16px; z-index: 11;
   background: rgba(13,19,29,0.9); border: 1px solid #1E2A3A; border-radius: 4px;
   padding: 8px 12px; font-family: ui-monospace, monospace; font-size: 11px; color: #C9D4E3;
   /* scroll rather than overflow the viewport on short / zoomed-in windows */
@@ -695,7 +695,7 @@ body:not(.system-mode) #system-legend { display: none; }
   /* compact top bar */
   .brand-sub { display: none; }
   .brand-mark { font-size: 13px; letter-spacing: 0.18em; }
-  #topbar { padding: 8px 10px; gap: 6px; }
+  #topbar { padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px; gap: 6px; }   /* keep the notch inset the wide layout has */
   #system-toggle, #moon-toggle { padding: 6px 9px; font-size: 11px; }
   #search { width: 38vw; max-width: 150px; }
 
@@ -727,7 +727,7 @@ body:not(.system-mode) #system-legend { display: none; }
      (the topbar ☰ is hidden in system-mode). */
   body.system-mode #system-legend-toggle {
     display: inline-flex; align-items: center;
-    position: absolute; top: 46px; right: 12px; z-index: 33;
+    position: absolute; top: calc(46px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 33;
     padding: 6px 10px; background: rgba(13,19,29,0.92); color: #C9D4E3;
     border: 1px solid #1E2A3A; border-radius: 4px;
     font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; cursor: pointer;
