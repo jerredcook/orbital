@@ -24,14 +24,13 @@ import {
   HeadingPitchRange, ArcType, Primitive, GeometryInstance, EllipsoidGeometry,
   VertexFormat, MaterialAppearance, Material, Matrix3, SceneTransforms,
   Geometry, GeometryAttribute, ComponentDatatype, PrimitiveType, BlendingState,
-  DistanceDisplayCondition, PolylineGlowMaterialProperty, PolylineDashMaterialProperty, Math as CMath,
+  PolylineGlowMaterialProperty, PolylineDashMaterialProperty, Math as CMath,
 } from 'cesium';
 import {
   BODIES, PLANETS, planetPosition, orbitSamples, centuriesSinceJ2000,
   orbitalPeriodCenturies, AU_METERS, eclipticFromElements, POLES,
 } from './ephemeris.js';
 import { MOON_ELEMENTS } from './moon-elements.js';
-import { PROBE_ELEMENTS } from './probe-elements.js';
 import { DWARF_ELEMENTS } from './dwarf-elements.js';
 import { COMET_ELEMENTS } from './comet-elements.js';
 import { INTERSTELLAR_ELEMENTS } from './interstellar-elements.js';
@@ -46,6 +45,8 @@ import {
   dwarfPos, cometPos, interstellarPos, elemHyperbolaSamples, elemOrbitSamples, moonRelPos,
 } from './helio.js';
 import { MOONS, MOON_FACTS, MOON_TEX, MOON_TEX_DIR } from './moon-data.js';
+import { PROBES, PROBE_FACTS } from './probe-data.js';
+import { initProbes, nowYear } from './sys-probes.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
 const ROCKY = new Set(['Mercury', 'Venus', 'Mars', 'Ceres']);
@@ -73,7 +74,6 @@ let onReturnToEarth = null; // main.js hook to re-centre Earth when we exit
 let moonRef = null;         // the Moon view, so show() can close it (one mode at a time)
 const entities = {};        // body name -> marker/label Entity
 const moonInfo = {};        // moon name -> { planet, entity, realR, periodDays, facts }
-const probeInfo = {};       // spacecraft name -> { planet, entity, periodDays, inclDeg, arrival, end, deorbited }
 const spheres = {};         // body name -> textured sphere Primitive
 const moonSpheres = {};     // moon name -> textured sphere Primitive (textured moons only)
 let orbitEntities = [];     // { name, entity } for rebuild on scale toggle
@@ -106,8 +106,6 @@ const _real = new Cartesian3();
 const _pos = new Cartesian3();
 const _moonHost = new Cartesian3();
 const _moonRel = new Cartesian3();
-const _probeRel = new Cartesian3();
-const PROBE_ECAP = 0.8;   // cap rendered eccentricity so apoapsis stays in-frame and periapsis clears the planet
 
 // Heliocentric positions + sampled orbit paths for the dwarfs, comets,
 // interstellar visitors and moons come from src/helio.js (pure Kepler off the
@@ -115,7 +113,6 @@ const PROBE_ECAP = 0.8;   // cap rendered eccentricity so apoapsis stays in-fram
 const _quat = new Quaternion();
 const _qSpin = new Quaternion();
 const _qTilt = new Quaternion();
-const _pom = new Matrix3();     // scratch basis for probe nadir-lock orientation
 const _dir = new Cartesian3();
 const _one = new Cartesian3(1, 1, 1);
 
@@ -456,263 +453,20 @@ function setMoonOrbits(on) {
   for (const e of moonOrbits) e.show = on;
 }
 
-// Manmade orbiters around the other planets: [name, display factor, period
-// (days), inclination°, node°, year reached orbit].  Rendered like moons but in
-// tech cyan, and gateable by year via the spacecraft timeline so you can watch
-// the robotic fleet arrive.  Orbits are schematic (real altitudes are ~1–1.5
-// planet radii); the point is to see what's there and when it got there.
-// [name, display factor, period (days), inclination°, node°, arrival year,
-//  end year (null = still operating), deorbited? (true = left orbit at `end`,
-//  so it fades out and is gone; false = derelict, still orbiting but dead)].
-const PROBES = {
-  Mercury: [['MESSENGER', 1.6, 0.5, 82, 30, 2011, 2015, true],
-            ['BepiColombo', 1.4, 0.10, 88, 0, 2026.9, null, false]],   // orbit insertion Nov 2026
-  Venus:   [['Venera 15', 1.8, 1.0, 87, 60, 1983, 1984, false],
-            ['Pioneer Venus', 2.4, 0.99, 105, 40, 1978, 1992, true],
-            ['Magellan', 1.6, 0.157, 86, 90, 1990, 1994, true],
-            ['Venus Express', 2.2, 1.0, 89, 130, 2006, 2015, true],
-            ['Akatsuki', 2.6, 10.5, 9, 0, 2015, 2024, false]],
-  Mars:    [['Mariner 9', 1.5, 0.5, 64, 20, 1971, 1972, false],       // mission ended Oct 1972; still a derelict in orbit
-            ['Viking 1 Orbiter', 1.95, 1.5, 38, 100, 1976, 1980, false],
-            ['Viking 2 Orbiter', 2.2, 1.5, 55, 220, 1976, 1978, false],
-            ['Mars Global Surveyor', 1.5, 0.078, 93, 60, 1997, 2006, false],
-            ['Mars Odyssey', 1.30, 0.082, 93, 0, 2001, null, false],
-            ['Mars Express', 1.7, 0.30, 86, 150, 2003, null, false],
-            ['MRO', 1.45, 0.075, 93, 250, 2006, null, false],
-            ['MAVEN', 2.1, 0.19, 75, 320, 2014, null, false],
-            ['Mangalyaan', 2.9, 3.2, 150, 40, 2014, 2022, false],
-            ['ExoMars TGO', 1.6, 0.083, 74, 110, 2016, null, false],
-            ['Hope', 3.1, 2.3, 25, 200, 2021, null, false],
-            ['Tianwen-1', 2.4, 0.30, 87, 290, 2021, null, false]],
-  Jupiter: [['Galileo', 2.2, 7, 5, 200, 1995, 2003, true], ['Juno', 3.0, 53, 90, 0, 2016, null, false]],
-  Saturn:  [['Cassini', 2.6, 16, 20, 0, 2004, 2017, true]],
-};
-
-// Operator + one-line mission note for the click-to-inspect panel.  The exact
-// years live in the fact text; the panel's "status" is just the present state.
-const PROBE_FACTS = {
-  MESSENGER: { op: 'NASA', fact: 'The first spacecraft to orbit Mercury (2011–15); it mapped the whole planet and found water ice in permanently shadowed polar craters before crashing into the surface.' },
-  BepiColombo: { op: 'ESA / JAXA', fact: 'A joint European–Japanese mission cruising to Mercury by repeated flybys; it splits into two orbiters once it arrives in 2026.' },
-  'Venera 15': { op: 'USSR', fact: 'With its twin Venera 16, it radar-mapped the northern hemisphere of cloud-shrouded Venus in 1983–84.' },
-  'Pioneer Venus': { op: 'NASA', fact: 'Orbited Venus for 14 years (1978–92), studying its thick atmosphere and making the first global radar map of the surface.' },
-  Magellan: { op: 'NASA', fact: 'Radar-mapped 98% of Venus at high resolution (1990–94), revealing volcanoes, lava plains and a young, resurfaced world with few craters.' },
-  'Venus Express': { op: 'ESA', fact: "Europe's first Venus orbiter (2006–15); it tracked the super-rotating atmosphere and hints of recent volcanism." },
-  Akatsuki: { op: 'JAXA', fact: "Japan's Venus climate orbiter, which limped into orbit in 2015 on a second attempt after its engine failed in 2010." },
-  'Mariner 9': { op: 'NASA', fact: 'The first spacecraft to orbit another planet (1971); it waited out a global dust storm, then revealed Valles Marineris and the giant Tharsis volcanoes.' },
-  'Viking 1 Orbiter': { op: 'NASA', fact: 'Relayed for the Viking 1 lander and imaged Mars from orbit (1976–80), scouting the surface and its moons.' },
-  'Viking 2 Orbiter': { op: 'NASA', fact: 'Companion to the Viking 2 lander (1976–78), photographing Mars and Deimos from orbit.' },
-  'Mars Global Surveyor': { op: 'NASA', fact: 'Mapped Mars for a decade (1997–2006): laser-altimeter topography, gullies hinting at water, and stripes of ancient crustal magnetism.' },
-  'Mars Odyssey': { op: 'NASA', fact: 'The longest-working spacecraft at Mars (since 2001); it found vast subsurface water ice and still relays data from the rovers.' },
-  'Mars Express': { op: 'ESA', fact: "Europe's first Mars orbiter (since 2003); its radar detected subsurface ice and a possible lake near the south pole." },
-  MRO: { op: 'NASA', fact: 'The Mars Reconnaissance Orbiter (since 2006) carries HiRISE, the sharpest camera ever sent to Mars, and is a key relay for surface missions.' },
-  MAVEN: { op: 'NASA', fact: 'Studies how Mars lost most of its atmosphere to space (since 2014), explaining how a once-wetter world dried out.' },
-  Mangalyaan: { op: 'ISRO', fact: "India's first interplanetary mission — it made India the first nation to reach Mars orbit on its very first try (2014)." },
-  'ExoMars TGO': { op: 'ESA / Roscosmos', fact: 'The Trace Gas Orbiter (since 2016) sniffs the atmosphere for methane and other gases, and relays for surface craft.' },
-  Hope: { op: 'UAE Space Agency', fact: "The Emirates Mars Mission (since 2021) — the Arab world's first interplanetary probe — watches Martian weather from a high orbit." },
-  'Tianwen-1': { op: 'CNSA', fact: "China's first Mars mission (2021): an orbiter that also delivered the Zhurong rover to the surface." },
-  Galileo: { op: 'NASA', fact: 'The first Jupiter orbiter (1995–2003); it dropped a probe into the clouds, found evidence of an ocean inside Europa, then plunged into Jupiter to protect the moons.' },
-  Juno: { op: 'NASA', fact: "A polar orbiter (since 2016) peering beneath Jupiter's clouds to map its gravity, magnetic field and deep interior — and its swirling poles." },
-  Cassini: { op: 'NASA / ESA / ASI', fact: "Orbited Saturn 2004–17, landed the Huygens probe on Titan and discovered Enceladus's icy geysers, before its fiery “Grand Finale” dive into Saturn." },
-};
-
-const PROBE_COLOR = Color.fromCssColorString('#6FE0FF');           // active
-const PROBE_COLOR_DERELICT = Color.fromCssColorString('#8AA7B2');  // dead but still orbiting
-const PROBE_COLOR_GONE = Color.fromCssColorString('#FF9A5A');      // reentering — fading out
-const PROBE_MODEL = `${import.meta.env.BASE_URL}models/probe.glb`; // generic, shown up close
-// Real published NASA models (github.com/nasa/NASA-3D-Resources, public domain)
-// for the flagship craft whose models are compact enough to read at icon scale;
-// the rest keep the generic.  (Probes like MESSENGER / Magellan / Galileo model
-// a very long magnetometer boom that shrinks the whole body to a speck here, so
-// the tidy generic represents them better.)  `k` normalises each GLB's
-// arbitrary native units so the rendered model is ~7% of its planet's radius.
-const REAL_PROBES = {
-  Juno:    { file: 'juno',    k: 0.0039 },   // Jupiter
-  Cassini: { file: 'cassini', k: 0.0020 },   // Saturn
-  MRO:     { file: 'mro',     k: 0.00080 },  // Mars
-};
-const TRAIL_STEPS = 20;          // segments in a probe's trailing arc
-const TRAIL_ARC = 0.55;          // radians of orbit the trail spans (~32°)
-const PROBE_FADE_YEARS = 1.5;                                      // fade span after a deorbit
-let probeList = [];          // { entity, year }
-let probeYear = null;        // null = show all (timeline off)
-
-function addProbe(planet, probe, idx) {
-  const [name, factor, illPeriod, illInc, illNode, arrival, end, deorbited] = probe;
-  const planetR = bodyRadius(BODIES[planet].radius);   // rendered radius — sizes the model + swap
-  // Real orbit shape + orientation from JPL Horizons where we have it (Juno's
-  // eccentric polar ellipse, MESSENGER's stretched orbit…), else the illustrative
-  // circle.  Periapsis is anchored to factor·planetR and eccentricity capped, so
-  // the orbit clears the planet and its apoapsis stays in frame.
-  const el = PROBE_ELEMENTS[name];
-  const e = el ? Math.min(el.e, PROBE_ECAP) : 0;
-  const orbInc = el ? el.i : illInc;
-  const orbNode = el ? el.node : illNode;
-  const orbPeri = el ? el.peri : 0;
-  const orbPeriod = el ? el.periodDays : illPeriod;
-  const M0 = el ? el.M0 : idx * 120;                   // illustrative de-phasing if no real phase
-  const aRender = (factor * planetR) / (1 - e);        // semi-major giving periapsis = factor·planetR
-  const iR = orbInc * Math.PI / 180, omR = orbNode * Math.PI / 180, siR = Math.sin(iR);
-  const nx = Math.sin(omR) * siR, ny = -Math.cos(omR) * siR, nz = Math.cos(iR);   // orbit-plane normal
-  // Phase isn't anchored to the element epoch (unlike the moons): a probe's exact
-  // spot on its orbit isn't observable at this scale, so M0 just sets a stable
-  // starting point and it flies its real-shaped orbit from there.
-  const meanAnom = (days) => M0 + 360 * days / orbPeriod;
-  const relAt = (M, out) => eclipticFromElements(aRender, e, orbInc, orbNode, orbPeri, M, out);
-
-  const trailPts = Array.from({ length: TRAIL_STEPS + 1 }, () => new Cartesian3());   // cached trail
-  const real = REAL_PROBES[name];                       // a real NASA model, or the generic
-  const modelUri = real ? `${import.meta.env.BASE_URL}models/${real.file}.glb` : PROBE_MODEL;
-  const modelScale = (real ? real.k : 0.009) * planetR;
-  const entity = viewer.entities.add({
-    name,
-    position: new CallbackProperty((time, result) => {
-      result = result || new Cartesian3();
-      scenePosOf(planet, _moonHost);
-      relAt(meanAnom(centuriesSinceJ2000(earthClock.currentTime) * 36525), _probeRel);
-      result.x = _moonHost.x + _probeRel.x;
-      result.y = _moonHost.y + _probeRel.y;
-      result.z = _moonHost.z + _probeRel.z;
-      return result;
-    }, false),
-    // Nadir-lock: the dish (+Y) points to space, the bus faces the planet, and
-    // the wings (±Z) lie along-track — so each probe holds a purposeful attitude
-    // and slowly turns to keep facing its world as it orbits.
-    orientation: new CallbackProperty((time, result) => {
-      relAt(meanAnom(centuriesSinceJ2000(earthClock.currentTime) * 36525), _probeRel);
-      let zx = _probeRel.x, zy = _probeRel.y, zz = _probeRel.z;                      // zenith (away from planet)
-      const zl = Math.hypot(zx, zy, zz) || 1; zx /= zl; zy /= zl; zz /= zl;
-      let Zx = ny * zz - nz * zy, Zy = nz * zx - nx * zz, Zz = nx * zy - ny * zx;    // along-track
-      const Zl = Math.hypot(Zx, Zy, Zz) || 1; Zx /= Zl; Zy /= Zl; Zz /= Zl;
-      const Xx = zy * Zz - zz * Zy, Xy = zz * Zx - zx * Zz, Xz = zx * Zy - zy * Zx;  // completes frame
-      _pom[0] = Xx; _pom[1] = Xy; _pom[2] = Xz;
-      _pom[3] = zx; _pom[4] = zy; _pom[5] = zz;
-      _pom[6] = Zx; _pom[7] = Zy; _pom[8] = Zz;
-      return Quaternion.fromRotationMatrix(_pom, result);
-    }, false),
-    // A dot in the system overview; up close (after you fly to its planet) it
-    // swaps for the little spacecraft model.  Swap range + model size scale
-    // with the rendered planet, so a probe reads the same at Mars or Jupiter.
-    point: {
-      pixelSize: 4, color: PROBE_COLOR,
-      outlineColor: Color.fromCssColorString('#0A2733'), outlineWidth: 1,
-      distanceDisplayCondition: new DistanceDisplayCondition(planetR * 6, Number.MAX_VALUE),
-    },
-    model: {
-      uri: modelUri,
-      minimumPixelSize: 56,
-      scale: modelScale,
-      distanceDisplayCondition: new DistanceDisplayCondition(0, planetR * 6),
-    },
-    // A short comet-tail sampled backward along the orbit, fading at the far end
-    // (taperPower) — shows which way the craft is travelling.  Shown up close
-    // with the model; mutates cached points so it costs no per-frame allocation.
-    polyline: {
-      positions: new CallbackProperty(() => {
-        scenePosOf(planet, _moonHost);
-        const M0t = meanAnom(centuriesSinceJ2000(earthClock.currentTime) * 36525);
-        const arcDeg = TRAIL_ARC * 180 / Math.PI;
-        for (let k = 0; k <= TRAIL_STEPS; k++) {
-          relAt(M0t - arcDeg + (k / TRAIL_STEPS) * arcDeg, _probeRel);
-          const pt = trailPts[k];
-          pt.x = _moonHost.x + _probeRel.x;
-          pt.y = _moonHost.y + _probeRel.y;
-          pt.z = _moonHost.z + _probeRel.z;
-        }
-        return trailPts;
-      }, false),
-      width: 2,
-      material: new PolylineGlowMaterialProperty({ color: PROBE_COLOR.withAlpha(0.55), glowPower: 0.18, taperPower: 0.4 }),
-      distanceDisplayCondition: new DistanceDisplayCondition(0, planetR * 6),
-    },
-    label: {
-      text: name,
-      font: '500 11px Inter, system-ui, sans-serif',
-      fillColor: PROBE_COLOR,
-      style: LabelStyle.FILL,
-      verticalOrigin: VerticalOrigin.BOTTOM,
-      pixelOffset: new Cartesian2(0, -7),
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      translucencyByDistance: new NearFarScalar(6e8, 1.0, 3e9, 0.0),
-    },
-  });
-  // Faint orbit ring (the full real ellipse, relative to the planet — fixed, so
-  // sampled once).  Shown only while this probe is selected, so flying to it
-  // reveals its real shape without tangling the Mars fleet together.
-  const ringRel = [];
-  for (let k = 0; k <= 128; k++) ringRel.push(relAt((k / 128) * 360, new Cartesian3()));
-  const ringPts = ringRel.map(() => new Cartesian3());
-  const ring = viewer.entities.add({
-    show: false,
-    polyline: {
-      positions: new CallbackProperty(() => {
-        scenePosOf(planet, _moonHost);
-        for (let k = 0; k < ringPts.length; k++) {
-          ringPts[k].x = _moonHost.x + ringRel[k].x;
-          ringPts[k].y = _moonHost.y + ringRel[k].y;
-          ringPts[k].z = _moonHost.z + ringRel[k].z;
-        }
-        return ringPts;
-      }, false),
-      width: 1.5,
-      arcType: ArcType.NONE,
-      material: PROBE_COLOR.withAlpha(0.4),
-    },
-  });
-  probeList.push({ entity, ring, arrival, end, deorbited });
-  // ecc shows the REAL eccentricity (Juno 0.977, not the render-capped 0.8) —
-  // the cap is a display device, not data.
-  probeInfo[name] = { planet, entity, ring, periodDays: orbPeriod, inclDeg: orbInc, ecc: el ? el.e : 0,
-    apo: aRender * (1 + e), arrival, end, deorbited };
-}
-
-function buildProbes() {
-  probeList = [];
-  for (const planet of Object.keys(PROBES)) PROBES[planet].forEach((pr, i) => addProbe(planet, pr, i));
-}
-
-// On a scale toggle, the probes' orbit size/model scale/swap distances are baked
-// from the planet's rendered radius (unlike the moons, which re-read it each
-// frame), so rebuild them against the new scale.
-function rebuildProbes() {
-  for (const p of probeList) { viewer.entities.remove(p.entity); viewer.entities.remove(p.ring); }
-  buildProbes();
-  refreshProbes();
-  const sel = selectedProbeName && probeInfo[selectedProbeName];
-  if (sel) sel.ring.show = sel.entity.show;   // re-reveal the selected probe's ring
-}
-
-const nowYear = () => { const d = new Date(); return d.getUTCFullYear() + (d.getUTCMonth() + 0.5) / 12; };
-
-// Appearance of a craft at (possibly fractional) year Y: null = not shown.
-//   before arrival          → hidden
-//   operating               → bright cyan
-//   deorbited (after end)    → orange, fading to nothing over PROBE_FADE_YEARS
-//   derelict (after end)     → dim slate, smaller (dead but still up there)
-function probeAppearance(pr, Y) {
-  if (Y < pr.arrival) return null;
-  if (pr.end == null || Y < pr.end) return { color: PROBE_COLOR, size: 5, alpha: 1 };
-  if (pr.deorbited) {
-    const a = 1 - (Y - pr.end) / PROBE_FADE_YEARS;
-    return a > 0 ? { color: PROBE_COLOR_GONE, size: 5, alpha: a } : null;
-  }
-  return { color: PROBE_COLOR_DERELICT, size: 4, alpha: 0.6 };
-}
-
-// Y defaults to the live timeline year, or today's date when the timeline is off
-// (so the default view shows each craft's real present-day status).
-function refreshProbes(yArg) {
-  const Y = yArg != null ? yArg : (probeYear != null ? probeYear : nowYear());
-  for (const p of probeList) {
-    const ap = probeAppearance(p, Y);
-    if (!ap) { p.entity.show = false; p.ring.show = false; continue; }
-    p.entity.show = true;
-    p.entity.point.color = ap.color.withAlpha(ap.alpha);
-    p.entity.point.pixelSize = ap.size;
-    p.entity.label.fillColor = ap.color.withAlpha(Math.max(0.45, ap.alpha));
-  }
-}
-
-function hideProbeRings() { for (const p of probeList) p.ring.show = false; }
+// Manmade orbiters around the other planets — the whole subsystem lives in
+// sys-probes.js (data in probe-data.js): building, arrival-year appearance, and
+// the spacecraft timeline.  Deps are getters because this view’s viewer and the
+// shared clock are created lazily in initSystemView below; selection + panel
+// logic (selectProbe / fillProbePanel) stays here with the view’s state machine.
+const {
+  probeInfo, buildProbes, rebuildProbes, refreshProbes, hideProbeRings, stopProbePlay,
+} = initProbes({
+  getViewer: () => viewer,
+  daysNow: () => centuriesSinceJ2000(earthClock.currentTime) * 36525,
+  scenePosOf: (name, out) => scenePosOf(name, out),
+  planetRadius: (planet) => bodyRadius(BODIES[planet].radius),
+  getSelectedProbeName: () => selectedProbeName,
+});
 
 function addBody(name) {
   const isSun = name === 'Sun';
@@ -1366,7 +1120,7 @@ function hide(earthViewer, recenter = true) {
   $('system-legend').hidden = true;
   $('probe-timeline').hidden = true;
   $('tl-era').hidden = true;
-  probeStopPlay();
+  stopProbePlay();
   document.body.classList.remove('system-mode');
   $('system-toggle').classList.remove('active');
   if (viewer) viewer.useDefaultRenderLoop = false;
@@ -1378,77 +1132,6 @@ function hide(earthViewer, recenter = true) {
 // The Earth viewer's clock, captured at init so createViewer() can wire the
 // CallbackPropertys against it before the first open.
 let pendingClock = null;
-
-// --------------------------------------------------------- spacecraft timeline ----
-// Gate the manmade orbiters by the year they reached their planet, so you can
-// watch the robotic fleet arrive (2001 →).  Mirrors the Earth launch timeline.
-const PROBE_TL_START = 1970;                    // back to the first planetary orbiter
-const probeMaxYear = () => new Date().getUTCFullYear();
-let probePlaying = false, probeRaf = 0, probeAnchorMs = 0, probeAnchorYear = PROBE_TL_START;
-
-// Milestones flashed (in the shared #tl-era banner) as the spacecraft play-head
-// crosses them.
-const PROBE_ERAS = [
-  [1971, 'Mariner 9 — first orbit of another planet'],
-  [1978, 'Pioneer Venus maps the clouds'],
-  [1990, 'Magellan radar-maps Venus'],
-  [1995, 'Galileo arrives at Jupiter'],
-  [1997, 'Mars Global Surveyor'],
-  [2001, 'Mars Odyssey — still working today'],
-  [2004, 'Cassini reaches Saturn'],
-  [2006, 'Venus Express & MRO arrive'],
-  [2011, 'MESSENGER orbits Mercury'],
-  [2014, 'A fleet reaches Mars — MAVEN, Mangalyaan'],
-  [2016, 'Juno arrives at Jupiter'],
-  [2021, 'Hope & Tianwen-1 at Mars'],
-  [2026, 'BepiColombo reaches Mercury'],
-];
-let sysEraTimer = 0;
-function flashSystemEra(text) {
-  const el = $('tl-era');
-  el.textContent = text; el.hidden = false;
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  clearTimeout(sysEraTimer);
-  sysEraTimer = setTimeout(() => el.classList.remove('show'), 4500);
-}
-
-let prevProbeInt = null;
-function setProbeYear(y) {                        // y may be fractional during play
-  probeYear = y;
-  const iy = Math.floor(y);
-  $('ptl-year').value = String(iy);
-  $('ptl-label').textContent = String(iy);
-  if (iy !== prevProbeInt) {                      // era flash on integer-year crossings
-    let era = null;
-    for (const [yr, text] of PROBE_ERAS) if (yr === iy || (prevProbeInt !== null && yr > prevProbeInt && yr <= iy)) era = text;
-    if (era) flashSystemEra(era);
-    prevProbeInt = iy;
-  }
-  refreshProbes(y);
-}
-function probeStep(now) {
-  if (!probePlaying) return;
-  const max = probeMaxYear();
-  const perYear = (20 * 1000) / Math.max(1, max - PROBE_TL_START);   // ~20 s sweep
-  const y = Math.min(max, probeAnchorYear + (now - probeAnchorMs) / perYear);
-  setProbeYear(y);                                // fractional → smooth deorbit fades
-  if (y >= max) { probeStopPlay(); return; }
-  probeRaf = requestAnimationFrame(probeStep);
-}
-function probeStartPlay() {
-  const max = probeMaxYear();
-  if (probeYear === null || probeYear >= max) setProbeYear(PROBE_TL_START);
-  probePlaying = true;
-  $('ptl-play').textContent = '⏸';
-  probeAnchorYear = probeYear;
-  probeAnchorMs = performance.now();
-  probeRaf = requestAnimationFrame(probeStep);
-}
-function probeStopPlay() {
-  probePlaying = false;
-  $('ptl-play').textContent = '▶';
-  cancelAnimationFrame(probeRaf);
-}
 
 // Populate the asteroid-family legend from the loaded metadata — a colour dot +
 // name per family, inner→outer.  No-op until createFamilies resolves.
@@ -1521,14 +1204,7 @@ export function initSystemView(earthViewer, moonView, onReturn) {
     });
   });
 
-  // Spacecraft timeline — gate the manmade orbiters by arrival year.
-  $('ptl-year').max = String(probeMaxYear());
-  $('ptl-toggle').addEventListener('change', (e) => {
-    if (e.target.checked) { $('ptl-controls').hidden = false; setProbeYear(PROBE_TL_START); }
-    else { probeStopPlay(); $('ptl-controls').hidden = true; $('tl-era').hidden = true; probeYear = null; prevProbeInt = null; refreshProbes(); }
-  });
-  $('ptl-play').addEventListener('click', () => (probePlaying ? probeStopPlay() : probeStartPlay()));
-  $('ptl-year').addEventListener('input', (e) => { probeStopPlay(); setProbeYear(parseInt(e.target.value, 10)); });
+  // The spacecraft arrival timeline (ptl-*) is wired inside sys-probes.js.
 
   // "Enter Earth" → back to the satellite tracker.  "Go to the Moon" → exit to
   // Earth first (its loop must be live), then open the lunar globe.

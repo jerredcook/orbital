@@ -160,6 +160,23 @@ try {
   await p.evaluate(() => window.__orbital.systemView.focus('Pluto')); await sleep(1200);
   await p.evaluate(() => window.__orbital.systemView.focus('Cassini')); await sleep(1200);
   check('systemFocus', await p.evaluate(() => !!window.__orbital.systemView.visible));
+
+  // --- spacecraft arrival timeline (sys-probes.js): toggle, scrub, era flash ---
+  const ptl = await p.evaluate(async () => {
+    const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.getElementById('ptl-toggle').click();      // on → jumps to 1970
+    await nap(250);
+    const at1970 = document.getElementById('ptl-label').textContent;
+    const y = document.getElementById('ptl-year');
+    y.value = '2005'; y.dispatchEvent(new Event('input', { bubbles: true }));
+    await nap(250);
+    const at2005 = document.getElementById('ptl-label').textContent;
+    const era = document.getElementById('tl-era').textContent;   // crossing 1971→2005 flashes a milestone
+    document.getElementById('ptl-toggle').click();      // off
+    return { at1970, at2005, era };
+  });
+  check('probeTimeline', ptl.at1970 === '1970' && ptl.at2005 === '2005' && ptl.era.length > 0);
+  R._ptl = ptl;
   await p.evaluate(() => { if (window.__orbital.systemView.visible) window.__orbital.systemView.hide(); }); await sleep(900);
   check('systemHide', await p.evaluate(() => !window.__orbital.systemView.visible));
   await p.evaluate(() => window.__orbital.moonView.show()); await sleep(1400);

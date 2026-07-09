@@ -7,6 +7,10 @@
 // It owns refreshVisibility() — the single place that applies both the legend
 // category toggles and the timeline year filter to the swarm — because both the
 // legend handler and applyCatalog need it too; they call timeline.refreshVisibility().
+// The play/pause loop and the era banner come from scrubber.js, shared with the
+// system view's spacecraft timeline (sys-probes.js).
+
+import { createEraFlasher, createYearPlayer } from './scrubber.js';
 
 export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTotals, passesGroup = () => true }) {
   const $ = (id) => document.getElementById(id);
@@ -40,15 +44,7 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
     [1998, 'ISS assembly begins'],
     [2019, 'Starlink — the megaconstellation era'],
   ];
-  let eraTimer = 0;
-  function flashEra(text) {
-    const el = $('tl-era');
-    el.textContent = text;
-    el.hidden = false;
-    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');  // restart the fade
-    clearTimeout(eraTimer);
-    eraTimer = setTimeout(() => { el.classList.remove('show'); }, 4500);
-  }
+  const flashEra = createEraFlasher($('tl-era'));
 
   // One pass: per-category counts launched by `year`, the running total for the
   // readout — and, in passing, drive the legend counts live during playback.
@@ -75,35 +71,18 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
     refreshVisibility();
   }
 
-  let tlPlaying = false;
-  let tlRaf = 0;
-  let tlAnchorMs = 0;
-  let tlAnchorYear = TIMELINE_START;
+  // Play/pause via the shared year player.  This scrubber steps integer years:
+  // the wrapper floors the player's fractional year and dedupes repeats (the
+  // per-year work — counts + visibility over the whole catalog — isn't per-frame).
   let tlYearsPerSec = 1;                          // playback speed; the dropdown sets it
-
-  function tlStep(nowMs) {
-    if (!tlPlaying) return;
-    const year = Math.min(timelineMax,
-      Math.floor(tlAnchorYear + (nowMs - tlAnchorMs) / 1000 * tlYearsPerSec));
-    if (year !== timelineYear) setTimelineYear(year);
-    if (year >= timelineMax) { stopTimelinePlay(); return; }
-    tlRaf = requestAnimationFrame(tlStep);
-  }
-
-  function startTimelinePlay() {
-    if (timelineYear >= timelineMax) setTimelineYear(TIMELINE_START);  // replay from the top
-    tlPlaying = true;
-    $('tl-play').textContent = '⏸';
-    tlAnchorYear = timelineYear;
-    tlAnchorMs = performance.now();
-    tlRaf = requestAnimationFrame(tlStep);
-  }
-
-  function stopTimelinePlay() {
-    tlPlaying = false;
-    $('tl-play').textContent = '▶';
-    cancelAnimationFrame(tlRaf);
-  }
+  const player = createYearPlayer({
+    min: TIMELINE_START,
+    max: () => timelineMax,
+    rate: () => tlYearsPerSec / 1000,
+    getYear: () => timelineYear,
+    setYear: (y) => { const iy = Math.floor(y); if (iy !== timelineYear) setTimelineYear(iy); },
+    playBtn: $('tl-play'),
+  });
 
   $('tl-year').max = String(timelineMax);
   $('tl-year').min = String(TIMELINE_START);
@@ -112,7 +91,7 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
       $('timeline-controls').hidden = false;
       setTimelineYear(TIMELINE_START);
     } else {
-      stopTimelinePlay();
+      player.stop();
       $('timeline-controls').hidden = true;
       $('tl-era').hidden = true;
       timelineYear = null;
@@ -121,13 +100,13 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
       refreshVisibility();
     }
   });
-  $('tl-play').addEventListener('click', () => (tlPlaying ? stopTimelinePlay() : startTimelinePlay()));
+  $('tl-play').addEventListener('click', player.toggle);
   $('tl-speed').addEventListener('change', (e) => {
     tlYearsPerSec = parseFloat(e.target.value);
-    if (tlPlaying) { tlAnchorYear = timelineYear; tlAnchorMs = performance.now(); }   // re-anchor at new speed
+    if (player.playing) player.reanchor();   // don't jump the play-head at the new speed
   });
   $('tl-year').addEventListener('input', (e) => {
-    stopTimelinePlay();
+    player.stop();
     setTimelineYear(parseInt(e.target.value, 10));
   });
 
