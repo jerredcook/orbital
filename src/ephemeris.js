@@ -17,7 +17,13 @@
 import { Cartesian3, JulianDate, Math as CMath } from 'cesium';
 
 export const AU_METERS = 1.495978707e11;
-const J2000 = JulianDate.fromIso8601('2000-01-01T12:00:00Z');
+// J2000.0 is a TT instant — 2000-01-01 11:58:55.816 UTC, not noon UTC.  Cesium
+// JulianDates difference in TAI (leap-second aware), so seconds since this epoch
+// are true TT/TDB seconds — the timescale the JPL planet elements and the
+// Horizons element epochs (*_EPOCH_JD, TDB) are defined in.  Differencing
+// against noon UTC injected a systematic ~69 s phase bias (~0.9° of mean
+// anomaly for Phobos, the fastest moon we draw).  (AST-09)
+const J2000 = JulianDate.fromIso8601('2000-01-01T11:58:55.816Z');
 const DEG = CMath.RADIANS_PER_DEGREE;
 
 // JPL Keplerian elements, valid 1800 AD – 2050 AD.  Per planet:

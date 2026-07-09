@@ -30,6 +30,7 @@ export function initConjunctions({
   const tcaCache = new Map();    // "i:j" → { tcaMs, missM } (missM null = no result)
   const tcaPending = new Set();  // keys requested but not yet answered
   let screening = null;          // { targetIndex, found: [{i, tcaMs, missM}], done, active }
+  let lastRowsSig = '';          // signature of the rendered rows, to skip no-op rebuilds
 
   tcaWorker.onerror = tcaWorker.onmessageerror = (err) => {
     console.error('tca worker error', err);
@@ -154,8 +155,13 @@ export function initConjunctions({
     // Don't tear the rows out from under a keyboard user mid-interaction — this
     // list rebuilds every ~600 ms tick and would otherwise drop their focus.
     if (listEl.contains(document.activeElement)) return;
-    listEl.innerHTML = '';
     const nowMs = JulianDate.toDate(viewer.clock.currentTime).getTime();
+    // Skip the DOM churn when nothing the rows show has changed (same pairs,
+    // same rounded distances, same forecast sublines — the common idle tick).
+    const sig = getGen() + '|' + top.map(([i, j, m]) => `${i}:${j}:${(m / 1000).toFixed(1)}:${fmtTca(`${i}:${j}`, nowMs)}`).join('|');
+    if (sig === lastRowsSig) return;
+    lastRowsSig = sig;
+    listEl.innerHTML = '';
     for (const [i, j, meters] of top) {
       const row = document.createElement('button');
       row.type = 'button';

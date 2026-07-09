@@ -971,6 +971,17 @@ setInterval(() => {
     JulianDate.toDate(viewer.clock.currentTime).toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }, 250);
 
+// The sim clock only advances when something ticks it, and Cesium's tick runs
+// inside a view's render loop.  The system view hand-ticks per frame, but the
+// Moon and body-globe views idle Earth's loop without ticking — ten minutes on
+// the Moon used to return you to a "live" tracker silently running ten minutes
+// behind wall time (passes, TCAs and the UTC readout all stale).  This keeper
+// guarantees the clock advances in every mode: Clock.tick() advances by the
+// wall-clock delta since the previous tick, so overlapping tickers (the system
+// view's per-frame tick + this heartbeat) partition time rather than double it.
+// (ARC-03)
+setInterval(() => { if (!viewer.useDefaultRenderLoop) viewer.clock.tick(); }, 250);
+
 // ---------------------------------------------------------------- search ----
 
 const searchBox = $('search');
