@@ -27,11 +27,15 @@ const ELEV_DEFAULT = 25;                  // user-terminal mask (Starlink-style)
 const R_EARTH = 6.371e6;                  // m
 const REFRESH_MS = 3000;
 const D2R = Math.PI / 180, R2D = 180 / Math.PI;
-const CELL_BUDGET = 6e6;                  // splat-cell budget before coarsening to 2°
+// Splat-cell budget before coarsening to 2°.  The estimate below is cap AREA in
+// deg², but painted equirect cells inflate by ~1/cos(lat) toward the poles, so
+// keep a 2× margin on the real few-ms target.
+const CELL_BUDGET = 3e6;
 
 export function initCoverage({ viewer, getCatalog, getLastBuf, isEarthActive, getActiveGroup }) {
   const $ = (id) => document.getElementById(id);
-  const counts = new Uint8Array(360 * 180);            // reused at either cell size
+  // Uint16: ~850 overlapping GEO caps under an operator chip genuinely exceed 255.
+  const counts = new Uint16Array(360 * 180);           // reused at either cell size
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
@@ -79,7 +83,7 @@ export function initCoverage({ viewer, getCatalog, getLastBuf, isEarthActive, ge
       for (let dc = -cells; dc <= cells; dc++) {
         const col = ((lon0 + dc) % W + W) % W;              // dateline wrap
         const k = row * W + col;
-        if (counts[k] < 255) counts[k]++;
+        if (counts[k] < 65535) counts[k]++;
       }
     }
   }
@@ -145,11 +149,13 @@ export function initCoverage({ viewer, getCatalog, getLastBuf, isEarthActive, ge
   }
 
   async function refresh() {
-    if (!enabled || swapping || !isEarthActive()) return;
-    // Follow the focused group: label + mask caption update even between frames.
+    // Follow the focused group in the legend row even while the overlay is OFF —
+    // otherwise tapping a chip leaves a stale "Starlink in view" label until the
+    // next enable.  (groups' onChange calls refresh() unconditionally.)
     const g = getActiveGroup();
     $('cov-label').textContent = g ? g.label : 'Starlink';
     $('cov-mask').textContent = `${g?.elev ?? ELEV_DEFAULT}°`;
+    if (!enabled || swapping || !isEarthActive()) return;
     const res = compute();
     if (!res) return;
     if (!res.n) { dropLayer(); $('cov-count').textContent = '—'; return; }   // group absent from today's catalog
