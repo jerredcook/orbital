@@ -97,7 +97,7 @@ function show(earthViewer) {
   writeHash({ luna: true });
 }
 
-function hide(earthViewer) {
+function hide(earthViewer, onHide) {
   visible = false;
   $('moonContainer').hidden = true;
   $('moon-exit').hidden = true;
@@ -106,18 +106,21 @@ function hide(earthViewer) {
 
   if (moonViewer) moonViewer.useDefaultRenderLoop = false;
   earthViewer.useDefaultRenderLoop = true;
-  writeHash(null);
+  // The Earth satellite selection survives the round trip, so let main decide the
+  // hash (restore #sat=… if one is selected) instead of blindly clearing it.
+  if (onHide) onHide(); else writeHash(null);
 }
 
-// Wire the topbar toggle, the in-view exit button, and Esc-to-leave.
-export function initMoonView(earthViewer) {
+// Wire the topbar toggle, the in-view exit button, and Esc-to-leave.  onHide lets
+// main restore the shareable hash on exit.
+export function initMoonView(earthViewer, onHide) {
   $('moon-toggle').addEventListener('click', () => {
-    if (visible) hide(earthViewer);
+    if (visible) hide(earthViewer, onHide);
     else show(earthViewer);
   });
-  $('moon-exit').addEventListener('click', () => hide(earthViewer));
+  $('moon-exit').addEventListener('click', () => hide(earthViewer, onHide));
   // Esc is handled by main.js's single dispatcher (see moonView.visible / hide).
 
   // Expose for debugging, mirroring window.__orbital.viewer.
-  return { show: () => show(earthViewer), hide: () => hide(earthViewer), get visible() { return visible; }, get viewer() { return moonViewer; } };
+  return { show: () => show(earthViewer), hide: () => hide(earthViewer, onHide), get visible() { return visible; }, get viewer() { return moonViewer; } };
 }

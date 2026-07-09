@@ -104,7 +104,7 @@ export function initStation({
     for (let i = 0, n = catalog.length; i < n; i++) {
       if (!catVisible[catOf(catalog[i])]) continue;
       const px = lastBuf[i * 3], py = lastBuf[i * 3 + 1], pz = lastBuf[i * 3 + 2];
-      if (px === 0 && py === 0 && pz === 0) continue;
+      if (Number.isNaN(px)) continue;   // failed SGP4 → NaN triple (the worker's dead-object sentinel)
       const dx = px - o.ox, dy = py - o.oy, dz = pz - o.oz;
       const u = dx * o.ux + dy * o.uy + dz * o.uz;
       if (u <= 0) continue;                              // below horizon — cheap reject
@@ -465,7 +465,10 @@ export function initStation({
   // A full catalog hot-swap renumbers every index, so any pass results point at
   // the wrong satellites — drop them and re-scan if the station is live.
   function onCatalogSwap() {
-    if (!passing) return;
+    // A station placed before the catalog loaded left passing=null with the
+    // status stuck at "waiting for the catalog…"; when it arrives, kick off the
+    // first scan even though nothing was in flight.
+    if (!passing) { if ($('toggle-station').checked && station) startPasses(); return; }
     cancelPasses();
     $('pass-list').innerHTML = '';
     $('pass-count').textContent = '—';

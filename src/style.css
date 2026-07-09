@@ -606,6 +606,7 @@ body:not(.system-mode) #system-legend { display: none; }
 /* ---------- toasts ---------- */
 #toasts {
   position: absolute; left: 50%; transform: translateX(-50%); bottom: 64px;
+  width: min(580px, calc(100vw - 24px));   /* a real width, so a toast isn't squeezed to <=50vw on phones */
   z-index: 20; display: flex; flex-direction: column; gap: 8px; align-items: center;
   pointer-events: none;
 }

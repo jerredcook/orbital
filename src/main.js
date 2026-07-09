@@ -55,7 +55,7 @@ viewer.clock.multiplier = 1;
 
 // The "◐ Moon" toggle flies to a separate lunar globe (LRO imagery on the
 // Moon ellipsoid) you can zoom into; see src/moon.js.
-const moonView = initMoonView(viewer);
+const moonView = initMoonView(viewer, () => writeHash(selected ? { sat: catalog[selected.index].norad } : null));
 
 // The "☉ System" toggle flies out to a heliocentric solar-system view (globe
 // off, planets on real Keplerian orbits); see src/solarsystem.js.  It can hand
@@ -214,9 +214,10 @@ function applyCatalog(list) {
   viewer.scene.primitives.add(swarm);
   catTotals = { ...counts };
   catalogEpochMs = medianEpochMs(catalog);   // freshness reference for the drift badge
-  for (const c of Object.keys(counts)) {
-    $(`count-${c}`).textContent = counts[c].toLocaleString();
-  }
+  // While the launch timeline is active it owns the legend numbers (year-filtered
+  // counts); don't stomp them with full-catalog totals on an auto-refresh hot-swap.
+  if (timeline.isActive()) timeline.refreshReadout();
+  else for (const c of Object.keys(counts)) $(`count-${c}`).textContent = counts[c].toLocaleString();
 
   worker.postMessage({
     type: 'init',
@@ -351,7 +352,7 @@ async function refreshCatalog() {
       }
       catalogGen++;   // drop any in-flight results propagated from the old elements
       catalogEpochMs = medianEpochMs(catalog);
-      conj.onCatalogSwap();
+      conj.onElementsRefresh();   // clears TCA cache and resets any running screen (indices still valid)
       worker.postMessage({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
       groundStation.onElementsRefresh();
       // The swarm/passes/TCA now use the fresh elements, but the selected
@@ -527,6 +528,9 @@ function renderOrbitTrack() {
 // Per-frame smooth motion + live readout for the selected satellite only.
 viewer.clock.onTick.addEventListener((clock) => {
   if (!selected) return;
+  // The System view hand-ticks this same clock while Earth's loop idles; the
+  // Earth selection is invisible then, so don't burn a per-frame propagation on it.
+  if (document.body.classList.contains('system-mode')) return;
   const date = JulianDate.toDate(clock.currentTime);
   const pv = satellite.propagate(selected.satrec, date);
   if (!pv?.position) return;
@@ -801,7 +805,7 @@ async function copyShareLink() {
     await navigator.clipboard.writeText(location.href);
     toast('Link copied — paste it to share this view', 3000);
   } catch {
-    toast(`Share this link:<br><span class="toast-url">${location.href}</span>`, 8000);
+    toast(`Share this link:<br><span class="toast-url">${esc(location.href)}</span>`, 8000);
   }
 }
 document.querySelectorAll('.copy-link').forEach((b) => b.addEventListener('click', copyShareLink));

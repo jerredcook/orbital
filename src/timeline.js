@@ -131,5 +131,9 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
     setTimelineYear(parseInt(e.target.value, 10));
   });
 
-  return { refreshVisibility };
+  return {
+    refreshVisibility,
+    isActive: () => timelineYear !== null,
+    refreshReadout: () => { if (timelineYear !== null) updateTimelineReadout(timelineYear); },
+  };
 }

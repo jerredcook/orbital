@@ -83,7 +83,13 @@ export function initConjunctions({
         l1b: catalog[j].l1, l2b: catalog[j].l2,
       });
     }
-    if (tcaCache.size > 500) tcaCache.clear();
+    if (tcaCache.size > 500) {   // evict oldest (Map insertion order), keeping the pairs on screen
+      const keep = new Set(pairs.map(([i, j]) => `${i}:${j}`));
+      for (const k of tcaCache.keys()) {
+        if (tcaCache.size <= 250) break;
+        if (!keep.has(k)) tcaCache.delete(k);
+      }
+    }
     if (batch.length) {
       tcaWorker.postMessage({
         type: 'tca',
@@ -266,6 +272,10 @@ export function initConjunctions({
 
   // Drop cached forecasts/pending when the catalog is hot-swapped (indices moved).
   function onCatalogSwap() { tcaCache.clear(); tcaPending.clear(); }
+  // An in-place element refresh keeps indices valid, but a running screen was
+  // computed on the old elements — reset it (its progress would otherwise stick
+  // at "Screening… NN%" forever, since onCatalogSwap only clears the TCA cache).
+  function onElementsRefresh() { tcaCache.clear(); tcaPending.clear(); if (screening) { cancelScreening(); resetScreenUi(); } }
 
-  return { render, onCatalogSwap, cancelScreening, resetScreenUi };
+  return { render, onCatalogSwap, onElementsRefresh, cancelScreening, resetScreenUi };
 }
