@@ -839,6 +839,7 @@ const groups = initGroups({
   getCatalog: () => catalog,
   onChange: () => {
     timeline.refreshVisibility();
+    coverage.refresh();   // the "in view" overlay follows the focused group
     const m = document.body.classList;
     if (!selected && !m.contains('system-mode') && !m.contains('moon-mode')) {
       writeHash(groups.activeId() ? { group: groups.activeId() } : null);
@@ -860,14 +861,15 @@ const timeline = initTimeline({
 });
 
 // ------------------------------------------------------- coverage overlay ----
-// "Starlink in view" heat overlay: for every point on Earth, how many Starlink
-// satellites are above 25° elevation right now — line-of-sight density computed
-// from the live propagator buffer, NOT service quality (gateways, licensing and
-// capacity aren't modelled).
+// "<group> in view" heat overlay: for every point on Earth, how many satellites
+// of the focused group (default Starlink) are above the group's elevation mask
+// right now — line-of-sight density computed from the live propagator buffer,
+// NOT service quality (gateways, licensing and capacity aren't modelled).
 const coverage = initCoverage({
   viewer,
   getCatalog: () => catalog,
   getLastBuf: () => lastBuf,
+  getActiveGroup: () => groups.activeGroup(),
   isEarthActive: () => !document.hidden
     && !document.body.classList.contains('system-mode')
     && !document.body.classList.contains('moon-mode'),

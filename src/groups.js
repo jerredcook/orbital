@@ -4,16 +4,19 @@
 // launch timeline, so a group composes with them (Starlink + LEO-only, etc.).
 
 // Constellations by name prefix/token.  Names are upper-cased catalog names.
+// `elev` is the elevation mask the coverage overlay uses for "in view": the
+// navigation constellations are usable down to a ~10° receiver mask, while the
+// comms constellations serve user terminals above ~25°.
 const CONSTELLATIONS = [
   { id: 'starlink', label: 'Starlink', test: (n) => n.startsWith('STARLINK') },
   { id: 'oneweb', label: 'OneWeb', test: (n) => n.startsWith('ONEWEB') },
   { id: 'iridium', label: 'Iridium', test: (n) => n.startsWith('IRIDIUM') },
   { id: 'planet', label: 'Planet', test: (n) => n.startsWith('FLOCK') || n.startsWith('SKYSAT') },
   { id: 'spire', label: 'Spire', test: (n) => n.startsWith('LEMUR') },
-  { id: 'gps', label: 'GPS', test: (n) => /\bNAVSTAR\b/.test(n) || /^GPS\b/.test(n) },
-  { id: 'galileo', label: 'Galileo', test: (n) => /\bGALILEO\b/.test(n) },
-  { id: 'glonass', label: 'GLONASS', test: (n) => /\bGLONASS\b/.test(n) },
-  { id: 'beidou', label: 'BeiDou', test: (n) => /\bBEIDOU\b/.test(n) },
+  { id: 'gps', label: 'GPS', elev: 10, test: (n) => /\bNAVSTAR\b/.test(n) || /^GPS\b/.test(n) },
+  { id: 'galileo', label: 'Galileo', elev: 10, test: (n) => /\bGALILEO\b/.test(n) },
+  { id: 'glonass', label: 'GLONASS', elev: 10, test: (n) => /\bGLONASS\b/.test(n) },
+  { id: 'beidou', label: 'BeiDou', elev: 10, test: (n) => /\bBEIDOU\b/.test(n) },
 ];
 
 // Operators / nations by SATCAT owner code (sat.meta.owner).  A few are unions
@@ -92,5 +95,10 @@ export function initGroups({ getCatalog, onChange }) {
   }
 
   build();
-  return { passes, setActive, recount, activeId: () => active, has: (id) => !!byId[id] };
+  return {
+    passes, setActive, recount,
+    activeId: () => active,
+    activeGroup: () => (active ? byId[active] : null),   // { id, label, match, elev? } for the coverage overlay
+    has: (id) => !!byId[id],
+  };
 }

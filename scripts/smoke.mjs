@@ -197,19 +197,26 @@ try {
     && grp.keepStarlink && !grp.dropOther && grp.clearedActive === null);
   R._group = grp;
 
-  // --- coverage overlay: toggle adds an imagery layer + a peak readout, off removes it ---
+  // --- coverage overlay: toggle adds an imagery layer + a peak readout, off removes
+  // it, and the overlay follows the focused group (GPS → 10° receiver mask) ---
   const cov = await p.evaluate(async () => {
     const nap = (ms) => new Promise((r) => setTimeout(r, ms));
     const O = window.__orbital;
     const before = O.viewer.imageryLayers.length;
     document.getElementById('toggle-coverage').click();
     await nap(4500);
-    const on = { layers: O.viewer.imageryLayers.length, enabled: O.coverage.enabled, count: document.getElementById('cov-count').textContent };
+    const on = { layers: O.viewer.imageryLayers.length, enabled: O.coverage.enabled, count: document.getElementById('cov-count').textContent, label: document.getElementById('cov-label').textContent };
+    document.querySelector('.group-chip[data-id=gps]')?.click();   // overlay follows the focused group
+    await nap(4500);
+    const gps = { label: document.getElementById('cov-label').textContent, mask: document.getElementById('cov-mask').textContent, count: document.getElementById('cov-count').textContent };
+    document.querySelector('.group-chip[data-id=gps]')?.click();   // clear focus
     document.getElementById('toggle-coverage').click();
     await nap(400);
-    return { before, on, offLayers: O.viewer.imageryLayers.length };
+    return { before, on, gps, offLayers: O.viewer.imageryLayers.length };
   });
-  check('coverageOverlay', cov.on.enabled && cov.on.layers > cov.before && /\d/.test(cov.on.count) && cov.offLayers === cov.before);
+  check('coverageOverlay', cov.on.enabled && cov.on.layers > cov.before && /\d/.test(cov.on.count)
+    && cov.on.label === 'Starlink' && cov.offLayers === cov.before);
+  check('coverageFollowsGroup', cov.gps.label === 'GPS' && cov.gps.mask === '10°' && /\d/.test(cov.gps.count));
   R._cov = cov;
 
   // --- a11y landmarks + combobox ---
