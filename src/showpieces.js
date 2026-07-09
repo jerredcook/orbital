@@ -27,10 +27,10 @@ const SHOWPIECES = [
     blurb: '🌍 <b>DSCOVR</b> — at L1, ~1.5 million km sunward; its EPIC camera takes the famous full-disc portraits of the sunlit Earth.' },
   { id: 'voyager1', name: 'Voyager 1 · interstellar', file: 'voyager', loc: 'deep', dir: [0.30, 0.42, 0.86],
     kw: 'VOYAGER 1 VOYAGER ONE',
-    blurb: '🛰 <b>Voyager 1</b> — the most distant human-made object, ~24 billion km out in interstellar space, still calling home since 1977. <i>(Far too distant to show to scale.)</i>' },
+    blurb: '🛰 <b>Voyager 1</b> — the most distant human-made object, more than 25 billion km out and receding, still calling home since 1977. <i>(Far too distant to show to scale.)</i>' },
   { id: 'voyager2', name: 'Voyager 2 · interstellar', file: 'voyager', loc: 'deep', dir: [-0.46, -0.78, -0.43],
     kw: 'VOYAGER 2 VOYAGER TWO',
-    blurb: '🛰 <b>Voyager 2</b> — ~20 billion km out, the only craft to visit all four giant planets, now in interstellar space. <i>(Far too distant to show to scale.)</i>' },
+    blurb: '🛰 <b>Voyager 2</b> — more than 21 billion km out and receding, the only craft to visit all four giant planets, now in interstellar space. <i>(Far too distant to show to scale.)</i>' },
   { id: 'pioneer10', name: 'Pioneer 10 · deep space', file: 'pioneer', loc: 'deep', dir: [0.72, -0.12, 0.68],
     kw: 'PIONEER 10 PIONEER TEN',
     blurb: '🛰 <b>Pioneer 10</b> — first craft through the asteroid belt and past Jupiter, now silent and coasting ~20 billion km out. <i>(Far too distant to show to scale.)</i>' },
@@ -94,7 +94,7 @@ export function initShowpieces({ viewer, clearSelection, toast, holdAutoFollow }
   const showpieceById = Object.fromEntries(SHOWPIECES.map((sp) => [sp.id, sp]));
 
   function inspect(id) {
-    const sp = showpieceById[id];
+    const sp = Object.hasOwn(showpieceById, id) ? showpieceById[id] : null;   // own-prop only, so #constructor etc. can't reach Object.prototype
     if (!sp) return;
     clearSelection();
     // Lazy-load the 3D model on first inspect (see the entity-creation note).

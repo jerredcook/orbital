@@ -162,6 +162,9 @@ function poleQuat(name) {
 function quatOf(name, out) {
   const periodSec = BODIES[name].day * 3600;     // signed: retrograde spins negate
   const sec = centuriesSinceJ2000(earthClock.currentTime) * 36525 * 86400;
+  // Real pole + spin RATE, but no IAU prime-meridian phase (W0) — so a body's
+  // absolute facing longitude is illustrative (its day length and axis are true;
+  // which side faces us at a given instant is not).
   const spin = (sec / periodSec) * 2 * Math.PI;
   Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, spin, _qSpin);
   return Quaternion.multiply(poleQuat(name), _qSpin, out);
@@ -497,7 +500,7 @@ const PROBE_FACTS = {
   Akatsuki: { op: 'JAXA', fact: "Japan's Venus climate orbiter, which limped into orbit in 2015 on a second attempt after its engine failed in 2010." },
   'Mariner 9': { op: 'NASA', fact: 'The first spacecraft to orbit another planet (1971); it waited out a global dust storm, then revealed Valles Marineris and the giant Tharsis volcanoes.' },
   'Viking 1 Orbiter': { op: 'NASA', fact: 'Relayed for the Viking 1 lander and imaged Mars from orbit (1976–80), scouting the surface and its moons.' },
-  'Viking 2 Orbiter': { op: 'NASA', fact: 'Companion to the Viking 2 lander (1976–79), photographing Mars and Deimos from orbit.' },
+  'Viking 2 Orbiter': { op: 'NASA', fact: 'Companion to the Viking 2 lander (1976–78), photographing Mars and Deimos from orbit.' },
   'Mars Global Surveyor': { op: 'NASA', fact: 'Mapped Mars for a decade (1997–2006): laser-altimeter topography, gullies hinting at water, and stripes of ancient crustal magnetism.' },
   'Mars Odyssey': { op: 'NASA', fact: 'The longest-working spacecraft at Mars (since 2001); it found vast subsurface water ice and still relays data from the rovers.' },
   'Mars Express': { op: 'ESA', fact: "Europe's first Mars orbiter (since 2003); its radar detected subsurface ice and a possible lake near the south pole." },

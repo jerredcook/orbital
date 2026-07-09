@@ -71,7 +71,7 @@
         <p>The opening view is every <b>active</b> satellite in the public catalog plus the three biggest debris clouds — about 18,000 objects — each flown live from real tracking data, moving in real time.</p>
         <ul>
           <li><b>Tap any dot</b> to lock on and follow it. The panel shows its name, catalog number, altitude, speed and orbit; the big, well-known craft (ISS, Hubble, Tiangong…) load a real 3D model as you zoom in.</li>
-          <li><b>Colour is the orbit type</b> — low-Earth, medium, geostationary, highly-elliptical, debris. The legend (top-right) explains it and lets you switch types off to declutter.</li>
+          <li><b>Colour is the orbit type</b> — low-Earth, medium, geostationary, highly-elliptical, debris. The legend (top-left — behind ☰ on a phone) explains it and lets you switch types off to declutter.</li>
           <li><b>Search</b> up top by name or catalog number to jump straight to a craft.</li>
         </ul>
       </section>
@@ -119,7 +119,7 @@
         <h3>🔭 The showpieces</h3>
         <p>Some famous craft never appear in the tracker because they don't orbit Earth — they sit at gravitational balance points or sail through deep space. They're all here, findable by search or a tap:</p>
         <ul>
-          <li><b>At the Lagrange points</b>: the James Webb and WMAP out at L2; SOHO, DSCOVR and ACE at L1.</li>
+          <li><b>At the Lagrange points</b>: the James Webb out at L2 (and WMAP, retired from there to a Sun-circling orbit in 2010); SOHO, DSCOVR and ACE at L1.</li>
           <li><b>Out in deep space</b>: Voyager 1 &amp; 2, Pioneer 10, New Horizons and more — billions of km out, far too far to draw to scale, so each is shown in its true direction with its real distance noted on the card.</li>
         </ul>
       </section>
@@ -156,7 +156,7 @@
       <input id="ptl-year" type="range" min="1970" max="2026" step="1" value="2026" aria-label="Spacecraft timeline year" />
     </div>
   </div>
-  <div id="system-attr">Planet maps © Solar System Scope (CC BY 4.0) · moon, Pluto &amp; Ceres maps S. Albers / B. Jónsson (NASA/JPL/USGS data) · planet positions: JPL Keplerian elements · moon, probe, dwarf-planet, comet &amp; interstellar orbits: JPL Horizons · star sky: NASA SVS / ESA Gaia</div>
+  <div id="system-attr">Planet &amp; Moon maps © Solar System Scope (CC BY 4.0) · other moon, Pluto &amp; Ceres maps S. Albers / B. Jónsson (NASA/JPL/USGS data) · planet positions: JPL Keplerian elements · moon, probe, dwarf-planet, comet &amp; interstellar orbits: JPL Horizons · star sky: NASA SVS / ESA Gaia</div>
 
   <aside id="system-legend" hidden aria-label="What's in orbit">
     <div class="sl-title">In orbit · fly to a planet</div>
@@ -314,7 +314,7 @@
     <div id="screen-results"></div>
   </aside>
 
-  <div id="tl-era" hidden></div>
+  <div id="tl-era" role="status" hidden></div>
 
   <div id="toasts" aria-live="polite"></div>
 

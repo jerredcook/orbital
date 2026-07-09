@@ -13,7 +13,7 @@ npm run dev
 
 Open the printed localhost URL.  First load fetches two datasets from
 CelesTrak (the active-satellite element sets and the SATCAT metadata
-catalog, ~4 MB total) and caches them in localStorage for two hours.
+catalog, ~4 MB total) and caches them in the Cache Storage API (2 h TTL).
 
 No API keys or accounts are required.  The globe streams Esri World
 Imagery — high-resolution satellite photography, street-level in
@@ -351,7 +351,7 @@ Design notes for the 3D close-up view:
   ellipse, etc.), eccentricity capped and periapsis anchored so it frames sensibly
   — re-sized to the planet on a **True scale** toggle; selecting a probe draws its
   real orbit ring.  Craft Horizons doesn't track keep a generic illustrative orbit.
-- **Showpieces** (`SHOWPIECES` in `main.js`) — craft that never enter Earth's
+- **Showpieces** (`SHOWPIECES` in `src/showpieces.js`) — craft that never enter Earth's
   catalog because they don't orbit Earth.  Lagrange-point observatories (JWST,
   WMAP at L2; SOHO, DSCOVR, ACE at L1), deep-space probes (Voyager 1 & 2,
   Pioneer 10, New Horizons) and other heliocentric/solar craft (Parker Solar
