@@ -31,16 +31,7 @@
 // TCA batches interleave cleanly.
 
 import * as satellite from 'satellite.js';
-
-// satellite.sgp4 wants minutes-since-TLE-epoch; doing the conversion here
-// skips the per-call Date/jday machinery of satellite.propagate — it's the
-// difference between a screen taking seconds and taking a minute.
-function eciAt(rec, tMs) {
-  const jd = rec.jdsatepoch + (rec.jdsatepochF ?? 0);
-  const tsince = (tMs / 86400000 + 2440587.5 - jd) * 1440;
-  const p = satellite.sgp4(rec, tsince)?.position;
-  return (p && !Number.isNaN(p.x)) ? p : null;
-}
+import { eciKm as eciAt } from './astro.js';   // shared fast SGP4 sampler (minutes-since-epoch trick)
 
 function pairDistM(recA, recB, tMs) {
   const a = eciAt(recA, tMs), b = eciAt(recB, tMs);

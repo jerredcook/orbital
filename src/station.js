@@ -11,7 +11,7 @@
 
 import { Cartesian3, Cartesian2, Color, Cartographic, JulianDate } from 'cesium';
 import * as satellite from 'satellite.js';
-import { DEG2RAD, RE_KM, SUN_DARK, NAKED_EYE, sunEcefDir, compass, isSunlit } from './astro.js';
+import { DEG2RAD, RE_KM, SUN_DARK, NAKED_EYE, sunEcefDir, compass, isSunlit, stationFrameKm, lookElAz } from './astro.js';
 import { tleMeanMotion, tleInclination } from './data.js';
 import { CAT_CSS } from './palette.js';
 import { esc } from './esc.js';
@@ -35,7 +35,7 @@ export function initStation({
   let passing = null;        // { passes: [...], active, scanId }
   let passScanId = 0;        // bumped each scan so a restart's stale in-flight batch is dropped
   let lastPassRenderMs = 0;  // throttle the streaming re-render (sort cost grows)
-  const sky = { canvas: null, ctx: null, obs: null, plotted: [] };
+  const sky = { canvas: null, ctx: null, obs: null, frame: null, plotted: [] };
   const alertedPasses = new Set();
 
   const passesWorker = new Worker(new URL('./passes.worker.js', import.meta.url), { type: 'module' });
@@ -63,15 +63,17 @@ export function initStation({
   // Precompute the observer's ECF position and east/north/up basis (geodetic) so
   // each tick is just a dot product per satellite.
   function prepStation() {
-    if (!station) { sky.obs = null; return; }
-    const latR = station.lat * DEG2RAD, lonR = station.lon * DEG2RAD;
-    const o = Cartesian3.fromDegrees(station.lon, station.lat, 0);
-    const sLa = Math.sin(latR), cLa = Math.cos(latR), sLo = Math.sin(lonR), cLo = Math.cos(lonR);
+    if (!station) { sky.obs = null; sky.frame = null; return; }
+    // One canonical WGS84 frame (astro.stationFrameKm — the same one the pass
+    // worker uses), kept both as the array frame for lookElAz (metres) and as
+    // flat scalars so the per-satellite hot loop below stays dot-products only.
+    const f = stationFrameKm(station.lat * DEG2RAD, station.lon * DEG2RAD, 0);
+    sky.frame = { pos: f.pos.map((k) => k * 1000), east: f.east, north: f.north, up: f.up };
     sky.obs = {
-      ox: o.x, oy: o.y, oz: o.z,
-      ex: -sLo, ey: cLo, ez: 0,                        // east
-      nx: -sLa * cLo, ny: -sLa * sLo, nz: cLa,         // north
-      ux: cLa * cLo, uy: cLa * sLo, uz: sLa,           // up (zenith)
+      ox: sky.frame.pos[0], oy: sky.frame.pos[1], oz: sky.frame.pos[2],
+      ex: f.east[0], ey: f.east[1], ez: f.east[2],
+      nx: f.north[0], ny: f.north[1], nz: f.north[2],
+      ux: f.up[0], uy: f.up[1], uz: f.up[2],
     };
   }
 
@@ -166,7 +168,9 @@ export function initStation({
 
   // ---- visible-pass alerts ----
   // Step a satellite forward from `from` and return its next visible pass
-  // { rise, riseAz, peakEl } within the hour, or null.
+  // { rise, riseAz, peakEl } within the hour, or null.  Uses the canonical
+  // look-angle + shadow helpers (astro.js) — this path runs a couple of
+  // satellites a minute, not the per-tick hot loop.
   function nextVisiblePass(satrec, from) {
     const o = sky.obs;
     let rise = null, riseAz = 0, peakEl = 0;
@@ -174,24 +178,18 @@ export function initStation({
       const t = new Date(from.getTime() + m * 60_000);
       const pv = satellite.propagate(satrec, t);
       if (!pv?.position) continue;
-      const gmst = satellite.gstime(t);
-      const ecf = satellite.eciToEcf(pv.position, gmst);
+      const ecf = satellite.eciToEcf(pv.position, satellite.gstime(t));
       const px = ecf.x * 1000, py = ecf.y * 1000, pz = ecf.z * 1000;
-      const dx = px - o.ox, dy = py - o.oy, dz = pz - o.oz;
-      const u = dx * o.ux + dy * o.uy + dz * o.uz;
-      let visible = false, elDeg = 0, az = 0;
-      if (u > 0) {
-        const e = dx * o.ex + dy * o.ey + dz * o.ez, nn = dx * o.nx + dy * o.ny + dz * o.nz;
-        elDeg = Math.atan2(u, Math.hypot(e, nn)) * 180 / Math.PI;
-        az = Math.atan2(e, nn) * 180 / Math.PI;
+      const l = lookElAz(px, py, pz, sky.frame);
+      let visible = false;
+      if (l && l.el > 0) {
         const sun = sunEcefDir(t);
         const dark = (sun.x * o.ux + sun.y * o.uy + sun.z * o.uz) < SUN_DARK;
-        const sunlit = isSunlit(px, py, pz, sun);
-        visible = elDeg >= 10 && sunlit && dark;
+        visible = l.el >= 10 && dark && isSunlit(px, py, pz, sun);
       }
       if (visible) {
-        if (!rise) { rise = t; riseAz = az; }
-        if (elDeg > peakEl) peakEl = elDeg;
+        if (!rise) { rise = t; riseAz = l.az; }
+        if (l.el > peakEl) peakEl = l.el;
       } else if (rise) break;                          // visible window ended
     }
     return rise ? { rise, riseAz, peakEl } : null;

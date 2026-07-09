@@ -24,45 +24,13 @@
 // the screen fast.
 
 import * as satellite from 'satellite.js';
+import { SUN_DARK, EARTH_R_KM, sunEciUnit, isSunlitR, eciKm, stationFrameKm, lookElAz } from './astro.js';
+import { findWindows } from './passfind.js';
 
-const RAD = Math.PI / 180, DEG = 180 / Math.PI;
-const RE_KM = 6378.137, E2 = 0.00669437999014;     // WGS84
+const DEG = 180 / Math.PI;
 const OMEGA_E = 7.2921159e-5;                       // Earth rotation rate, rad/s
-const SUN_DARK = Math.sin(-6 * RAD);                // civil twilight: sky dark enough to spot satellites
-const SHADOW_R_KM = 6371;                           // mean radius for the cylindrical shadow test
-
-// Low-precision solar direction in ECI (unit vector) — same series main.js uses.
-function sunEci(tMs) {
-  const n = (tMs - Date.UTC(2000, 0, 1, 12)) / 86400000;
-  const g = (357.529 + 0.98560028 * n) * RAD;
-  const L = (280.459 + 0.98564736 * n) * RAD;
-  const lam = L + (1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * RAD;
-  const eps = 23.439 * RAD;
-  return [Math.cos(lam), Math.cos(eps) * Math.sin(lam), Math.sin(eps) * Math.sin(lam)];
-}
 
 let activeRun = null;
-
-// Station ECF position (km) and local ENU basis, from geodetic lat/lon/alt.
-function stationFrame(latRad, lonRad, altM) {
-  const h = altM / 1000;
-  const sLat = Math.sin(latRad), cLat = Math.cos(latRad);
-  const sLon = Math.sin(lonRad), cLon = Math.cos(lonRad);
-  const N = RE_KM / Math.sqrt(1 - E2 * sLat * sLat);
-  return {
-    pos: [(N + h) * cLat * cLon, (N + h) * cLat * sLon, (N * (1 - E2) + h) * sLat],
-    up: [cLat * cLon, cLat * sLon, sLat],
-    east: [-sLon, cLon, 0],
-    north: [-sLat * cLon, -sLat * sLon, cLat],
-  };
-}
-
-function eciKm(rec, tMs) {
-  const jd = rec.jdsatepoch + (rec.jdsatepochF ?? 0);
-  const tsince = (tMs / 86400000 + 2440587.5 - jd) * 1440;
-  const p = satellite.sgp4(rec, tsince)?.position;
-  return (p && !Number.isNaN(p.x)) ? p : null;
-}
 
 // Look-angle of `rec` from the station at absolute time tMs, given gmst there.
 // Returns { el, az } in degrees, or null if propagation failed.
@@ -70,19 +38,8 @@ function look(rec, tMs, gmst, st) {
   const eci = eciKm(rec, tMs);
   if (!eci) return null;
   const cg = Math.cos(gmst), sg = Math.sin(gmst);
-  const x = eci.x * cg + eci.y * sg;       // ECI → ECF (rotate by −gmst about Z)
-  const y = -eci.x * sg + eci.y * cg;
-  const z = eci.z;
-  const dx = x - st.pos[0], dy = y - st.pos[1], dz = z - st.pos[2];
-  const rng = Math.hypot(dx, dy, dz);
-  if (rng === 0) return null;
-  const u = (dx * st.up[0] + dy * st.up[1] + dz * st.up[2]) / rng;
-  const el = Math.asin(Math.max(-1, Math.min(1, u))) * DEG;
-  const e = dx * st.east[0] + dy * st.east[1] + dz * st.east[2];
-  const n = dx * st.north[0] + dy * st.north[1] + dz * st.north[2];
-  let az = Math.atan2(e, n) * DEG;
-  if (az < 0) az += 360;
-  return { el, az };
+  // ECI → ECF (rotate by −gmst about Z), then the shared look-angle math.
+  return lookElAz(eci.x * cg + eci.y * sg, -eci.x * sg + eci.y * cg, eci.z, st);
 }
 
 function startPasses(msg) {
@@ -93,7 +50,7 @@ function startPasses(msg) {
   const horizonMs = msg.horizonHours * 3.6e6;
   const minEl = msg.minElevDeg;
   const STEP = 60_000;
-  const st = stationFrame(msg.station.latRad, msg.station.lonRad, msg.station.altM);
+  const st = stationFrameKm(msg.station.latRad, msg.station.lonRad, msg.station.altM);
   const gmst0 = satellite.gstime(new Date(startMs));
   const gmstAt = (tMs) => gmst0 + OMEGA_E * (tMs - startMs) / 1000;
 
@@ -103,7 +60,8 @@ function startPasses(msg) {
 
   const elAt = (rec, tMs) => { const l = look(rec, tMs, gmstAt(tMs), st); return l ? l.el : NaN; };
 
-  // Elevation at grid index k using the precomputed rotation (hot path).
+  // Elevation at grid index k using the precomputed rotation (HOT path: 1,440
+  // steps × thousands of candidates — keeps astro.lookElAz's math inlined).
   function elK(rec, k) {
     const eci = eciKm(rec, startMs + k * STEP);
     if (!eci) return NaN;
@@ -114,85 +72,27 @@ function startPasses(msg) {
     return Math.asin(Math.max(-1, Math.min(1, (dx * st.up[0] + dy * st.up[1] + dz * st.up[2]) / rng))) * DEG;
   }
 
-  // Bisect the minEl crossing between a below-horizon time and an above-horizon
-  // time → time of el == minEl.  Direction-agnostic: works for a rise (tBelow
-  // earlier) and a set (tBelow later), since each step moves the endpoint whose
-  // side matches, never relying on the numeric ordering of the two times.
-  function crossing(rec, tBelow, tAbove) {
-    for (let it = 0; it < 24 && Math.abs(tAbove - tBelow) > 500; it++) {
-      const tm = (tBelow + tAbove) / 2;
-      if (elAt(rec, tm) >= minEl) tAbove = tm; else tBelow = tm;
-    }
-    return (tBelow + tAbove) / 2;
-  }
-
-  // Peak time within [a, b] by ternary search (elevation is unimodal within one
-  // above-minEl hump).
-  function ternaryPeak(rec, a, b) {
-    while (b - a > 1000) {
-      const m1 = a + (b - a) / 3, m2 = b - (b - a) / 3;
-      if (elAt(rec, m1) < elAt(rec, m2)) a = m1; else b = m2;
-    }
-    return (a + b) / 2;
-  }
-
-  // One pass from a single above-minEl hump: peak by ternary between the first
-  // and last above-minEl sub-samples; exact minEl rise/set by bisection against
-  // the below-minEl brackets on either side.
-  function refinePass(rec, tBelowRise, tAboveRise, tAboveSet, tBelowSet) {
-    const peakMs = ternaryPeak(rec, tAboveRise, tAboveSet);
-    const peak = look(rec, peakMs, gmstAt(peakMs), st);
-    if (!peak || peak.el < minEl) return null;
-    const riseMs = crossing(rec, tBelowRise, tAboveRise);   // up-crossing on the way in
-    const setMs = crossing(rec, tBelowSet, tAboveSet);       // down-crossing on the way out
-    const rise = look(rec, riseMs, gmstAt(riseMs), st);
-    const set = look(rec, setMs, gmstAt(setMs), st);
-    return {
-      riseMs, peakMs, setMs,
-      peakEl: peak.el,
-      riseAz: rise ? Math.round(rise.az) : null,
-      setAz: set ? Math.round(set.az) : null,
-      visible: visibleAt(rec, peakMs),
-    };
-  }
-
   // Given an above-HORIZON run (firstK..lastK), return EVERY minimum-elevation
   // pass inside it.  Detecting runs at the geometric horizon (not at minEl) means
   // a short pass that pops above a high filter for less than one 60 s grid step
-  // is never straddled and lost (AST-11).  But one horizon run can contain more
-  // than one minEl window: eccentric HEO objects (Molniya, GTO) make two separate
-  // apparitions per orbit without ever dropping below the horizon between them, so
-  // sub-scan the run at 15 s and refine each above-minEl segment independently
-  // rather than assuming a single peak.  Falls back to the whole-run peak for the
-  // ultra-short pop that clears minEl between two sub-samples.
-  const SUB = 15_000;
+  // is never straddled and lost (AST-11); the multi-window refinement itself is
+  // the pure, unit-tested findWindows in passfind.js (eccentric HEO objects make
+  // several apparitions per orbit without ever setting between them).
   function closeRun(rec, firstK, lastK) {
     const runStart = firstK > 0 ? startMs + (firstK - 1) * STEP : startMs;   // last below-horizon sample (or window start)
     const runEnd = lastK < nT ? startMs + (lastK + 1) * STEP : startMs + nT * STEP;
-    const ts = [], ab = [];
-    for (let t = runStart; t < runEnd; t += SUB) { ts.push(t); ab.push(elAt(rec, t) >= minEl); }
-    ts.push(runEnd); ab.push(elAt(rec, runEnd) >= minEl);
-
-    const out = [];
-    let a = -1;   // index of the first above-minEl sub-sample of the current segment
-    for (let s = 0; s < ts.length; s++) {
-      if (ab[s] && a < 0) a = s;
-      if ((!ab[s] || s === ts.length - 1) && a >= 0) {
-        const b = ab[s] ? s : s - 1;   // last above-minEl sub-sample of the segment
-        const p = refinePass(rec, a > 0 ? ts[a - 1] : runStart, ts[a], ts[b], ab[s] ? runEnd : ts[s]);
-        if (p) out.push(p);
-        a = -1;
-      }
-    }
-    if (!out.length) {   // short-pop fallback: peak clears minEl between 15 s samples
-      const peakMs = ternaryPeak(rec, runStart, runEnd);
-      const peak = look(rec, peakMs, gmstAt(peakMs), st);
-      if (peak && peak.el >= minEl) {
-        const p = refinePass(rec, runStart, peakMs, peakMs, runEnd);
-        if (p) out.push(p);
-      }
-    }
-    return out;
+    const wins = findWindows({ elAt: (t) => elAt(rec, t), minEl, runStart, runEnd });
+    return wins.map((w) => {
+      const rise = look(rec, w.riseMs, gmstAt(w.riseMs), st);
+      const set = look(rec, w.setMs, gmstAt(w.setMs), st);
+      return {
+        riseMs: w.riseMs, peakMs: w.peakMs, setMs: w.setMs,
+        peakEl: w.peakEl,
+        riseAz: rise ? Math.round(rise.az) : null,
+        setAz: set ? Math.round(set.az) : null,
+        visible: visibleAt(rec, w.peakMs),
+      };
+    });
   }
 
   // Naked-eye test at the pass peak: the satellite in sunlight (outside Earth's
@@ -200,14 +100,11 @@ function startPasses(msg) {
   function visibleAt(rec, tMs) {
     const eci = eciKm(rec, tMs);
     if (!eci) return false;
-    const s = sunEci(tMs);
+    const s = sunEciUnit(tMs);
     const g = gmstAt(tMs), cg = Math.cos(g), sg = Math.sin(g);
-    const sx = s[0] * cg + s[1] * sg, sy = -s[0] * sg + s[1] * cg, sz = s[2];   // sun → ECF
+    const sx = s.x * cg + s.y * sg, sy = -s.x * sg + s.y * cg, sz = s.z;   // sun → ECF
     if (sx * st.up[0] + sy * st.up[1] + sz * st.up[2] >= SUN_DARK) return false;   // observer's sky too bright
-    const along = eci.x * s[0] + eci.y * s[1] + eci.z * s[2];
-    if (along > 0) return true;                        // sunward of Earth's centre — lit
-    const wx = eci.x - along * s[0], wy = eci.y - along * s[1], wz = eci.z - along * s[2];
-    return wx * wx + wy * wy + wz * wz > SHADOW_R_KM * SHADOW_R_KM;   // clear of the shadow cylinder
+    return isSunlitR(eci.x, eci.y, eci.z, s, EARTH_R_KM);   // ECI km, vs the shared shadow test
   }
 
   const candidates = msg.candidates;
