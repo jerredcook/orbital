@@ -9,15 +9,24 @@
 //   npm run dev            # terminal 1 (note the port it prints)
 //   PORT=5173 npm run smoke # terminal 2
 //
+// Or against the production build (what CI gates deploys on — note the base path):
+//   npm run build && npx vite preview --port 4173 &
+//   SMOKE_URL=http://localhost:4173/orbital/ npm run smoke
+//
 // Uses playwright-core with channel:'chrome', so it needs Google Chrome present
 // but downloads no browsers.  Default port 5173 (Vite's default).
 import { chromium } from 'playwright-core';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
-const URL = `http://localhost:${PORT}/`;
+const URL = process.env.SMOKE_URL || `http://localhost:${PORT}/`;
 
-const b = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader', '--no-sandbox', '--use-gl=angle', '--enable-gpu'] });
+const b = await chromium.launch({
+  channel: 'chrome', headless: true,
+  // swiftshader/angle: software WebGL so this runs on GPU-less CI runners;
+  // disable-dev-shm-usage: CI containers mount a tiny /dev/shm that crashes tabs.
+  args: ['--enable-unsafe-swiftshader', '--no-sandbox', '--use-gl=angle', '--enable-gpu', '--disable-dev-shm-usage'],
+});
 const p = await b.newPage({ viewport: { width: 1280, height: 800 } });
 await p.addInitScript(() => {
   try {

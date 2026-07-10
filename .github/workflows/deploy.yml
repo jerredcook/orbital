@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25   # the smoke gate takes ~4-6 min; anything past this is a hang
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +33,29 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Gate the deploy on the headless smoke suite, run against the PRODUCTION
+      # build (scripts/smoke.mjs: ~35 behaviour checks — selection + live readout,
+      # groups/coverage, station + passes + sky chart, system/Moon views, XSS
+      # escaping, dialog focus, idle-pause) using the runner's preinstalled
+      # Chrome with software WebGL.  dist/ is served by scripts/serve-dist.mjs
+      # (a deliberately dumb static server — `vite preview` was observed 404-ing
+      # real assets under browser Accept-Encoding headers).  One retry absorbs a
+      # transient flake; two straight failures mean the build is genuinely broken
+      # and the previous deploy stays live.
+      - name: Smoke test the production build
+        run: |
+          google-chrome --version
+          node scripts/serve-dist.mjs 4173 &
+          JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
+          for i in $(seq 1 15); do
+            curl -sf "http://localhost:4173/orbital/$JS" -o /dev/null && break
+            sleep 1
+          done
+          for attempt in 1 2; do
+            if SMOKE_URL=http://localhost:4173/orbital/ node scripts/smoke.mjs; then exit 0; fi
+            echo "smoke attempt $attempt failed"
+          done
+          exit 1
       # enablement: true turns Pages on for the repo on the first run, so no
       # manual Settings → Pages toggle is needed.
       - uses: actions/configure-pages@v5
