@@ -267,7 +267,11 @@ export function initConjunctions({
   }
 
   // ---- DOM wiring ----
+  // The distance selector only means something while the feature is on — leaving
+  // it interactive when unchecked is a silent no-op that reads as broken.
+  $('conj-range').disabled = !$('toggle-conj').checked;
   $('toggle-conj').addEventListener('change', () => {
+    $('conj-range').disabled = !$('toggle-conj').checked;
     if (!$('toggle-conj').checked) render([]);
     // turning it on: the next worker tick (≤ 600 ms) delivers pairs
   });

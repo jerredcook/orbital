@@ -361,12 +361,15 @@ export function initStation({
   }
 
   // Jump the clock to the pass's peak and fly to the satellite, so it's framed
-  // high over the station; time then runs forward at 1× through the pass.
+  // high over the station; time then runs forward at 1× through the pass.  On a
+  // phone the tap lives inside the drawer, which covers the very flight it
+  // triggers — close it so the user sees the satellite arrive.
   function jumpToPass(p) {
     viewer.clock.currentTime = JulianDate.fromDate(new Date(p.peakMs));
     setRate(0);
     selectByIndex(p.i);
     flyToSat(p.i);
+    setLegendOpen(false);
   }
 
   passesWorker.onmessage = (e) => {

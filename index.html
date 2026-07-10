@@ -133,7 +133,9 @@
         <h3>🔗 Share what you find &amp; get around</h3>
         <ul>
           <li><b>The link updates as you explore</b> — copy the address to send someone the exact thing you're looking at, whether a satellite, a planet, a moon or a probe. They'll open right to it.</li>
-          <li><b>Controls</b>: drag to rotate, scroll or pinch to zoom, <b>Esc</b> steps back one level. The <b>?</b> button (top-right) reopens the welcome any time.</li>
+          <li><b>Time travel</b>: the bar at the bottom runs the clock — <b>−</b>/<b>+</b> warp from real time up to 7200×, <b>NOW</b> snaps back to the present. If you warp far, an amber badge reminds you positions are being extrapolated.</li>
+          <li><b>Controls</b>: drag to rotate, scroll or pinch to zoom, <b>Esc</b> steps back one level, <b>/</b> jumps to search. The <b>?</b> button (top-right) reopens the welcome any time.</li>
+          <li><b>Keep it as an app</b>: Android/Chrome offer an Install button on the welcome card; on iPhone use Safari's <b>Share → Add to Home Screen</b>.</li>
         </ul>
       </section>
 
@@ -242,11 +244,11 @@
   <div id="legend-scrim"></div>
   <aside id="legend" aria-label="Display options">
     <div class="legend-title">Orbit regimes</div>
-    <label class="legend-row"><input type="checkbox" data-cat="LEO" checked /><span class="swatch leo"></span>LEO <span class="count" id="count-LEO"></span></label>
-    <label class="legend-row"><input type="checkbox" data-cat="MEO" checked /><span class="swatch meo"></span>MEO <span class="count" id="count-MEO"></span></label>
-    <label class="legend-row"><input type="checkbox" data-cat="GEO" checked /><span class="swatch geo"></span>GEO <span class="count" id="count-GEO"></span></label>
-    <label class="legend-row"><input type="checkbox" data-cat="HEO" checked /><span class="swatch heo"></span>HEO <span class="count" id="count-HEO"></span></label>
-    <label class="legend-row"><input type="checkbox" data-cat="DEB" checked /><span class="swatch deb"></span>Debris <span class="count" id="count-DEB"></span></label>
+    <label class="legend-row" title="Low Earth orbit — a few hundred km up, one lap every ~90 minutes (the ISS, Starlink)"><input type="checkbox" data-cat="LEO" checked /><span class="swatch leo"></span>LEO <span class="count" id="count-LEO"></span></label>
+    <label class="legend-row" title="Medium Earth orbit — where the navigation constellations live (GPS, Galileo…)"><input type="checkbox" data-cat="MEO" checked /><span class="swatch meo"></span>MEO <span class="count" id="count-MEO"></span></label>
+    <label class="legend-row" title="Geostationary — ~35,800 km up, hovering over one spot on Earth (TV, weather)"><input type="checkbox" data-cat="GEO" checked /><span class="swatch geo"></span>GEO <span class="count" id="count-GEO"></span></label>
+    <label class="legend-row" title="Highly-elliptical orbits — swinging far out and diving back in"><input type="checkbox" data-cat="HEO" checked /><span class="swatch heo"></span>HEO <span class="count" id="count-HEO"></span></label>
+    <label class="legend-row" title="Tracked fragments from breakups and old rocket stages"><input type="checkbox" data-cat="DEB" checked /><span class="swatch deb"></span>Debris <span class="count" id="count-DEB"></span></label>
     <div class="legend-divider"></div>
     <div class="legend-title">Focus a group <span class="legend-hint">tap to isolate</span></div>
     <div id="group-filter"></div>

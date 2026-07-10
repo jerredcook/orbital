@@ -21,6 +21,10 @@
 /* Keyboard highlight for the active search result (combobox aria-activedescendant). */
 #search-results .result-row.active { background: rgba(255, 180, 84, 0.16); }
 
+/* A select that's meaningless right now (e.g. conjunction distance while the
+   feature is off) visibly steps back instead of silently no-oping. */
+#legend select:disabled { opacity: 0.4; cursor: default; }
+
 /* Retry button in the boot-failure toast. */
 .toast-retry {
   margin-top: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
@@ -539,7 +543,9 @@ body:not(.system-mode) #system-legend { display: none; }
 
 /* era milestone flash — centered near the top, fades in and out */
 #tl-era {
-  position: absolute; top: 64px; left: 0; right: 0; z-index: 9;
+  /* Above the phone drawer (z 30) + scrim (z 29): milestone flashes must stay
+     visible while the timeline plays from inside the open drawer. */
+  position: absolute; top: 64px; left: 0; right: 0; z-index: 35;
   text-align: center; pointer-events: none;
   font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: 0.06em;
   color: #FFD166; text-shadow: 0 2px 8px #05070C, 0 0 18px rgba(255,209,102,0.4);
@@ -707,19 +713,28 @@ body:not(.system-mode) #system-legend { display: none; }
   .tb-label { display: none; }                 /* icon-only System / Moon buttons */
   #topbar { z-index: 31; }                      /* keep the bar (and ☰) above the drawer + scrim */
 
-  /* the display-options legend becomes a slide-in drawer */
+  /* the display-options legend becomes a slide-in drawer (top tracks the notch
+     inset like the topbar does) */
   #legend {
-    top: 50px; left: 0; bottom: 0; width: min(86vw, 280px); max-height: calc(100dvh - 50px);
+    top: calc(50px + env(safe-area-inset-top, 0px)); left: 0; bottom: 0; width: min(86vw, 280px);
+    max-height: calc(100dvh - 50px - env(safe-area-inset-top, 0px));
     border-radius: 0; border-left: none; border-top: none; overflow-y: auto;
     transform: translateX(-105%); transition: transform 0.22s ease; z-index: 30;
   }
   body.legend-open #legend { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.55); }
-  #legend-scrim { z-index: 29; }
+  /* Lighter dim on phones: the drawer's controls act on the globe (timeline,
+     groups, coverage), so keep what they do visible beside it. */
+  #legend-scrim { z-index: 29; background: rgba(2,4,10,0.25); }
   body.legend-open #legend-scrim { display: block; }
+
+  /* Marquee touch controls at real finger sizes (44px guideline, ≥34px min). */
+  .group-chip { min-height: 34px; padding: 6px 12px; }
+  #pass-setloc, #pass-geoloc { min-height: 36px; padding: 7px 12px; }
+  #pass-minel, #conj-range, #tl-speed { min-height: 34px; }
   /* no legend in the system / moon scenes, so no button either */
   body.system-mode #legend-toggle, body.moon-mode #legend-toggle { display: none; }
 
-  #infopanel { left: 12px; right: 12px; width: auto; top: auto; bottom: 64px; max-height: 45vh; }
+  #infopanel { left: 12px; right: 12px; width: auto; top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); max-height: 45vh; }
   /* 16px stops iOS Safari auto-zooming the page when the field is focused. */
   #search { width: 160px; font-size: 16px; padding: 6px 10px; }
 

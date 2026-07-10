@@ -12,7 +12,7 @@
 
 import { createEraFlasher, createYearPlayer } from './scrubber.js';
 
-export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTotals, passesGroup = () => true }) {
+export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, passesGroup = () => true }) {
   const $ = (id) => document.getElementById(id);
 
   let timelineYear = null;                       // null = timeline off (show all)
@@ -48,15 +48,27 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
 
   // One pass: per-category counts launched by `year`, the running total for the
   // readout — and, in passing, drive the legend counts live during playback.
+  // Group-filtered, so the numbers always describe the dots actually on screen.
   function updateTimelineReadout(year) {
     const catalog = getCatalog();
     const c = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
     let total = 0;
     for (const s of catalog) {
-      if ((s.launchYear ?? 9999) <= year) { c[catOf(s)]++; total++; }
+      if ((s.launchYear ?? 9999) <= year && passesGroup(s)) { c[catOf(s)]++; total++; }
     }
     for (const k of Object.keys(c)) $(`count-${k}`).textContent = c[k].toLocaleString();
     $('tl-label').textContent = `${year} · ${total.toLocaleString()} tracked`;
+  }
+
+  // The single owner of the legend's per-regime numbers: they always describe
+  // what's visible — filtered by the focused group, and by the scrubbed year
+  // while the timeline is active.  Called by applyCatalog and on group change.
+  function refreshCounts() {
+    if (timelineYear !== null) { updateTimelineReadout(timelineYear); return; }
+    const catalog = getCatalog();
+    const c = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
+    for (const s of catalog) if (passesGroup(s)) c[catOf(s)]++;
+    for (const k of Object.keys(c)) $(`count-${k}`).textContent = c[k].toLocaleString();
   }
 
   function setTimelineYear(year) {
@@ -95,8 +107,7 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
       $('timeline-controls').hidden = true;
       $('tl-era').hidden = true;
       timelineYear = null;
-      const catTotals = getCatTotals();
-      for (const k of Object.keys(catTotals)) $(`count-${k}`).textContent = catTotals[k].toLocaleString();
+      refreshCounts();   // back to present-day numbers (group-filtered if one is focused)
       refreshVisibility();
     }
   });
@@ -110,9 +121,5 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, getCatTo
     setTimelineYear(parseInt(e.target.value, 10));
   });
 
-  return {
-    refreshVisibility,
-    isActive: () => timelineYear !== null,
-    refreshReadout: () => { if (timelineYear !== null) updateTimelineReadout(timelineYear); },
-  };
+  return { refreshVisibility, refreshCounts };
 }

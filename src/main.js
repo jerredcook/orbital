@@ -100,7 +100,6 @@ let autoFollowHoldUntil = 0;   // suppress auto-follow during camera flights
 let autoFollowDisabled = false; // set when the user manually stops following
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
-let catTotals = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };   // full counts, to restore after the timeline
 let catalogEpochMs = null;   // median TLE epoch — how far the propagation is being extrapolated
 const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
 
@@ -215,12 +214,10 @@ function applyCatalog(list) {
   groups.recount();               // group-chip counts + hide groups absent from today's catalog
   timeline.refreshVisibility();   // apply category toggles + timeline + group focus
   viewer.scene.primitives.add(swarm);
-  catTotals = { ...counts };
   catalogEpochMs = medianEpochMs(catalog);   // freshness reference for the drift badge
-  // While the launch timeline is active it owns the legend numbers (year-filtered
-  // counts); don't stomp them with full-catalog totals on an auto-refresh hot-swap.
-  if (timeline.isActive()) timeline.refreshReadout();
-  else for (const c of Object.keys(counts)) $(`count-${c}`).textContent = counts[c].toLocaleString();
+  // The timeline module owns the legend's per-regime numbers — they always
+  // describe the dots on screen (group-filtered; year-filtered while scrubbing).
+  timeline.refreshCounts();
 
   worker.postMessage({
     type: 'init',
@@ -255,7 +252,9 @@ function bootFailed() {
   $('toasts').appendChild(el);
 }
 
+let bootSettled = false;   // catalog load finished (either way) — retry loops key off this, not a fixed try-count
 async function boot() {
+  bootSettled = false;
   try {
     const list = await loadCatalog(status);
     diffAndToast(list);
@@ -264,6 +263,7 @@ async function boot() {
     console.error(err);
     bootFailed();
   } finally {
+    bootSettled = true;
     $('boot-chip')?.remove();   // loading feedback the drawer-bound status can't give on phones
     // Always restore the shared view: a #system / #luna / #guide / #show link
     // needs no Earth catalog, so it must still open even if the catalog failed.
@@ -665,7 +665,14 @@ function inspectSat(i) {
 function inspectByNorad(norad, tries = 0) {
   const i = catalog.findIndex((c) => String(c.norad) === String(norad));
   if (i >= 0) { inspectSat(i); return; }
-  if (!catalog.length && tries < 30) { setTimeout(() => inspectByNorad(norad, tries + 1), 400); return; }   // catalog still loading (give up after ~12 s)
+  if (!catalog.length && !bootSettled) {
+    // A welcome-chip tap on a slow cold load: acknowledge it once, then keep
+    // waiting for the catalog however long the fetch takes (boot settling — not
+    // a fixed try-count — ends the loop; a failed boot shows its own Retry toast).
+    if (tries === 0) toast('On it — flying there as soon as the catalog finishes loading…', 6000);
+    setTimeout(() => inspectByNorad(norad, tries + 1), 400);
+    return;
+  }
   if (catalog.length) toast(`That satellite isn’t in today’s catalog (NORAD ${norad}).`, 5000);
 }
 
@@ -716,6 +723,10 @@ drawerMq.addEventListener('change', () => {       // recompute on rotate / resiz
 $('legend-scrim').addEventListener('click', () => { setLegendOpen(false); setSysLegendOpen(false); });
 $('system-toggle').addEventListener('click', () => setLegendOpen(false));
 $('moon-toggle').addEventListener('click', () => setLegendOpen(false));
+// Pressing ▶ on the launch timeline starts a show that plays on the globe — on a
+// phone, close the drawer that would otherwise cover it (milestones flash in the
+// #tl-era banner, which sits above the drawer anyway).
+$('tl-play').addEventListener('click', () => { if (drawerMq.matches) setLegendOpen(false); });
 
 // Modal focus management for the two aria-modal dialogs: on open, remember where
 // focus was and move it into the dialog; keep Tab inside it; on close, restore.
@@ -840,7 +851,8 @@ const groups = initGroups({
   getCatalog: () => catalog,
   onChange: () => {
     timeline.refreshVisibility();
-    coverage.refresh();   // the "in view" overlay follows the focused group
+    timeline.refreshCounts();   // legend numbers follow the focused group
+    coverage.refresh();         // …and so does the "in view" overlay
     const m = document.body.classList;
     if (!selected && !m.contains('system-mode') && !m.contains('moon-mode')) {
       writeHash(groups.activeId() ? { group: groups.activeId() } : null);
@@ -857,7 +869,6 @@ const timeline = initTimeline({
   getCatalog: () => catalog,
   getSwarm: () => swarm,
   catVisible, catOf,
-  getCatTotals: () => catTotals,
   passesGroup: (s) => groups.passes(s),
 });
 
