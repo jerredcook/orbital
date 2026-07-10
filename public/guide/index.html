@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Orbital — User Guide</title>
+  <meta name="description" content="The complete illustrated guide to Orbital: the live satellite tracker and solar-system explorer." />
+  <link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png" />
+  <style>
+    :root {
+      --void: #05070C; --panel: #0D131D; --panel2: #0B1018; --hair: #1E2A3A;
+      --ink: #C9D4E3; --dim: #8595A8; --faint: #5D6B82; --amber: #FFB454;
+      --leo: #5EC8E5; --meo: #C9A0FF; --geo: #FFD166; --heo: #FF8C66; --deb: #8B93A1;
+      --cyan: #6FE0FF; --teal: #41E1CD;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+    body {
+      background: var(--void); color: var(--ink);
+      font: 16px/1.65 Inter, system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--amber); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    b { color: #E8EFF8; }
+    kbd {
+      font: 12px ui-monospace, monospace; background: var(--panel); border: 1px solid var(--hair);
+      border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; color: var(--ink); white-space: nowrap;
+    }
+
+    /* top bar */
+    .bar {
+      position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 14px;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 18px 10px;
+      background: rgba(5,7,12,0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--hair);
+    }
+    .bar .mark { font: 700 15px ui-monospace, monospace; letter-spacing: 0.28em; color: #E8EFF8; }
+    .bar .sub { font: 10px ui-monospace, monospace; letter-spacing: 0.2em; color: var(--faint); text-transform: uppercase; }
+    .bar .back {
+      margin-left: auto; padding: 7px 14px; border: 1px solid var(--hair); border-radius: 6px;
+      font: 600 13px Inter, sans-serif; color: var(--ink); white-space: nowrap;
+    }
+    .bar .back:hover { border-color: var(--amber); color: var(--amber); text-decoration: none; }
+
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 0 18px 90px; }
+
+    /* hero */
+    .hero { padding: 54px 0 8px; }
+    .hero h1 { font: 800 clamp(30px, 5.5vw, 44px)/1.15 Inter, sans-serif; color: #F2F6FC; letter-spacing: -0.015em; }
+    .hero h1 span { color: var(--amber); }
+    .hero p { margin-top: 14px; font-size: 17.5px; color: var(--dim); max-width: 46em; }
+
+    /* toc */
+    nav.toc {
+      margin: 26px 0 10px; display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    nav.toc a {
+      padding: 6px 13px; border: 1px solid var(--hair); border-radius: 20px;
+      font: 500 12.5px Inter, sans-serif; color: var(--dim); background: rgba(13,19,29,0.6);
+    }
+    nav.toc a:hover { color: var(--amber); border-color: var(--amber); text-decoration: none; }
+
+    section { margin-top: 64px; }
+    section > h2 {
+      font: 700 clamp(21px, 3.2vw, 27px)/1.25 Inter, sans-serif; color: #F2F6FC;
+      padding-top: 8px; letter-spacing: -0.01em;
+    }
+    .eyebrow {
+      font: 10.5px ui-monospace, monospace; letter-spacing: 0.24em; text-transform: uppercase;
+      color: var(--amber); display: block; margin-bottom: 6px;
+    }
+    section > p, section li { color: var(--ink); }
+    section > p { margin-top: 12px; max-width: 47em; }
+    ul { margin: 12px 0 0 1.2em; display: grid; gap: 9px; max-width: 47em; }
+
+    figure { margin: 22px 0 6px; }
+    figure img {
+      width: 100%; height: auto; display: block; border-radius: 10px;
+      border: 1px solid var(--hair); box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+    }
+    figcaption { margin-top: 9px; font-size: 13px; color: var(--faint); }
+
+    .tip {
+      margin-top: 18px; padding: 13px 16px; border-left: 3px solid var(--amber);
+      background: rgba(255,180,84,0.06); border-radius: 0 8px 8px 0; max-width: 47em;
+      font-size: 14.5px; color: var(--ink);
+    }
+    .tip b:first-child { color: var(--amber); }
+
+    /* swatches + small tables */
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+    table { margin-top: 14px; border-collapse: collapse; width: 100%; max-width: 47em; font-size: 14.5px; }
+    th, td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+    th { font: 600 11px ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+    td code { font: 13px ui-monospace, monospace; color: var(--geo); white-space: nowrap; }
+
+    .foot {
+      margin-top: 80px; padding-top: 26px; border-top: 1px solid var(--hair);
+      font-size: 13.5px; color: var(--faint); max-width: 52em;
+    }
+    .foot a { color: var(--dim); }
+
+    @media (max-width: 620px) {
+      body { font-size: 15px; }
+      section { margin-top: 48px; }
+      .hero { padding-top: 34px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="mark">ORBITAL</span><span class="sub">User guide</span>
+  <a class="back" href="../">← Back to Orbital</a>
+</div>
+
+<div class="wrap">
+
+<div class="hero">
+  <h1>Two worlds in one map:<br />every satellite, <span>and the whole solar system</span>.</h1>
+  <p>Orbital tracks ~18,000 objects around Earth live from real orbital data, and lets you fly the solar system — planets, moons, comets, interstellar visitors and the robotic fleet — placed from real JPL ephemerides. This guide walks through everything it can do. It's a free page for family and friends; no accounts, no ads, nothing to install (though you can, <a href="#install">see below</a>).</p>
+</div>
+
+<nav class="toc">
+  <a href="#basics">The basics</a>
+  <a href="#tracker">The tracker</a>
+  <a href="#groups">Groups &amp; coverage</a>
+  <a href="#station">Over your house</a>
+  <a href="#conj">Close approaches</a>
+  <a href="#timeline">The Space Age replay</a>
+  <a href="#system">The solar system</a>
+  <a href="#worlds">Other worlds</a>
+  <a href="#showpieces">Showpieces</a>
+  <a href="#time">Time travel</a>
+  <a href="#share">Sharing links</a>
+  <a href="#install">Install it</a>
+  <a href="#honest">How real is it?</a>
+</nav>
+
+<section id="basics">
+  <span class="eyebrow">01 · Start here</span>
+  <h2>The basics — one minute</h2>
+  <ul>
+    <li><b>Drag</b> to spin the world · <b>pinch or scroll</b> to zoom · <b>tap</b> anything to learn about it.</li>
+    <li><b>Esc</b> (or the on-screen ✕) always steps <em>back one level</em> — out of a close-up, a planet, a view.</li>
+    <li>The top bar takes you between the worlds: <b>☉ System</b> (the solar system) and <b>◐ Moon</b> (the lunar globe). The <b>?</b> reopens the welcome card.</li>
+    <li>On a phone, the control desk is behind the <b>☰</b> button. On a computer it's the panel on the left, and <kbd>/</kbd> jumps to search.</li>
+    <li>Everything moves in <b>real time</b> — those dots really are up there, right now, where the map says they are.</li>
+  </ul>
+  <figure>
+    <img src="img/earth.jpg" alt="The opening view: Earth surrounded by thousands of coloured satellite dots, with the control panel on the left" loading="lazy" />
+    <figcaption>The opening view — every active satellite in the public catalog, live. The colours are orbit families (next section).</figcaption>
+  </figure>
+</section>
+
+<section id="tracker">
+  <span class="eyebrow">02 · Around Earth</span>
+  <h2>The live satellite tracker</h2>
+  <p>Each dot is a real object flown from its current tracking data. The colour tells you how high it lives:</p>
+  <ul>
+    <li><span class="sw" style="background:var(--leo)"></span><b>LEO</b> — low Earth orbit, a few hundred km up, circling in ~90 minutes. The ISS, Starlink, most of everything.</li>
+    <li><span class="sw" style="background:var(--meo)"></span><b>MEO</b> — medium orbits, where the navigation constellations (GPS, Galileo…) live.</li>
+    <li><span class="sw" style="background:var(--geo)"></span><b>GEO</b> — geostationary, ~35,800 km up, orbiting exactly as fast as Earth turns so they hover over one spot. TV and weather satellites.</li>
+    <li><span class="sw" style="background:var(--heo)"></span><b>HEO</b> — highly-elliptical orbits that swing far out and dive back in.</li>
+    <li><span class="sw" style="background:var(--deb)"></span><b>Debris</b> — tracked fragments from breakups. Untick any of these in the legend to declutter.</li>
+  </ul>
+  <p><b>Tap a dot</b> (or search a name / NORAD number) to select it: the panel shows live altitude and speed, its orbit draws as a ring, and Orbital follows it. Zoom right in on the famous ones — the ISS, Hubble, Tiangong and a dozen more carry their <b>real NASA 3D models</b>; everything else gets a class-appropriate stand-in.</p>
+  <figure>
+    <img src="img/select.jpg" alt="The real ISS 3D model above Earth with a live readout panel showing altitude 420 km and speed 7.66 km/s" loading="lazy" />
+    <figcaption>The ISS — the real published model, flying its real orbit at 7.66 km/s. “Stop following” hands the camera back.</figcaption>
+  </figure>
+  <div class="tip"><b>Try it:</b> search <b>ISS</b>, then just scroll in. The camera locks on automatically once you're close — a satellite at 7.6 km/s would outrun a free camera in seconds.</div>
+</section>
+
+<section id="groups">
+  <span class="eyebrow">03 · Focus</span>
+  <h2>Groups — and who can see the sky</h2>
+  <p>The <b>Focus a group</b> chips isolate one slice of the sky at a time: a constellation (Starlink, OneWeb, Iridium, GPS, Galileo, GLONASS, BeiDou…) or an operator — the USA's, China's, or Russia's whole fleets. Counts are live; tap again to show everything.</p>
+  <figure>
+    <img src="img/groups.jpg" alt="Earth wrapped in the Starlink shell — thousands of dots in orbital planes, with the Starlink chip active" loading="lazy" />
+    <figcaption>Starlink isolated — 8,000+ satellites in their shells. This link is shareable: the address bar becomes <code>#group=starlink</code>.</figcaption>
+  </figure>
+  <p><b>“In view” coverage:</b> tick the coverage toggle and Orbital paints, for every point on Earth, <em>how many satellites of the focused group are above the horizon mask right now</em> — computed live from the actual positions. Orange = thin, teal = dense.</p>
+  <figure>
+    <img src="img/coverage.jpg" alt="Earth draped in a heat map showing Starlink line-of-sight density, dense teal at mid-latitudes" loading="lazy" />
+    <figcaption>“Starlink in view”: the dense mid-latitude band is where the 53° shells stack up; thinner at the equator and poles.</figcaption>
+  </figure>
+  <figure>
+    <img src="img/coverage-gps.jpg" alt="Earth with a nearly uniform GPS coverage wash" loading="lazy" />
+    <figcaption>Switch the focus to GPS and the map answers a famous question: a receiver sees several satellites from <em>everywhere</em> — that uniform wash is why GPS works.</figcaption>
+  </figure>
+  <div class="tip"><b>Honest label:</b> this is <em>line of sight</em> — how many satellites a dish or receiver could geometrically see — not service quality. Ground stations, licensing and capacity aren't modelled.</div>
+</section>
+
+<section id="station">
+  <span class="eyebrow">04 · Your sky</span>
+  <h2>What flies over your house</h2>
+  <p>In the legend, switch on <b>Ground station</b>, then either <b>📍 My location</b> or <b>⌖ Tap map</b> to drop a spot. Orbital sweeps the whole catalog for every pass over that spot in the next 24 hours — when each object rises, how high it climbs, when it sets.</p>
+  <ul>
+    <li><b>👁 Naked-eye passes</b> — every pass is checked for <em>real</em> visibility: the satellite still in sunlight while your sky is dark. Those are the ones you can walk outside and see; there's a “naked-eye passes only” filter.</li>
+    <li><b>Sighting alerts</b> — when the ISS or Tiangong is about to make a visible pass over your station, Orbital pops a countdown with the compass direction it will rise from. Go look up.</li>
+    <li><b>The sky chart</b> — a live map of your sky right now: zenith at the centre, horizon at the rim. In a dark sky the sunlit (visible) craft stay bright while shadowed ones dim. Tap a dot on the chart to track it.</li>
+    <li><b>Tap a pass row</b> to jump time to that pass and watch it ride over your station.</li>
+  </ul>
+  <figure>
+    <img src="img/station.jpg" alt="The control panel with a ground station set: pass list with times and elevations, and a circular overhead sky chart" loading="lazy" />
+    <figcaption>The control desk with a station set — upcoming passes (👁 = visible to the eye) and the live overhead sky chart.</figcaption>
+  </figure>
+  <div class="tip"><b>Your spot is remembered</b> on your device (nothing is uploaded anywhere), so the passes and sky chart come straight back on your next visit.</div>
+</section>
+
+<section id="conj">
+  <span class="eyebrow">05 · Traffic</span>
+  <h2>Conjunctions — orbital near-misses</h2>
+  <p>Tick <b>Conjunctions</b> and Orbital continuously finds every pair of tracked objects passing within 5, 10 or 25 km of each other — the everyday near-misses of an increasingly crowded sky. Click a row to fly to the encounter; the subline forecasts the moment of closest approach over the next day.</p>
+  <p>For any selected satellite, <b>“Screen close approaches”</b> runs the same search the other way: everything that will come near <em>that one craft</em> in the next 24 hours, closest first.</p>
+</section>
+
+<section id="timeline">
+  <span class="eyebrow">06 · History</span>
+  <h2>Replay the Space Age</h2>
+  <p>Switch on the <b>Launch timeline</b> and drag the year slider — the sky rebuilds to show only what had launched by then. Press ▶ and watch seven decades unfold: Sputnik alone in 1957, the Cold War build-up, GPS arriving, and the Starlink explosion after 2019. Milestones flash as the play-head crosses them.</p>
+  <figure>
+    <img src="img/timeline.jpg" alt="Earth in 1978 with only a sparse shell of satellites, timeline controls at the bottom" loading="lazy" />
+    <figcaption>1978: a few hundred objects. Scrub to today and it's ~18,000 — most of the difference is the last five years.</figcaption>
+  </figure>
+</section>
+
+<section id="system">
+  <span class="eyebrow">07 · Out there</span>
+  <h2>Fly the solar system</h2>
+  <p><b>☉ System</b> leaves Earth for a Sun's-eye view: all eight planets on their real orbits, the five dwarf planets, famous comets, the three known interstellar visitors, the asteroid belt with its named families, Jupiter's Trojan clouds — and an accurate star sky behind it all. <b>Tap anything to fly to it.</b></p>
+  <figure>
+    <img src="img/system.jpg" alt="The whole solar system: planet orbits as rings around the Sun with the asteroid belt" loading="lazy" />
+    <figcaption>The overview. Spacing is “readable” by default — flip <b>True scale</b> to see how empty space really is.</figcaption>
+  </figure>
+  <ul>
+    <li><b>The positions are real.</b> Planets, moons, dwarf planets, comets and probes are placed from JPL data — this is where everything actually is today, not decoration.</li>
+    <li><b>Moons dance in their true configuration</b> — the Galilean moons around Jupiter, Triton circling Neptune backwards, Iapetus tilted out of Saturn's plane.</li>
+    <li><b>Comets &amp; interstellar visitors</b>: Halley's backwards 76-year loop, Hale-Bopp's near-vertical dive — and ʻOumuamua, Borisov and 3I/ATLAS on <em>open</em> violet arcs, because they're not in orbit at all: they fell in from interstellar space and are leaving forever.</li>
+    <li><b>The robotic fleet</b>: every orbiter humanity has sent to another planet, in cyan, each holding a purposeful nadir-locked attitude. The <b>Spacecraft timeline</b> (bottom-left) replays their arrivals from 1970 on — watch the Mars fleet assemble.</li>
+  </ul>
+  <figure>
+    <img src="img/saturn.jpg" alt="Saturn with its rings and a family of moons on tilted orbit rings" loading="lazy" />
+    <figcaption>Saturn — the rings wear their real tilt, and “Show moon orbits” reveals the family, Mimas out to Phoebe orbiting backwards.</figcaption>
+  </figure>
+  <figure>
+    <img src="img/probes.jpg" alt="Mars surrounded by spacecraft markers with the spacecraft timeline set to 2006" loading="lazy" />
+    <figcaption>Mars, 2006, on the spacecraft timeline — Global Surveyor's era ending just as MRO arrives. Orange craft are re-entering; dim ones are derelicts.</figcaption>
+  </figure>
+  <figure>
+    <img src="img/pluto.jpg" alt="Pluto showing its heart-shaped Tombaugh Regio beside its large moon Charon" loading="lazy" />
+    <figcaption>Pluto &amp; Charon — a true binary, with the real New Horizons maps. The heart is right where it should be.</figcaption>
+  </figure>
+</section>
+
+<section id="worlds">
+  <span class="eyebrow">08 · Boots down</span>
+  <h2>Land on other worlds</h2>
+  <p><b>◐ Moon</b> opens the lunar globe — real NASA imagery you can explore from orbit down to the footpaths of the Apollo sites' neighbourhoods. In the system view, most planets (and Pluto and Ceres) can be <b>entered</b> the same way from their panel: Mars streams down to ~25 m/px, Ceres wears its real Dawn mosaic.</p>
+  <figure>
+    <img src="img/moon.jpg" alt="The Moon rendered as a full navigable globe" loading="lazy" />
+    <figcaption>The lunar globe. Esc (or ✕) climbs back out to wherever you came from.</figcaption>
+  </figure>
+</section>
+
+<section id="showpieces">
+  <span class="eyebrow">09 · The famous ones</span>
+  <h2>Showpieces beyond Earth orbit</h2>
+  <p>Some celebrated spacecraft never appear in the tracker because they don't orbit Earth. Search for them and fly out: <b>James Webb</b> at L2, <b>SOHO</b>, <b>DSCOVR</b> and <b>ACE</b> at L1 — and the deep-space legends: <b>Voyager 1 &amp; 2</b>, <b>Pioneer 10</b>, <b>New Horizons</b>, each shown in its true direction with its real distance on the card (billions of km — far too far to draw to scale).</p>
+  <figure>
+    <img src="img/jwst.jpg" alt="The James Webb Space Telescope model with its gold mirror, floating in dark space" loading="lazy" />
+    <figcaption>James Webb, ~1.5 million km out on Earth's night side. Scroll out or press Esc to come home.</figcaption>
+  </figure>
+</section>
+
+<section id="time">
+  <span class="eyebrow">10 · The clock</span>
+  <h2>Time travel</h2>
+  <p>The bar at the bottom is the simulation clock. <b>−</b> / <b>+</b> steps the speed from 1× (real time) up to 7200× — two hours per second, fast enough to watch whole constellations swirl and the Galilean moons lap Jupiter. <b>NOW</b> snaps back to the present at 1×.</p>
+  <div class="tip"><b>The honesty badge:</b> orbital predictions age. If you warp days ahead (or the data is old), an amber badge appears warning that positions are extrapolated — the further from “now”, the fuzzier the truth.</div>
+</section>
+
+<section id="share">
+  <span class="eyebrow">11 · Send it</span>
+  <h2>Sharing what you find</h2>
+  <p>The address bar tracks what you're looking at — copy it (every panel has a <b>Copy link</b> button) and whoever opens it lands on the same thing. A field guide to the links:</p>
+  <table>
+    <tr><th>Link ends with</th><th>Opens</th></tr>
+    <tr><td><code>#sat=25544</code></td><td>a satellite, tracked live (by NORAD number — that one's the ISS)</td></tr>
+    <tr><td><code>#group=starlink</code></td><td>the Earth view focused on a group</td></tr>
+    <tr><td><code>#system</code></td><td>the solar-system overview</td></tr>
+    <tr><td><code>#body=Saturn</code></td><td>flying over a planet, dwarf planet or comet</td></tr>
+    <tr><td><code>#moon=Europa</code> · <code>#probe=Juno</code></td><td>a natural moon, or a spacecraft at its planet</td></tr>
+    <tr><td><code>#luna</code></td><td>the Moon globe</td></tr>
+    <tr><td><code>#jwst</code>, <code>#voyager1</code>, …</td><td>a showpiece, up close</td></tr>
+  </table>
+</section>
+
+<section id="install">
+  <span class="eyebrow">12 · Keep it</span>
+  <h2>Install it as an app</h2>
+  <ul>
+    <li><b>Android / Chrome:</b> the welcome card offers <b>📲 Install Orbital</b> (or use the browser menu → “Install app”). It opens full-screen with its own icon, and repeat launches are fast.</li>
+    <li><b>iPhone / iPad:</b> in Safari, tap <b>Share → Add to Home Screen</b>. Same thing — Apple just hides the button.</li>
+  </ul>
+  <p>Orbital stays online-first either way: the live orbits always come fresh from the tracking feed.</p>
+</section>
+
+<section id="honest">
+  <span class="eyebrow">13 · The fine print</span>
+  <h2>How real is all this?</h2>
+  <p>Very — with a few honest cheats, all in the name of legibility:</p>
+  <ul>
+    <li><b>Satellites</b> fly their current public element sets (CelesTrak), propagated with the standard SGP4 model — the same math ground stations use. Fresh data is fetched every couple of hours.</li>
+    <li><b>Planets</b> ride JPL's Keplerian elements; <b>moons, dwarf planets, comets, interstellar visitors and probes</b> carry real osculating elements from JPL Horizons, validated against JPL's own positions by an automated test suite. The major moons land within about a degree of the truth.</li>
+    <li><b>The cheats:</b> planet sizes and moon spacings are exaggerated by default so things are visible (flip <b>True scale</b> for reality); probe orbits keep their real tilt and shape-character but are gently eased to stay in frame; the system view is lit for viewing, so day/night lines out there aren't physical; and which side of a planet faces you at a given hour is illustrative (the spin <em>rate</em> and axis are real).</li>
+  </ul>
+  <div class="foot">
+    <p>Live orbital data: <a href="https://celestrak.org/">CelesTrak</a> (Dr. T.S. Kelso) · planet &amp; moon ephemerides: NASA/JPL Horizons · Earth imagery © Esri · planet &amp; Moon maps © Solar System Scope (CC BY 4.0) · other moon, Pluto &amp; Ceres maps S. Albers / B. Jónsson (NASA/JPL/USGS data) · Mars/Mercury/Ceres/Moon surface tiles: NASA Solar System Treks · star sky: NASA SVS / ESA Gaia · spacecraft models: NASA 3D Resources.</p>
+    <p style="margin-top:10px">Orbital is a non-commercial labour of love — a free page for family and friends. Clear skies! 🌌 &nbsp; <a href="../">← Back to Orbital</a></p>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

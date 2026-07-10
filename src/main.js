@@ -264,6 +264,7 @@ async function boot() {
     console.error(err);
     bootFailed();
   } finally {
+    $('boot-chip')?.remove();   // loading feedback the drawer-bound status can't give on phones
     // Always restore the shared view: a #system / #luna / #guide / #show link
     // needs no Earth catalog, so it must still open even if the catalog failed.
     applyDeepLink();

@@ -31,6 +31,7 @@
 <body>
   <h1 class="sr-only">Orbital — live satellite tracker and solar-system explorer</h1>
   <div id="cesiumContainer" role="main" aria-label="3D globe and solar-system view"></div>
+  <div id="boot-chip" role="status">🛰 fetching the live catalog…</div>
 
   <div id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
     <div class="welcome-card">
@@ -65,6 +66,7 @@
       <button id="guide-close" class="guide-close" type="button" aria-label="Close guide">✕</button>
       <div class="welcome-mark" id="guide-title">ORBITAL</div>
       <p class="guide-sub">Everything this map can do. It's really two worlds in one — a <b>live satellite tracker</b> around Earth, and the <b>whole solar system</b> to fly through. Switch any time with <b>☉ System</b> in the top bar, and <b>Esc</b> always steps back a level.</p>
+      <a class="guide-full-link" href="guide/" target="_blank" rel="noopener">📖 Prefer pictures? Open the full illustrated guide →</a>
 
       <section class="guide-sec">
         <h3>🛰 The live satellite tracker</h3>
@@ -77,11 +79,14 @@
       </section>
 
       <section class="guide-sec">
-        <h3>📋 Filters, conjunctions &amp; screening</h3>
-        <p>The side panel — tap <b>☰</b> on a phone — is the control desk.</p>
+        <h3>📋 The control desk</h3>
+        <p>The side panel — tap <b>☰</b> on a phone — runs the show.</p>
         <ul>
+          <li><b>Focus a group</b>: chips that isolate one slice of the sky — Starlink, OneWeb, GPS… or a whole nation's fleet (USA, China, Russia…), with live counts. Tap again to show everything.</li>
+          <li><b>“In view” coverage</b>: paints the Earth with how many satellites of the focused group are overhead everywhere right now — see Starlink's dense mid-latitude band, or why GPS works from anywhere. Line of sight, not service quality.</li>
           <li><b>Conjunctions</b>: every pair of objects passing within 5, 10 or 25 km of each other, found live. Click a row to fly to the close approach.</li>
           <li><b>Screen one satellite</b>: select it, then “Screen close approaches” to list everything that comes within 25 km of it over the next day.</li>
+          <li><b>Launch timeline</b>: replay the Space Age — drag the year slider (or press ▶) and watch the sky fill from Sputnik to the Starlink era.</li>
         </ul>
       </section>
 
