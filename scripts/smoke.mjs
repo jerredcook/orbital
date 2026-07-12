@@ -133,7 +133,7 @@ try {
     window.__xss = 0;
     const O = window.__orbital; const list = O.catalog.slice();
     const bad = { ...list[0], name: '<img src=x onerror="window.__xss=1">PWN', norad: 999999001 };
-    list[0] = bad;
+    list.push(bad);   // append — overwriting list[0] would eat the ISS (active.tle starts with ZARYA), breaking later checks
     O.applyCatalog(list);
     await nap(300);
     const box = document.getElementById('search');
@@ -202,6 +202,42 @@ try {
     return label;
   });
   check('timelineScrub', /1965/.test(tl) && /tracked/.test(tl));
+
+  // --- the guided tour: start → ISS stop selects, jump around, end tidies up ---
+  const tourRes = await p.evaluate(async () => {
+    const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+    const O = window.__orbital;
+    O.tour.start();
+    await nap(1800);
+    const s1 = {
+      cardShown: !document.getElementById('tour-card').hidden,
+      step: document.getElementById('tour-step').textContent,
+      title: document.getElementById('tour-title').textContent,
+      issSelected: O.selected && O.catalog[O.selected.index]?.norad === 25544,
+    };
+    document.getElementById('tour-next').click();   // → Starlink shell
+    await nap(900);
+    const s2 = { group: O.groups.activeId(), step: document.getElementById('tour-step').textContent };
+    document.getElementById('tour-next').click();   // → GPS + coverage
+    await nap(1200);
+    const s3 = { group: O.groups.activeId(), coverage: document.getElementById('toggle-coverage').checked };
+    O.tour.end();
+    await nap(600);
+    const done = {
+      cardHidden: document.getElementById('tour-card').hidden,
+      groupCleared: O.groups.activeId() === null,
+      coverageOff: !document.getElementById('toggle-coverage').checked,
+      active: O.tour.active,
+    };
+    return { s1, s2, s3, done };
+  });
+  check('tourStarts', tourRes.s1.cardShown && /^1 \/ 12$/.test(tourRes.s1.step) && tourRes.s1.issSelected);
+  check('tourAdvances', tourRes.s2.group === 'starlink' && /^2 \/ 12$/.test(tourRes.s2.step)
+    && tourRes.s3.group === 'gps' && tourRes.s3.coverage);
+  check('tourEndsClean', tourRes.done.cardHidden && tourRes.done.groupCleared && tourRes.done.coverageOff && !tourRes.done.active);
+  R._tour = tourRes;
+  await p.evaluate(() => { document.getElementById('info-close')?.click(); });   // drop the tour's ISS selection
+  await sleep(400);
 
   // --- group focus: Starlink chip filters the swarm + is deep-linkable ---
   const grp = await p.evaluate(() => {

@@ -25,6 +25,48 @@
    feature is off) visibly steps back instead of silently no-oping. */
 #legend select:disabled { opacity: 0.4; cursor: default; }
 
+/* ---- the guided tour ---- */
+/* Top-centre, below the topbar and clear of the era banner (top:64px), the info
+   panel (right / bottom) and the timebar — z above the phone drawer + scrim so
+   the narration survives any state a stop sets up. */
+#tour-card {
+  position: absolute; top: calc(96px + env(safe-area-inset-top, 0px));
+  left: 50%; transform: translateX(-50%);
+  width: min(460px, calc(100vw - 24px));
+  background: rgba(13, 19, 29, 0.94); border: 1px solid #2A3A50; border-radius: 12px;
+  padding: 12px 14px; z-index: 38; box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+}
+.tour-head { display: flex; align-items: baseline; gap: 10px; }
+.tour-step {
+  font: 600 10.5px ui-monospace, monospace; letter-spacing: 0.14em;
+  color: #FFB454; white-space: nowrap;
+}
+.tour-title { font: 700 15.5px Inter, system-ui, sans-serif; color: #F2F6FC; flex: 1; }
+#tour-close {
+  background: none; border: none; color: #8595A8; font-size: 15px; line-height: 1;
+  cursor: pointer; padding: 2px 4px; margin: -2px -4px 0 0;
+}
+#tour-close:hover { color: #FFB454; }
+.tour-story { margin: 8px 0 10px; font: 13.5px/1.55 Inter, system-ui, sans-serif; color: #C9D4E3; }
+.tour-nav { display: flex; justify-content: space-between; gap: 10px; }
+.tour-nav button {
+  min-height: 34px; padding: 6px 16px; border-radius: 8px; cursor: pointer;
+  font: 600 13px Inter, system-ui, sans-serif;
+  background: rgba(30, 42, 58, 0.6); border: 1px solid #1E2A3A; color: #C9D4E3;
+}
+.tour-nav button:disabled { opacity: 0.35; cursor: default; }
+.tour-nav button.tour-next { background: #FFB454; border-color: #FFB454; color: #06090F; }
+.tour-nav button.tour-next:hover { background: #FFC475; }
+
+/* The welcome card's tour CTA — the marquee action for a first-timer. */
+.welcome-tour {
+  display: block; width: 100%; margin: 10px 0 8px; padding: 11px 16px;
+  border-radius: 10px; cursor: pointer;
+  background: rgba(255, 180, 84, 0.1); border: 1px solid #FFB454; color: #FFB454;
+  font: 600 14.5px Inter, system-ui, sans-serif;
+}
+.welcome-tour:hover { background: rgba(255, 180, 84, 0.2); }
+
 /* Retry button in the boot-failure toast. */
 .toast-retry {
   margin-top: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer;

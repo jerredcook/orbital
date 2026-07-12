@@ -24,6 +24,7 @@ import { initStation } from './station.js';
 import { initTimeline } from './timeline.js';
 import { initGroups } from './groups.js';
 import { initCoverage } from './coverage.js';
+import { initTour } from './tour.js';
 import { esc } from './esc.js';
 
 // ---------------------------------------------------------------- scene ----
@@ -765,6 +766,7 @@ const closeWelcome = () => {
   try { localStorage.setItem('orbital.welcomed', '1'); } catch { /* ignore */ }
 };
 $('welcome-go').addEventListener('click', closeWelcome);
+$('welcome-tour').addEventListener('click', () => { closeWelcome(); tour.start(); });
 welcome.addEventListener('click', (e) => { if (e.target === welcome) closeWelcome(); });   // backdrop tap
 $('help-toggle').addEventListener('click', () => openModal(welcome, $('welcome-go')));
 
@@ -924,6 +926,41 @@ const groundStation = initStation({
   selectByIndex, flyToSat, setRate, setLegendOpen, toast, holdAutoFollow,
 });
 
+// ------------------------------------------------------------ the guided tour ----
+// "Take the tour" — twelve narrated stops (src/tour.js) that ride the existing
+// navigation.  Every stop begins with tidy(), so stops are order-independent and
+// recover from wherever the user wandered mid-tour.
+const tour = initTour({
+  // strip any state a previous stop armed (never touches the user's own selection)
+  tidy: () => {
+    const cov = $('toggle-coverage');
+    if (cov.checked) cov.click();
+    const g = groups.activeId();
+    if (g) groups.setActive(g);
+    const tl = $('toggle-timeline');
+    if (tl.checked) tl.click();
+  },
+  ensureEarth: () => {
+    if (systemView.visible) systemView.hide();
+    if (moonView.visible) moonView.hide();
+  },
+  clearSelection: () => { clearSelection(); $('infopanel').hidden = true; },
+  focusGroup: (id) => { if (groups.activeId() !== id) groups.setActive(id); },
+  setCoverage: (on) => { const c = $('toggle-coverage'); if (c.checked !== on) c.click(); },
+  flyHome: () => { holdAutoFollow(2500); viewer.camera.flyHome(1.5); },
+  // a famous geostationary bird if one is up today (GOES weather), else any GEO payload
+  findGeo: () => (catalog.find((s) => s.name.startsWith('GOES') && s.regime === 'GEO')
+    || catalog.find((s) => s.regime === 'GEO' && s.kind !== 'DEB'))?.norad,
+  gotoSat: (n) => navigateTo({ sat: String(n) }),
+  playTimeline: () => { const tl = $('toggle-timeline'); if (!tl.checked) tl.click(); $('tl-play').click(); },
+  showMoon: () => moonView.show(),
+  showSystem: () => systemView.show(),
+  gotoBody: (name) => navigateTo({ body: name }),
+  inspectByNorad, inspectShowpiece,
+  closeDrawer: () => setLegendOpen(false),
+  toast,
+});
+
 // Fly the camera out to frame a satellite from a comfortable standoff (without
 // locking on — auto-follow is held off so the flight isn't yanked short).
 function flyToSat(i) {
@@ -949,6 +986,7 @@ function navigateTo(s, tries = 0) {
     return;
   }
   if (s.guide) { openGuide(); return; }
+  if (s.tour) { tour.start(); return; }
   if (s.luna) { moonView.show(); return; }
   if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }
@@ -1100,6 +1138,7 @@ document.addEventListener('keydown', (e) => {
   if (!resultsEl.hidden) { closeResults(); return; }        // an open search dropdown consumes Esc (one key, one action)
   if (!guide.hidden) { closeGuide(); return; }              // modal overlays first
   if (!welcome.hidden) { closeWelcome(); return; }
+  if (tour.active) { tour.end(); return; }                 // one press ends the tour, keeps the view
   if (moonView.visible) { moonView.hide(); return; }         // then the open view
   if (systemView.visible) { systemView.stepBack(); return; } // (handles body globe + selections)
   if (!leaveShowpiece()) { clearSelection(); $('infopanel').hidden = true; }   // Earth view
@@ -1121,5 +1160,6 @@ window.__orbital = {
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter
+  tour,                                                     // debug: the guided tour
   coverage,                                                 // debug: Starlink coverage overlay
 };
