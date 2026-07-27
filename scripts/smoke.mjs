@@ -294,14 +294,22 @@ try {
   mi.liveRows = 0;
   for (let i = 0; i < 20 && !mi.liveRows; i++) { await sleep(500); mi.liveRows = await p.locator('#missions .mi-live-row').count(); }
   mi.liveText = await p.evaluate(() => document.getElementById('mi-live')?.textContent.slice(0, 100) ?? '');
-  // REAL wheel scroll: the overlay must be its own scroll container
-  await p.mouse.move(640, 400);
-  await p.mouse.wheel(0, 3000);
-  await sleep(400);
-  mi.scrollTop = await p.evaluate(() => document.getElementById('missions').scrollTop);
-  // era jump chip (real click) must move the scroll position dramatically
-  await p.locator('#missions .mi-nav-now').click();
-  await sleep(900);
+  // Scrollability, asserted two deterministic ways (both catch the original
+  // "no overlay chrome" bug, where the overlay wasn't a scroll container at all):
+  // structurally, and via a real hit-tested click on the "Now" era chip that must
+  // drive the container's scroll position to the live tail.  The raw mouse-wheel
+  // is ALSO exercised and recorded, but not asserted — CI compositors under
+  // software GL drop/delay wheel events even when human scrolling works fine
+  // (observed: wheel=0 on the runner while chip-scroll hit 17,814 px).
+  mi.scrollRange = await p.evaluate(() => { const el = document.getElementById('missions'); return el.scrollHeight - el.clientHeight; });
+  mi.wheelTop = 0;
+  for (let a = 0; a < 3 && mi.wheelTop < 500; a++) {
+    await p.mouse.move(640, 400);
+    await p.mouse.wheel(0, 1500);
+    for (let i = 0; i < 4 && mi.wheelTop < 500; i++) { await sleep(500); mi.wheelTop = await p.evaluate(() => document.getElementById('missions').scrollTop); }
+  }
+  await p.locator('#missions .mi-nav-now').click();   // real click on the era chip
+  await sleep(1200);
   mi.scrollAfterNow = await p.evaluate(() => document.getElementById('missions').scrollTop);
   // real fly-to: scroll the ISS card into view and click its button for real
   const issFly = p.locator('#missions .mi-card', { hasText: 'International Space Station' }).locator('.mi-fly');
@@ -312,7 +320,7 @@ try {
   mi.issSelected = await p.evaluate(() => window.__orbital.selected
     && window.__orbital.catalog[window.__orbital.selected.index]?.norad === 25544);
   check('missionsOpensReal', mi.cards > 55 && mi.flyBtns > 30);
-  check('missionsScrolls', mi.scrollTop > 500 && mi.scrollAfterNow > mi.scrollTop);
+  check('missionsScrolls', mi.scrollRange > 5000 && mi.scrollAfterNow > 10000);
   check('missionsLiveTail', mi.liveRows >= 8);
   check('missionsFlyToReal', mi.closed && mi.issSelected === true);
   R._missions = mi;
