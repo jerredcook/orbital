@@ -285,12 +285,19 @@ try {
   const mi = await p.evaluate(async () => {
     const nap = (ms) => new Promise((r) => setTimeout(r, ms));
     document.getElementById('missions-toggle').click();
-    await nap(1200);   // build + recent.json fetch
+    await nap(600);
+    // The live tail arrives async (recent.json fetch) — on a loaded CI runner the
+    // main thread is busy, so poll up to ~10 s instead of assuming one beat.
+    let liveRows = 0;
+    for (let i = 0; i < 20 && !liveRows; i++) {
+      await nap(500);
+      liveRows = document.querySelectorAll('#missions-body .mi-live-row').length;
+    }
     const opened = !document.getElementById('missions').hidden;
     const eras = document.querySelectorAll('#missions-body .mi-era').length;   // 6 + the live head
     const cards = document.querySelectorAll('#missions-body .mi-card').length;
-    const liveRows = document.querySelectorAll('#missions-body .mi-live-row').length;
     const flyBtns = document.querySelectorAll('#missions-body .mi-fly').length;
+    const liveText = document.getElementById('mi-live')?.textContent.slice(0, 120) ?? '';
     // fly-to on the ISS card → closes overlay, selects the live station
     const issCard = [...document.querySelectorAll('#missions-body .mi-card')]
       .find((c) => c.querySelector('.mi-name')?.textContent.startsWith('International Space Station'));
@@ -299,7 +306,7 @@ try {
     const closed = document.getElementById('missions').hidden;
     const issSelected = window.__orbital.selected
       && window.__orbital.catalog[window.__orbital.selected.index]?.norad === 25544;
-    return { opened, eras, cards, liveRows, flyBtns, closed, issSelected };
+    return { opened, eras, cards, liveRows, flyBtns, closed, issSelected, liveText };
   });
   check('missionsOpens', mi.opened && mi.eras >= 6 && mi.cards > 55 && mi.flyBtns > 30);
   check('missionsLiveTail', mi.liveRows >= 8);

@@ -45,6 +45,7 @@ jobs:
       - name: Smoke test the production build
         run: |
           google-chrome --version
+          ls -la dist/missions/ && head -c 120 dist/missions/recent.json; echo
           node scripts/serve-dist.mjs 4173 &
           JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
           for i in $(seq 1 15); do
