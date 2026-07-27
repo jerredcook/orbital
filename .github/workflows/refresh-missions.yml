@@ -1,0 +1,42 @@
+name: Refresh mission data
+
+# The Missions chapter's live tail: pull the latest + upcoming launches from
+# Launch Library 2 twice a week and commit public/missions/recent.json when it
+# changed.  A push made with GITHUB_TOKEN does NOT trigger the deploy workflow
+# (GitHub's recursion guard), so we dispatch it explicitly — which still runs
+# the full smoke gate before anything is published.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1,4'   # Mon + Thu 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Fetch latest + upcoming launches
+        run: node tools/fetch-recent-launches.mjs
+      - name: Commit and deploy if the data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet public/missions/recent.json; then
+            echo "mission data unchanged — nothing to do"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/missions/recent.json
+          git commit -m "Missions: refresh the live launch data (automated)"
+          git push
+          gh workflow run "Deploy to GitHub Pages" --ref main

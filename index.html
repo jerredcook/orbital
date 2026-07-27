@@ -75,11 +75,20 @@
     </div>
   </div>
 
+  <div id="missions" role="dialog" aria-modal="true" aria-labelledby="missions-title" hidden>
+    <div class="guide-card missions-card">
+      <button id="missions-close" class="guide-close" type="button" aria-label="Close missions">✕</button>
+      <div class="welcome-mark" id="missions-title">MISSIONS</div>
+      <p class="guide-sub">The story of spaceflight — every milestone from <b>Sputnik</b> to <b>this week</b>, told in the missions that mattered. Where the subject is flying in this app right now, a card will take you to it. The final section updates itself as new launches happen.</p>
+      <div id="missions-body"></div>
+    </div>
+  </div>
+
   <div id="guide" role="dialog" aria-modal="true" aria-labelledby="guide-title" hidden>
     <div class="guide-card">
       <button id="guide-close" class="guide-close" type="button" aria-label="Close guide">✕</button>
       <div class="welcome-mark" id="guide-title">ORBITAL</div>
-      <p class="guide-sub">Everything this map can do. It's really two worlds in one — a <b>live satellite tracker</b> around Earth, and the <b>whole solar system</b> to fly through. Switch any time with <b>☉ System</b> in the top bar, and <b>Esc</b> always steps back a level. New here? The <b>🚀 guided tour</b> on the welcome card (the <b>?</b> button reopens it) flies you through the twelve best stops with the story of each.</p>
+      <p class="guide-sub">Everything this map can do. It's really two worlds in one — a <b>live satellite tracker</b> around Earth, and the <b>whole solar system</b> to fly through. Switch any time with <b>☉ System</b> in the top bar, and <b>Esc</b> always steps back a level. New here? The <b>🚀 guided tour</b> on the welcome card (the <b>?</b> button reopens it) flies you through the twelve best stops with the story of each. And <b>✦ Missions</b> in the top bar tells the whole story of spaceflight — Sputnik to this week, with a live tail that updates itself.</p>
       <a class="guide-full-link" href="guide/" target="_blank" rel="noopener">📖 Prefer pictures? Open the full illustrated guide →</a>
 
       <section class="guide-sec">
@@ -248,6 +257,7 @@
     </div>
     <button id="system-toggle" title="Fly out to the whole solar system" aria-label="Solar system view">☉ <span class="tb-label">System</span></button>
     <button id="moon-toggle" title="Fly to the Moon" aria-label="Moon view">◐ <span class="tb-label">Moon</span></button>
+    <button id="missions-toggle" title="The story of spaceflight, Sputnik to this week" aria-label="Missions — the story of spaceflight">✦ <span class="tb-label">Missions</span></button>
     <button id="help-toggle" title="What is this?" aria-label="What is this?">?</button>
     <div class="topbar-right">
       <input id="search" type="search" placeholder="Search name or NORAD ID…" autocomplete="off" aria-label="Search satellites, planets and spacecraft by name or NORAD ID" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list" />

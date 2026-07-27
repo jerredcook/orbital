@@ -281,6 +281,33 @@ try {
   check('coverageFollowsGroup', cov.gps.label === 'GPS' && cov.gps.mask === '10°' && /\d/.test(cov.gps.count));
   R._cov = cov;
 
+  // --- the Missions chapter: opens, renders eras + cards + live tail, fly-to works ---
+  const mi = await p.evaluate(async () => {
+    const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.getElementById('missions-toggle').click();
+    await nap(1200);   // build + recent.json fetch
+    const opened = !document.getElementById('missions').hidden;
+    const eras = document.querySelectorAll('#missions-body .mi-era').length;   // 6 + the live head
+    const cards = document.querySelectorAll('#missions-body .mi-card').length;
+    const liveRows = document.querySelectorAll('#missions-body .mi-live-row').length;
+    const flyBtns = document.querySelectorAll('#missions-body .mi-fly').length;
+    // fly-to on the ISS card → closes overlay, selects the live station
+    const issCard = [...document.querySelectorAll('#missions-body .mi-card')]
+      .find((c) => c.querySelector('.mi-name')?.textContent.startsWith('International Space Station'));
+    issCard?.querySelector('.mi-fly')?.click();
+    await nap(1500);
+    const closed = document.getElementById('missions').hidden;
+    const issSelected = window.__orbital.selected
+      && window.__orbital.catalog[window.__orbital.selected.index]?.norad === 25544;
+    return { opened, eras, cards, liveRows, flyBtns, closed, issSelected };
+  });
+  check('missionsOpens', mi.opened && mi.eras >= 6 && mi.cards > 55 && mi.flyBtns > 30);
+  check('missionsLiveTail', mi.liveRows >= 8);
+  check('missionsFlyTo', mi.closed && mi.issSelected === true);
+  R._missions = mi;
+  await p.evaluate(() => { document.getElementById('info-close')?.click(); });
+  await sleep(400);
+
   // --- a11y landmarks + combobox ---
   const a11y = await p.evaluate(async () => {
     const nap = (ms) => new Promise((r) => setTimeout(r, ms));

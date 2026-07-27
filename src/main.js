@@ -25,6 +25,7 @@ import { initTimeline } from './timeline.js';
 import { initGroups } from './groups.js';
 import { initCoverage } from './coverage.js';
 import { initTour } from './tour.js';
+import { initMissions } from './missions.js';
 import { esc } from './esc.js';
 
 // ---------------------------------------------------------------- scene ----
@@ -733,17 +734,18 @@ $('tl-play').addEventListener('click', () => { if (drawerMq.matches) setLegendOp
 // focus was and move it into the dialog; keep Tab inside it; on close, restore.
 const welcome = $('welcome');
 const guide = $('guide');
+const missionsEl = $('missions');
 let modalReturn = null;
 const focusablesIn = (el) => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
   .filter((x) => !x.hidden && x.offsetParent !== null);
 function openModal(el, focusEl) {
-  if (welcome.hidden && guide.hidden) modalReturn = document.activeElement;   // capture only when entering from the app
+  if (welcome.hidden && guide.hidden && missionsEl.hidden) modalReturn = document.activeElement;   // capture only when entering from the app
   el.hidden = false;
   (focusEl || focusablesIn(el)[0])?.focus();
 }
 function closeModal(el) {
   el.hidden = true;
-  if (welcome.hidden && guide.hidden) {   // no dialog left open → hand focus back to the app
+  if (welcome.hidden && guide.hidden && missionsEl.hidden) {   // no dialog left open → hand focus back to the app
     if (modalReturn && modalReturn.focus && modalReturn.isConnected) modalReturn.focus();
     modalReturn = null;
   }
@@ -751,7 +753,7 @@ function closeModal(el) {
 // Trap Tab within whichever dialog is open (guide sits above welcome).
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Tab') return;
-  const modal = !guide.hidden ? guide : (!welcome.hidden ? welcome : null);
+  const modal = !missionsEl.hidden ? missionsEl : (!guide.hidden ? guide : (!welcome.hidden ? welcome : null));
   if (!modal) return;
   const f = focusablesIn(modal);
   if (!f.length) return;
@@ -961,6 +963,18 @@ const tour = initTour({
   toast,
 });
 
+// ------------------------------------------------------------ the missions chapter ----
+// "✦ Missions" — the story of spaceflight, Sputnik → this week (src/missions.js).
+// Curated milestones + a live tail CI refreshes on a schedule.  Cards whose
+// subject exists in the app fly you straight to it.
+const missions = initMissions({
+  onFly: (spec) => { closeModal(missionsEl); navigateTo(spec); },
+});
+const openMissions = () => { missions.build(); openModal(missionsEl, $('missions-close')); };
+$('missions-toggle').addEventListener('click', () => { setLegendOpen(false); openMissions(); });
+$('missions-close').addEventListener('click', () => closeModal(missionsEl));
+missionsEl.addEventListener('click', (e) => { if (e.target === missionsEl) closeModal(missionsEl); });   // backdrop tap
+
 // Fly the camera out to frame a satellite from a comfortable standoff (without
 // locking on — auto-follow is held off so the flight isn't yanked short).
 function flyToSat(i) {
@@ -987,6 +1001,7 @@ function navigateTo(s, tries = 0) {
   }
   if (s.guide) { openGuide(); return; }
   if (s.tour) { tour.start(); return; }
+  if (s.missions) { openMissions(); return; }
   if (s.luna) { moonView.show(); return; }
   if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }
@@ -1138,6 +1153,7 @@ document.addEventListener('keydown', (e) => {
   if (!resultsEl.hidden) { closeResults(); return; }        // an open search dropdown consumes Esc (one key, one action)
   if (!guide.hidden) { closeGuide(); return; }              // modal overlays first
   if (!welcome.hidden) { closeWelcome(); return; }
+  if (!missionsEl.hidden) { closeModal(missionsEl); return; }
   if (tour.active) { tour.end(); return; }                 // one press ends the tour, keeps the view
   if (moonView.visible) { moonView.hide(); return; }         // then the open view
   if (systemView.visible) { systemView.stepBack(); return; } // (handles body globe + selections)
@@ -1161,5 +1177,6 @@ window.__orbital = {
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter
   tour,                                                     // debug: the guided tour
+  missions,                                                 // debug: the missions chapter
   coverage,                                                 // debug: Starlink coverage overlay
 };

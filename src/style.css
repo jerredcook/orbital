@@ -58,6 +58,73 @@
 .tour-nav button.tour-next { background: #FFB454; border-color: #FFB454; color: #06090F; }
 .tour-nav button.tour-next:hover { background: #FFC475; }
 
+/* ---- the Missions chapter ---- */
+.missions-card { max-width: 780px; }
+
+.mi-nav { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0 6px; }
+.mi-nav-chip {
+  padding: 5px 12px; border: 1px solid #1E2A3A; border-radius: 20px; text-decoration: none;
+  font: 500 12px Inter, system-ui, sans-serif; color: #8595A8; background: rgba(30,42,58,0.4);
+}
+.mi-nav-chip:hover { color: #FFB454; border-color: #FFB454; }
+.mi-nav-now { color: #41E1CD; border-color: rgba(65,225,205,0.4); }
+
+.mi-era { margin-top: 34px; }
+.mi-era-span {
+  font: 600 10.5px ui-monospace, monospace; letter-spacing: 0.22em;
+  text-transform: uppercase; color: #FFB454;
+}
+.mi-era-title { margin: 3px 0 6px; font: 700 21px Inter, system-ui, sans-serif; color: #F2F6FC; }
+.mi-era-blurb { margin: 0; font: 13.5px/1.55 Inter, system-ui, sans-serif; color: #8595A8; max-width: 60ch; }
+
+.mi-list { display: grid; gap: 12px; margin-top: 16px; }
+.mi-card {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: rgba(11, 16, 24, 0.75); border: 1px solid #1B2432; border-radius: 10px;
+  padding: 13px 15px;
+}
+.mi-img {
+  width: 92px; height: 92px; object-fit: cover; border-radius: 8px; flex: none;
+  border: 1px solid #1E2A3A; background: #0B1018;
+}
+.mi-body { min-width: 0; flex: 1; }
+.mi-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.mi-date { font: 600 11px ui-monospace, monospace; letter-spacing: 0.08em; color: #FFD166; }
+.mi-agency { font: 500 11.5px Inter, system-ui, sans-serif; color: #8595A8; }
+.mi-upcoming {
+  font: 600 9.5px ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #41E1CD; border: 1px solid rgba(65,225,205,0.4); border-radius: 10px; padding: 1px 8px;
+}
+.mi-name { margin: 3px 0 0; font: 700 15.5px Inter, system-ui, sans-serif; color: #E8EFF8; }
+.mi-name-live { font-size: 13.5px; }
+.mi-crew { margin-top: 2px; font: 12px Inter, system-ui, sans-serif; color: #C9A0FF; }
+.mi-story { margin: 6px 0 0; font: 13px/1.55 Inter, system-ui, sans-serif; color: #C9D4E3; }
+.mi-disc { margin: 6px 0 0; font: 12.5px/1.5 Inter, system-ui, sans-serif; color: #8FD8C9; }
+.mi-disc::before { content: '→ '; color: #41E1CD; }
+.mi-fly {
+  margin-top: 9px; padding: 5px 13px; border-radius: 8px; cursor: pointer;
+  background: rgba(255, 180, 84, 0.1); border: 1px solid #FFB454; color: #FFB454;
+  font: 600 12px Inter, system-ui, sans-serif;
+}
+.mi-fly:hover { background: #FFB454; color: #06090F; }
+
+.mi-live { margin-top: 34px; }
+.mi-live-sub {
+  margin: 16px 0 8px; font: 600 11px ui-monospace, monospace;
+  letter-spacing: 0.18em; text-transform: uppercase; color: #5D6B82;
+}
+.mi-live-row {
+  display: flex; gap: 12px; align-items: flex-start;
+  border-top: 1px solid #141C28; padding: 10px 2px;
+}
+.mi-live-img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex: none; border: 1px solid #1E2A3A; }
+.mi-foot { margin-top: 30px; font: 11.5px/1.5 Inter, system-ui, sans-serif; color: #5D6B82; }
+
+@media (max-width: 560px) {
+  .mi-img { width: 64px; height: 64px; }
+  .mi-card { padding: 11px 12px; gap: 10px; }
+}
+
 /* The welcome card's tour CTA — the marquee action for a first-timer. */
 .welcome-tour {
   display: block; width: 100%; margin: 10px 0 8px; padding: 11px 16px;

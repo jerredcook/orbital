@@ -40,6 +40,7 @@ export function readHash() {
   if (h === 'system') return { system: true };
   if (h === 'guide') return { guide: true };   // the full guide overlay
   if (h === 'tour') return { tour: true };     // start the guided tour
+  if (h === 'missions') return { missions: true };   // open the missions chapter
   const eq = h.indexOf('=');
   if (eq < 0) return { show: h };   // a bare word is a showpiece id (jwst, voyager1, soho…)
   const k = h.slice(0, eq);
