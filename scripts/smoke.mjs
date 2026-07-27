@@ -281,36 +281,40 @@ try {
   check('coverageFollowsGroup', cov.gps.label === 'GPS' && cov.gps.mask === '10°' && /\d/.test(cov.gps.count));
   R._cov = cov;
 
-  // --- the Missions chapter: opens, renders eras + cards + live tail, fly-to works ---
-  const mi = await p.evaluate(async () => {
-    const nap = (ms) => new Promise((r) => setTimeout(r, ms));
-    document.getElementById('missions-toggle').click();
-    await nap(600);
-    // The live tail arrives async (recent.json fetch) — on a loaded CI runner the
-    // main thread is busy, so poll up to ~10 s instead of assuming one beat.
-    let liveRows = 0;
-    for (let i = 0; i < 20 && !liveRows; i++) {
-      await nap(500);
-      liveRows = document.querySelectorAll('#missions-body .mi-live-row').length;
-    }
-    const opened = !document.getElementById('missions').hidden;
-    const eras = document.querySelectorAll('#missions-body .mi-era').length;   // 6 + the live head
-    const cards = document.querySelectorAll('#missions-body .mi-card').length;
-    const flyBtns = document.querySelectorAll('#missions-body .mi-fly').length;
-    const liveText = document.getElementById('mi-live')?.textContent.slice(0, 120) ?? '';
-    // fly-to on the ISS card → closes overlay, selects the live station
-    const issCard = [...document.querySelectorAll('#missions-body .mi-card')]
-      .find((c) => c.querySelector('.mi-name')?.textContent.startsWith('International Space Station'));
-    issCard?.querySelector('.mi-fly')?.click();
-    await nap(1500);
-    const closed = document.getElementById('missions').hidden;
-    const issSelected = window.__orbital.selected
-      && window.__orbital.catalog[window.__orbital.selected.index]?.norad === 25544;
-    return { opened, eras, cards, liveRows, flyBtns, closed, issSelected, liveText };
-  });
-  check('missionsOpens', mi.opened && mi.eras >= 6 && mi.cards > 55 && mi.flyBtns > 30);
+  // --- the Missions chapter — REAL interactions only (hit-tested clicks, real
+  // wheel scrolling).  Synthetic element.click() once let this feature ship
+  // unusable: the overlay rendered without its fixed/scroll chrome, so nothing
+  // below the fold was reachable by a human, while DOM-level checks passed.
+  const mi = {};
+  await p.click('#missions-toggle');                              // real topbar click
+  await p.locator('#missions .mi-card').first().waitFor({ state: 'visible', timeout: 8000 });
+  mi.cards = await p.locator('#missions .mi-card').count();
+  mi.flyBtns = await p.locator('#missions .mi-fly').count();
+  // the live tail arrives async — poll (CI runners are slow under software GL)
+  mi.liveRows = 0;
+  for (let i = 0; i < 20 && !mi.liveRows; i++) { await sleep(500); mi.liveRows = await p.locator('#missions .mi-live-row').count(); }
+  mi.liveText = await p.evaluate(() => document.getElementById('mi-live')?.textContent.slice(0, 100) ?? '');
+  // REAL wheel scroll: the overlay must be its own scroll container
+  await p.mouse.move(640, 400);
+  await p.mouse.wheel(0, 3000);
+  await sleep(400);
+  mi.scrollTop = await p.evaluate(() => document.getElementById('missions').scrollTop);
+  // era jump chip (real click) must move the scroll position dramatically
+  await p.locator('#missions .mi-nav-now').click();
+  await sleep(900);
+  mi.scrollAfterNow = await p.evaluate(() => document.getElementById('missions').scrollTop);
+  // real fly-to: scroll the ISS card into view and click its button for real
+  const issFly = p.locator('#missions .mi-card', { hasText: 'International Space Station' }).locator('.mi-fly');
+  await issFly.scrollIntoViewIfNeeded();
+  await issFly.click();
+  await sleep(1500);
+  mi.closed = await p.evaluate(() => document.getElementById('missions').hidden);
+  mi.issSelected = await p.evaluate(() => window.__orbital.selected
+    && window.__orbital.catalog[window.__orbital.selected.index]?.norad === 25544);
+  check('missionsOpensReal', mi.cards > 55 && mi.flyBtns > 30);
+  check('missionsScrolls', mi.scrollTop > 500 && mi.scrollAfterNow > mi.scrollTop);
   check('missionsLiveTail', mi.liveRows >= 8);
-  check('missionsFlyTo', mi.closed && mi.issSelected === true);
+  check('missionsFlyToReal', mi.closed && mi.issSelected === true);
   R._missions = mi;
   await p.evaluate(() => { document.getElementById('info-close')?.click(); });
   await sleep(400);

@@ -492,11 +492,13 @@ body:not(.system-mode) #system-legend { display: none; }
 
 /* The full guide — its own scrollable "page", reachable from the welcome,
    the ? button, or a #guide link. */
-#guide {
+/* The full-screen reading overlays (quick guide + missions chapter) share the
+   same chrome: fixed scrim, their own scroll container, above all app UI. */
+#guide, #missions {
   position: fixed; inset: 0; z-index: 55; padding: 20px; overflow-y: auto;
   background: rgba(2,4,10,0.86); backdrop-filter: blur(4px);
 }
-#guide[hidden] { display: none; }
+#guide[hidden], #missions[hidden] { display: none; }
 .guide-card {
   position: relative; width: 100%; max-width: 680px; margin: 0 auto;
   padding: 30px 30px 26px; border: 1px solid #243348; border-radius: 12px;
