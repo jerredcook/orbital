@@ -309,8 +309,12 @@ try {
     for (let i = 0; i < 4 && mi.wheelTop < 500; i++) { await sleep(500); mi.wheelTop = await p.evaluate(() => document.getElementById('missions').scrollTop); }
   }
   await p.locator('#missions .mi-nav-now').click();   // real click on the era chip
-  await sleep(1200);
-  mi.scrollAfterNow = await p.evaluate(() => document.getElementById('missions').scrollTop);
+  // the chip scrolls smoothly (animated) — poll to completion instead of sampling mid-flight
+  mi.scrollAfterNow = 0;
+  for (let i = 0; i < 16 && mi.scrollAfterNow < 10000; i++) {
+    await sleep(500);
+    mi.scrollAfterNow = await p.evaluate(() => document.getElementById('missions').scrollTop);
+  }
   // real fly-to: scroll the ISS card into view and click its button for real
   const issFly = p.locator('#missions .mi-card', { hasText: 'International Space Station' }).locator('.mi-fly');
   await issFly.scrollIntoViewIfNeeded();
