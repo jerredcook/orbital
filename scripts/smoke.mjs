@@ -39,7 +39,7 @@ p.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 160)));
 p.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 160)); });
 
 const R = {};
-const check = (name, cond) => { R[name] = cond ? 'PASS' : 'FAIL'; };
+const check = (name, cond) => { R[name] = cond ? 'PASS' : 'FAIL'; if (process.env.SMOKE_TRACE) process.stderr.write(`[${R[name]}] ${name}\n`); };
 
 try {
   await p.goto(URL, { waitUntil: 'load', timeout: 30000 });
@@ -328,6 +328,56 @@ try {
   check('missionsLiveTail', mi.liveRows >= 8);
   check('missionsFlyToReal', mi.closed && mi.issSelected === true);
   R._missions = mi;
+  await p.evaluate(() => { document.getElementById('info-close')?.click(); });
+  await sleep(400);
+
+  // --- partial NORAD search: "255" must now surface the ISS (25544), which the
+  //     old exact-only matcher missed entirely ---
+  await p.fill('#search', '255');
+  await sleep(300);
+  const nsearch = await p.evaluate(() => [...document.querySelectorAll('#search-results .rid')].map((e) => e.textContent));
+  check('searchPartialNorad', nsearch.includes('25544'));
+  R._nsearch = nsearch.slice(0, 6);
+  await p.fill('#search', '');
+  await sleep(150);
+
+  // --- the catalog browser — REAL interactions (hit-tested clicks, real typing,
+  //     real scroll of the virtual list). All rows must be browsable but only a
+  //     window rendered; filter/regime/Enter-to-fly must all work. ---
+  const cb = {};
+  await p.click('#catalog-toggle');
+  await p.locator('#catalog .cat-row').first().waitFor({ state: 'visible', timeout: 8000 });
+  cb.renderedRows = await p.locator('#catalog .cat-row').count();     // virtual: a small window, not 17k
+  cb.sizerHeight = await p.evaluate(() => document.querySelector('#catalog .cat-sizer').offsetHeight);
+  // virtual scroll: jump deep, the top rendered row must change to a later index
+  cb.topBefore = await p.evaluate(() => document.querySelector('#catalog .cat-id')?.textContent);
+  await p.evaluate(() => { const s = document.getElementById('catalog-scroll'); s.scrollTop = 200000; s.dispatchEvent(new Event('scroll')); });
+  await sleep(300);
+  cb.topAfter = await p.evaluate(() => document.querySelector('#catalog .cat-id')?.textContent);
+  // filter by exact NORAD ID
+  await p.fill('#catalog-q', '25544');
+  await sleep(400);
+  cb.filterCount = await p.evaluate(() => document.getElementById('catalog-count').textContent);
+  cb.filterFirst = await p.evaluate(() => document.querySelector('#catalog .cat-id')?.textContent);
+  // regime chip filters (real click)
+  await p.fill('#catalog-q', '');
+  await sleep(200);
+  await p.locator('#catalog .cat-chip', { hasText: 'GEO' }).click();
+  await sleep(400);
+  cb.geoAllBadges = await p.evaluate(() => [...document.querySelectorAll('#catalog .cat-badge')].every((b) => b.textContent === 'GEO'));
+  // Enter-to-fly on an exact ID: closes the overlay + selects the ISS
+  await p.locator('#catalog .cat-chip', { hasText: 'All' }).click();
+  await p.fill('#catalog-q', '25544');
+  await sleep(300);
+  await p.press('#catalog-q', 'Enter');
+  await sleep(1500);
+  cb.flewClosed = await p.evaluate(() => document.getElementById('catalog').hidden);
+  cb.flewIss = await p.evaluate(() => window.__orbital.selected && window.__orbital.catalog[window.__orbital.selected.index]?.norad === 25544);
+  check('catalogVirtualizes', cb.renderedRows > 5 && cb.renderedRows < 60 && cb.sizerHeight > 100000);
+  check('catalogScrolls', cb.topBefore !== cb.topAfter);
+  check('catalogFilters', /^1 of/.test(cb.filterCount) && cb.filterFirst === '25544' && cb.geoAllBadges);
+  check('catalogFlyTo', cb.flewClosed && cb.flewIss === true);
+  R._catalog = cb;
   await p.evaluate(() => { document.getElementById('info-close')?.click(); });
   await sleep(400);
 

@@ -58,6 +58,76 @@
 .tour-nav button.tour-next { background: #FFB454; border-color: #FFB454; color: #06090F; }
 .tour-nav button.tour-next:hover { background: #FFC475; }
 
+/* ---- the satellite catalog browser ---- */
+/* Its own overlay chrome (NOT the shared #guide,#missions rule): the card is a
+   bounded flex column so the virtual list scrolls INSIDE it, not the page. */
+#catalog {
+  position: fixed; inset: 0; z-index: 55; padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(2,4,10,0.86); backdrop-filter: blur(4px);
+}
+#catalog[hidden] { display: none; }
+.catalog-card {
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 740px; max-height: calc(100dvh - 40px);
+  padding: 22px 22px 16px;
+}
+#catalog-ui { display: flex; flex-direction: column; min-height: 0; flex: 1; margin-top: 12px; }
+
+.cat-controls { display: flex; flex-direction: column; gap: 10px; flex: none; }
+#catalog-q {
+  width: 100%; padding: 10px 13px; border-radius: 9px; -webkit-appearance: none;
+  background: rgba(11,16,24,0.9); border: 1px solid #243348; color: #E8EFF8;
+  font: 14.5px Inter, system-ui, sans-serif;
+}
+#catalog-q:focus { outline: none; border-color: #FFB454; }
+.cat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-chip {
+  padding: 4px 13px; border: 1px solid #1E2A3A; border-radius: 20px; cursor: pointer;
+  font: 500 12px Inter, system-ui, sans-serif; color: #8595A8; background: rgba(30,42,58,0.4);
+}
+.cat-chip:hover { color: #FFB454; border-color: #FFB454; }
+.cat-chip.active { color: #06090F; background: #FFB454; border-color: #FFB454; }
+.cat-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cat-count { font: 12px ui-monospace, monospace; color: #8595A8; }
+.cat-sort { font: 12px Inter, system-ui, sans-serif; color: #8595A8; display: flex; align-items: center; gap: 6px; }
+.cat-sort select {
+  background: rgba(11,16,24,0.9); border: 1px solid #243348; color: #C9D4E3;
+  border-radius: 6px; padding: 3px 6px; font: 12px Inter, system-ui, sans-serif;
+}
+
+.cat-scroll {
+  flex: 1; min-height: 0; overflow-y: auto; margin-top: 12px;
+  border-top: 1px solid #141C28; overscroll-behavior: contain;
+}
+.cat-sizer { position: relative; width: 100%; }
+.cat-rows { position: absolute; inset: 0; }
+.cat-row {
+  position: absolute; left: 0; right: 0; height: 46px;   /* height MUST match ROW_H in catalog-browser.js */
+  display: grid; grid-template-columns: 74px 1fr auto 132px; align-items: center; gap: 12px;
+  padding: 0 10px; border-bottom: 1px solid #121A26; cursor: pointer;
+  background: none; text-align: left; width: 100%;
+  font: 13px Inter, system-ui, sans-serif; color: #C9D4E3;
+}
+.cat-row:hover { background: rgba(255,180,84,0.08); }
+.cat-row:focus-visible { outline: 2px solid #FFB454; outline-offset: -2px; }
+.cat-id { font: 600 13px ui-monospace, monospace; color: #FFD166; }
+.cat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #E8EFF8; }
+.cat-badge {
+  justify-self: start; padding: 1px 8px; border-radius: 10px;
+  font: 600 9.5px ui-monospace, monospace; letter-spacing: 0.08em; border: 1px solid currentColor;
+}
+.cat-badge.leo { color: #5EC8E5; } .cat-badge.meo { color: #C9A0FF; }
+.cat-badge.geo { color: #FFD166; } .cat-badge.heo { color: #FF8C66; } .cat-badge.deb { color: #8B93A1; }
+.cat-owner { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8595A8; font-size: 12px; }
+.cat-empty { padding: 34px 10px; color: #8595A8; text-align: center; }
+
+@media (max-width: 560px) {
+  .catalog-card { padding: 18px 15px 12px; }
+  .cat-row { grid-template-columns: 66px 1fr auto; gap: 10px; }
+  .cat-owner { display: none; }
+}
+
 /* ---- the Missions chapter ---- */
 .missions-card { max-width: 780px; }
 

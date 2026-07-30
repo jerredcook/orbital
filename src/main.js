@@ -26,6 +26,7 @@ import { initGroups } from './groups.js';
 import { initCoverage } from './coverage.js';
 import { initTour } from './tour.js';
 import { initMissions } from './missions.js';
+import { initCatalogBrowser } from './catalog-browser.js';
 import { esc } from './esc.js';
 
 // ---------------------------------------------------------------- scene ----
@@ -735,17 +736,18 @@ $('tl-play').addEventListener('click', () => { if (drawerMq.matches) setLegendOp
 const welcome = $('welcome');
 const guide = $('guide');
 const missionsEl = $('missions');
+const catalogUI = $('catalog');
 let modalReturn = null;
 const focusablesIn = (el) => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
   .filter((x) => !x.hidden && x.offsetParent !== null);
 function openModal(el, focusEl) {
-  if (welcome.hidden && guide.hidden && missionsEl.hidden) modalReturn = document.activeElement;   // capture only when entering from the app
+  if (welcome.hidden && guide.hidden && missionsEl.hidden && catalogUI.hidden) modalReturn = document.activeElement;   // capture only when entering from the app
   el.hidden = false;
   (focusEl || focusablesIn(el)[0])?.focus();
 }
 function closeModal(el) {
   el.hidden = true;
-  if (welcome.hidden && guide.hidden && missionsEl.hidden) {   // no dialog left open → hand focus back to the app
+  if (welcome.hidden && guide.hidden && missionsEl.hidden && catalogUI.hidden) {   // no dialog left open → hand focus back to the app
     if (modalReturn && modalReturn.focus && modalReturn.isConnected) modalReturn.focus();
     modalReturn = null;
   }
@@ -753,7 +755,7 @@ function closeModal(el) {
 // Trap Tab within whichever dialog is open (guide sits above welcome).
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Tab') return;
-  const modal = !missionsEl.hidden ? missionsEl : (!guide.hidden ? guide : (!welcome.hidden ? welcome : null));
+  const modal = !catalogUI.hidden ? catalogUI : (!missionsEl.hidden ? missionsEl : (!guide.hidden ? guide : (!welcome.hidden ? welcome : null)));
   if (!modal) return;
   const f = focusablesIn(modal);
   if (!f.length) return;
@@ -975,6 +977,24 @@ $('missions-toggle').addEventListener('click', () => { setLegendOpen(false); ope
 $('missions-close').addEventListener('click', () => closeModal(missionsEl));
 missionsEl.addEventListener('click', (e) => { if (e.target === missionsEl) closeModal(missionsEl); });   // backdrop tap
 
+// ------------------------------------------------------------ the catalog browser ----
+// "▦ Catalog" — a searchable, virtual-scrolled reference of every tracked object
+// by name and NORAD ID (src/catalog-browser.js).  Tap a row to fly to it.
+const catalogBrowser = initCatalogBrowser({
+  getCatalog: () => catalog,
+  decodeOwner,
+  onPick: (norad) => { closeModal(catalogUI); navigateTo({ sat: String(norad) }); },
+});
+const openCatalog = () => {
+  openModal(catalogUI, $('catalog-close'));   // unhide + trap focus
+  catalogBrowser.build();                     // first open builds the list
+  catalogBrowser.refresh();                   // re-measure now it's visible / catalog may have hot-swapped
+  catalogBrowser.focusSearch();
+};
+$('catalog-toggle').addEventListener('click', () => { setLegendOpen(false); openCatalog(); });
+$('catalog-close').addEventListener('click', () => closeModal(catalogUI));
+catalogUI.addEventListener('click', (e) => { if (e.target === catalogUI) closeModal(catalogUI); });   // backdrop tap
+
 // Fly the camera out to frame a satellite from a comfortable standoff (without
 // locking on — auto-follow is held off so the flight isn't yanked short).
 function flyToSat(i) {
@@ -1002,6 +1022,7 @@ function navigateTo(s, tries = 0) {
   if (s.guide) { openGuide(); return; }
   if (s.tour) { tour.start(); return; }
   if (s.missions) { openMissions(); return; }
+  if (s.catalog) { openCatalog(); return; }
   if (s.luna) { moonView.show(); return; }
   if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }
@@ -1100,12 +1121,25 @@ searchBox.addEventListener('input', () => {
   searchBox.removeAttribute('aria-activedescendant');   // don't leave it pointing at a recycled/removed option
   resultsEl.innerHTML = '';
   if (q.length < 2) { closeResults(); return; }
-  const hits = [];
-  for (let i = 0; i < catalog.length && hits.length < 12; i++) {
-    if (catalog[i].name.toUpperCase().includes(q) || String(catalog[i].norad) === q) {
-      hits.push(i);
-    }
+  // Rank matches so a NORAD-ID query surfaces the right objects: an exact ID
+  // first, then IDs that start with the digits (25544 for "255"), then names,
+  // then IDs merely containing the digits.  Previously only an EXACT id matched,
+  // so partial NORAD searches found nothing.
+  const numeric = /^\d+$/.test(q);
+  const scored = [];
+  for (let i = 0; i < catalog.length; i++) {
+    const id = String(catalog[i].norad);
+    const nameU = catalog[i].name.toUpperCase();
+    let rank = -1;
+    if (id === q) rank = 0;
+    else if (numeric && id.startsWith(q)) rank = 1;
+    else if (nameU.startsWith(q)) rank = 2;
+    else if (nameU.includes(q)) rank = 3;
+    else if (numeric && id.includes(q)) rank = 4;
+    if (rank >= 0) scored.push({ i, rank, norad: catalog[i].norad });
   }
+  scored.sort((a, b) => a.rank - b.rank || a.norad - b.norad);
+  const hits = scored.slice(0, 12).map((x) => x.i);
   // Showpieces (JWST, Voyager, SOHO…) aren't in the catalog — they don't orbit
   // Earth — so surface any that match and fly out to them, searchable like a sat.
   // Match on word boundaries so "ace" finds ACE without also matching "sp-ACE".
@@ -1154,6 +1188,7 @@ document.addEventListener('keydown', (e) => {
   if (!guide.hidden) { closeGuide(); return; }              // modal overlays first
   if (!welcome.hidden) { closeWelcome(); return; }
   if (!missionsEl.hidden) { closeModal(missionsEl); return; }
+  if (!catalogUI.hidden) { closeModal(catalogUI); return; }
   if (tour.active) { tour.end(); return; }                 // one press ends the tour, keeps the view
   if (moonView.visible) { moonView.hide(); return; }         // then the open view
   if (systemView.visible) { systemView.stepBack(); return; } // (handles body globe + selections)
@@ -1178,5 +1213,6 @@ window.__orbital = {
   groups,                                                   // debug: group-focus filter
   tour,                                                     // debug: the guided tour
   missions,                                                 // debug: the missions chapter
+  catalogBrowser,                                           // debug: the catalog browser
   coverage,                                                 // debug: Starlink coverage overlay
 };
