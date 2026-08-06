@@ -1,6 +1,51 @@
 {
- "updated": "2026-08-03",
+ "updated": "2026-08-06",
  "previous": [
+  {
+   "name": "Electron | The Grain Goddess Provides (iQPS Launch 7)",
+   "date": "2026-08-06T09:18:00Z",
+   "agency": "Rocket Lab",
+   "status": "In Flight",
+   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Falcon 9 Block 5 | BlueBird 11-13 (Block 2 #6-8)",
+   "date": "2026-08-05T07:49:00Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "AST SpaceMobile’s Block 2 BlueBird satellites are designed to deliver up to 10 times the bandwidth capacity of the BlueBird Block 1 satellites, required to achieve 24/7 continuous cellular broadband service coverage in the United States, with beams designed to",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_on_slc-40_2_image_20240919072420.jpg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Smart Dragon 3 | OSE HS-01 & 02",
+   "date": "2026-08-05T02:38:00Z",
+   "agency": "China Rocket Co. Ltd.",
+   "status": "Success",
+   "desc": "2 hyper-spectral Earth observation satellites from Chinese company STAR.VISION. Both satellites are built in corporation with foreign customers: * Lampung-1: Built in close partnership with Lampung Province, Indonesia, to accelerate marine economy growth, envi",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/smart_dragon_3__image_20240925074606.jpg",
+   "pad": "Haiyang Oriental Spaceport"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 17-53",
+   "date": "2026-08-04T17:05:03Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Long March 8A | SatNet LEO Group 23",
+   "date": "2026-08-04T08:52:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 17-52",
    "date": "2026-08-01T03:08:43Z",
@@ -27,98 +72,17 @@
    "desc": "2 Chinese classified satellites claimed to be for communication technology test purposes. Actual mission not known.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_20251209050223.jpeg",
    "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 7A | Tianlian 3-01",
-   "date": "2026-07-29T11:50:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "Tianlian is a Chinese data tracking and relay communications geostationary satellite series. The TL-3 (Tian Lian 3) satellites are the 3rd generation of China's geostationary orbit data relay satellites, based on the DFH-4E geostationary satellite bus. They wi",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-7a_launch_2_image_20251206093324.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-51",
-   "date": "2026-07-25T15:51:55Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Starship | Flight 13",
-   "date": "2026-07-24T22:51:00Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "13th test flight of the two-stage Starship launch vehicle. Second flight of Starship V3. For the first time, Starship will carry 20 V3 Starlink satellites to space, which will extend solar arrays and antennas and will attempt to connect with ground stations in",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
-   "pad": "SpaceX Starbase, TX, USA"
-  },
-  {
-   "name": "Kinetica 1 | 5 satellites",
-   "date": "2026-07-23T23:33:00Z",
-   "agency": "CAS Space",
-   "status": "Success",
-   "desc": "Share-ride of 5 commercial Earth observation and technology demonstration satellites to SSO, including SpaceTY's TY-48. Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhongke-1a_image_20220912002218.png",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 3B/E | Tianlian 2-06",
-   "date": "2026-07-23T12:00:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "Tianlian is a Chinese data tracking and relay communications geostationary satellite series. The TL 2 (Tian Lian 2) satellites represent the second generation of this relay satellite network, and is based on the DFH-4 Bus, a three-axis-stabilized telecommunica",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march_image_20230907120240.jpeg",
-   "pad": "Xichang Satellite Launch Center, People's Republic of China"
   }
  ],
  "upcoming": [
   {
-   "name": "Long March 8A | Unknown Payload",
-   "date": "2026-08-04T08:50:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-53",
-   "date": "2026-08-04T14:00:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Smart Dragon 3 | Unknown Payload",
-   "date": "2026-08-05T02:35:00Z",
-   "agency": "China Rocket Co. Ltd.",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/smart_dragon_3__image_20240925074606.jpg",
-   "pad": "Haiyang Oriental Spaceport"
-  },
-  {
-   "name": "Falcon 9 Block 5 | BlueBird 11-13 (Block 2 #6-8)",
-   "date": "2026-08-05T07:42:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "AST SpaceMobile’s Block 2 BlueBird satellites are designed to deliver up to 10 times the bandwidth capacity of the BlueBird Block 1 satellites, required to achieve 24/7 continuous cellular broadband service coverage in the United States, with beams designed to",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_on_slc-40_2_image_20240919072420.jpg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "H3-22 | Michibiki 7 (QZS-7)",
-   "date": "2026-08-06T19:30:00Z",
-   "agency": "Mitsubishi Heavy Industries",
-   "status": "Go",
-   "desc": "QZSS (Quasi Zenith Satellite System) is a Japanese satellite navigation system operating from inclined, elliptical geosynchronous orbits to achieve optimal high-elevation visibility in urban canyons and mountainous areas. The navigation system objective is to ",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-22_liftoff__image_20251028183835.jpg",
-   "pad": "Tanegashima Space Center, Japan"
+   "name": "Electron | The Grain Goddess Provides (iQPS Launch 7)",
+   "date": "2026-08-06T09:18:00Z",
+   "agency": "Rocket Lab",
+   "status": "In Flight",
+   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 17-38",
@@ -131,9 +95,9 @@
   },
   {
    "name": "Long March 7A | Unknown Payload",
-   "date": "2026-08-09T11:00:00Z",
+   "date": "2026-08-10T12:00:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
-   "status": "TBC",
+   "status": "Go",
    "desc": "Details TBD.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-7a_launch_2_image_20251206093324.jpeg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
@@ -146,6 +110,42 @@
    "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Zhuque-3 | Flight 2",
+   "date": "2026-08-10T23:45:00Z",
+   "agency": "LandSpace",
+   "status": "Go",
+   "desc": "Second test launch of LandSpace’s ZQ-3 rocket. Payload identities are TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zq-3_flight_1_l_image_20251203064230.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 17-49",
+   "date": "2026-08-12T02:00:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Globalstar 2-R Mission 1 (x 9)",
+   "date": "2026-08-16T01:12:00Z",
+   "agency": "SpaceX",
+   "status": "TBC",
+   "desc": "The Globalstar global mobile communications network offers global, digital real time voice, data and fax services via its Low Earth Orbit satellite constellation. The constellation operates in a 1410 km orbit inclined at 52 degrees. In early 2022, Globalstar c",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Long March 12 | Unknown Payload",
+   "date": "2026-08-17T02:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "TBC",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
   }
  ]
 }
