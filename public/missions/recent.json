@@ -1,11 +1,20 @@
 {
- "updated": "2026-08-06",
+ "updated": "2026-08-10",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 17-38",
+   "date": "2026-08-08T16:35:02Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
   {
    "name": "Electron | The Grain Goddess Provides (iQPS Launch 7)",
    "date": "2026-08-06T09:18:00Z",
    "agency": "Rocket Lab",
-   "status": "In Flight",
+   "status": "Success",
    "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
    "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
@@ -63,36 +72,9 @@
    "desc": "Classified payload for the US National Reconnaissance Office.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_at_slc_image_20260729112529.jpeg",
    "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Long March 6A | TJSW-27A & B",
-   "date": "2026-07-30T01:00:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "2 Chinese classified satellites claimed to be for communication technology test purposes. Actual mission not known.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_20251209050223.jpeg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
   }
  ],
  "upcoming": [
-  {
-   "name": "Electron | The Grain Goddess Provides (iQPS Launch 7)",
-   "date": "2026-08-06T09:18:00Z",
-   "agency": "Rocket Lab",
-   "status": "In Flight",
-   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-38",
-   "date": "2026-08-08T14:00:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
   {
    "name": "Long March 7A | Unknown Payload",
    "date": "2026-08-10T12:00:00Z",
@@ -104,12 +86,21 @@
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 10-19",
-   "date": "2026-08-10T14:49:00Z",
+   "date": "2026-08-10T15:07:28Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "H3-22 | Michibiki 7 (QZS-7)",
+   "date": "2026-08-10T19:23:31Z",
+   "agency": "Mitsubishi Heavy Industries",
+   "status": "Go",
+   "desc": "QZSS (Quasi Zenith Satellite System) is a Japanese satellite navigation system operating from inclined, elliptical geosynchronous orbits to achieve optimal high-elevation visibility in urban canyons and mountainous areas. The navigation system objective is to ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-22_liftoff__image_20251028183835.jpg",
+   "pad": "Tanegashima Space Center, Japan"
   },
   {
    "name": "Zhuque-3 | Flight 2",
@@ -130,10 +121,19 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
+   "name": "Falcon 9 Block 5 | R-1",
+   "date": "2026-08-15T21:52:00Z",
+   "agency": "SpaceX",
+   "status": "TBC",
+   "desc": "Possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches. Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
    "name": "Falcon 9 Block 5 | Globalstar 2-R Mission 1 (x 9)",
    "date": "2026-08-16T01:12:00Z",
    "agency": "SpaceX",
-   "status": "TBC",
+   "status": "Go",
    "desc": "The Globalstar global mobile communications network offers global, digital real time voice, data and fax services via its Low Earth Orbit satellite constellation. The constellation operates in a 1410 km orbit inclined at 52 degrees. In early 2022, Globalstar c",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
    "pad": "Cape Canaveral SFS, FL, USA"
