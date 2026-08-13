@@ -1,6 +1,42 @@
 {
- "updated": "2026-08-10",
+ "updated": "2026-08-13",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 17-49",
+   "date": "2026-08-12T04:46:47Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 10-19",
+   "date": "2026-08-11T15:58:26Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "H3-22 | Michibiki 7 (QZS-7)",
+   "date": "2026-08-10T19:23:31Z",
+   "agency": "Mitsubishi Heavy Industries",
+   "status": "Success",
+   "desc": "QZSS (Quasi Zenith Satellite System) is a Japanese satellite navigation system operating from inclined, elliptical geosynchronous orbits to achieve optimal high-elevation visibility in urban canyons and mountainous areas. The navigation system objective is to ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-22_liftoff__image_20251028183835.jpg",
+   "pad": "Tanegashima Space Center, Japan"
+  },
+  {
+   "name": "Long March 7A | ChinaSat 4B",
+   "date": "2026-08-10T12:02:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Failure",
+   "desc": "Chinese communication geostationary satellite for unknown purposes.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_7a_e_image_20260810162338.jpg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 17-38",
    "date": "2026-08-08T16:35:02Z",
@@ -36,96 +72,15 @@
    "desc": "2 hyper-spectral Earth observation satellites from Chinese company STAR.VISION. Both satellites are built in corporation with foreign customers: * Lampung-1: Built in close partnership with Lampung Province, Indonesia, to accelerate marine economy growth, envi",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/smart_dragon_3__image_20240925074606.jpg",
    "pad": "Haiyang Oriental Spaceport"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-53",
-   "date": "2026-08-04T17:05:03Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 8A | SatNet LEO Group 23",
-   "date": "2026-08-04T08:52:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-52",
-   "date": "2026-08-01T03:08:43Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | NROL-95",
-   "date": "2026-07-30T07:10:19Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "Classified payload for the US National Reconnaissance Office.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_at_slc_image_20260729112529.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Long March 7A | Unknown Payload",
-   "date": "2026-08-10T12:00:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-7a_launch_2_image_20251206093324.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 10-19",
-   "date": "2026-08-10T15:07:28Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "H3-22 | Michibiki 7 (QZS-7)",
-   "date": "2026-08-10T19:23:31Z",
-   "agency": "Mitsubishi Heavy Industries",
-   "status": "Go",
-   "desc": "QZSS (Quasi Zenith Satellite System) is a Japanese satellite navigation system operating from inclined, elliptical geosynchronous orbits to achieve optimal high-elevation visibility in urban canyons and mountainous areas. The navigation system objective is to ",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-22_liftoff__image_20251028183835.jpg",
-   "pad": "Tanegashima Space Center, Japan"
-  },
-  {
-   "name": "Zhuque-3 | Flight 2",
-   "date": "2026-08-10T23:45:00Z",
-   "agency": "LandSpace",
-   "status": "Go",
-   "desc": "Second test launch of LandSpace’s ZQ-3 rocket. Payload identities are TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zq-3_flight_1_l_image_20251203064230.jpg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-49",
-   "date": "2026-08-12T02:00:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | R-1",
+   "name": "Falcon 9 Block 5 | USSF-366",
    "date": "2026-08-15T21:52:00Z",
    "agency": "SpaceX",
-   "status": "TBC",
-   "desc": "Possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches. Details TBD.",
+   "status": "Go",
+   "desc": "USSF-366 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with p",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
    "pad": "Vandenberg SFB, CA, USA"
   },
@@ -140,12 +95,57 @@
   },
   {
    "name": "Long March 12 | Unknown Payload",
-   "date": "2026-08-17T02:00:00Z",
+   "date": "2026-08-16T04:10:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
-   "status": "TBC",
+   "status": "Go",
    "desc": "Details TBD.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
+   "name": "Long March 2C | Unknown Payload",
+   "date": "2026-08-17T03:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_2_image_20230803100234.jpeg",
+   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 17-50",
+   "date": "2026-08-19T02:00:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 10-39",
+   "date": "2026-08-20T15:19:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Long March 5 | Chang'e 7",
+   "date": "2026-08-24T00:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "TBC",
+   "desc": "Chang'e 7/CE-7 is scheduled to launch in 2026, including an orbiter, a lander, a mini-hopping probe, and a rover. The mission will land in the South Pole regions of the Moon to study lunar surface environment around the South Pole, especially in looking for wa",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_5_tj_image_20260612043435.jpg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 10-49",
+   "date": "2026-08-25T11:00:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Cape Canaveral SFS, FL, USA"
   }
  ]
 }
