@@ -1,6 +1,24 @@
 {
- "updated": "2026-08-17",
+ "updated": "2026-08-20",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 17-50",
+   "date": "2026-08-19T04:01:07Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Zhuque-3 | Honghu-03",
+   "date": "2026-08-18T23:35:20Z",
+   "agency": "LandSpace",
+   "status": "Success",
+   "desc": "Note: Second test launch of LandSpace’s ZQ-3 rocket and first ever successful orbital launch vehicle booster recovery by a Chinese private launch service provider. Prototype LEO communication satellite for LandSpace's subsidiary Hongqing Technology.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zq-3_flight_1_l_image_20251203064230.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
   {
    "name": "Long March 2C | Satellite for Earth Observation (SEO)",
    "date": "2026-08-17T03:02:00Z",
@@ -54,57 +72,21 @@
    "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "H3-22 | Michibiki 7 (QZS-7)",
-   "date": "2026-08-10T19:23:31Z",
-   "agency": "Mitsubishi Heavy Industries",
-   "status": "Success",
-   "desc": "QZSS (Quasi Zenith Satellite System) is a Japanese satellite navigation system operating from inclined, elliptical geosynchronous orbits to achieve optimal high-elevation visibility in urban canyons and mountainous areas. The navigation system objective is to ",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-22_liftoff__image_20251028183835.jpg",
-   "pad": "Tanegashima Space Center, Japan"
-  },
-  {
-   "name": "Long March 7A | ChinaSat 4B",
-   "date": "2026-08-10T12:02:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Failure",
-   "desc": "Chinese communication geostationary satellite for unknown purposes.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_7a_e_image_20260810162338.jpg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
   }
  ],
  "upcoming": [
   {
-   "name": "Long March 2C | Satellite for Earth Observation (SEO)",
-   "date": "2026-08-17T03:02:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "Satellite for Earth Observation (SEO) is an Earth observation satellite project of the United Arab Emirates (UAE) by the National Space Science and Technology Center (NSSTC) at the United Arab Emirates University. The SEO mission aims to develop advanced space",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_2_image_20230803100234.jpeg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Zhuque-3 | Flight 2",
-   "date": "2026-08-18T23:35:00Z",
-   "agency": "LandSpace",
+   "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
+   "date": "2026-08-20T13:00:00Z",
+   "agency": "Rocket Lab",
    "status": "Go",
-   "desc": "Second test launch of LandSpace’s ZQ-3 rocket. Payload identities are TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zq-3_flight_1_l_image_20251203064230.jpg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-50",
-   "date": "2026-08-19T02:00:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
+   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 10-39",
-   "date": "2026-08-20T15:19:00Z",
+   "date": "2026-08-20T15:38:44Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
@@ -140,12 +122,30 @@
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 15-22",
-   "date": "2026-08-25T16:44:00Z",
+   "date": "2026-08-25T09:42:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Ariane 62 | MTG-I2",
+   "date": "2026-08-27T20:10:00Z",
+   "agency": "Arianespace",
+   "status": "Go",
+   "desc": "Third of EUMETSAT's third generation of weather satellite.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_62_lifto_image_20240711132056.jpeg",
+   "pad": "Guiana Space Centre, French Guiana"
+  },
+  {
+   "name": "Falcon Heavy | Nancy Grace Roman Space Telescope",
+   "date": "2026-08-30T11:26:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "The Nancy Grace Roman Space Telescope is a NASA infrared space telescope with a 2.4 m (7.9 ft) wide field of view primary mirror and two scientific instruments. The Wide-Field Instrument (WFI) is a 300.8-megapixel multi-band visible and near-infrared camera, p",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
+   "pad": "Kennedy Space Center, FL, USA"
   }
  ]
 }
