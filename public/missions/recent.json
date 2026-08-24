@@ -1,6 +1,33 @@
 {
- "updated": "2026-08-20",
+ "updated": "2026-08-24",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-20",
+   "date": "2026-08-22T07:25:16Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 10-39",
+   "date": "2026-08-21T15:14:22Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
+   "date": "2026-08-20T13:04:45Z",
+   "agency": "Rocket Lab",
+   "status": "Success",
+   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 17-50",
    "date": "2026-08-19T04:01:07Z",
@@ -45,71 +72,17 @@
    "desc": "USSF-366 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with p",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
    "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Globalstar 2-R Mission 1 (x 8)",
-   "date": "2026-08-16T01:12:14Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "The Globalstar global mobile communications network offers global, digital real time voice, data and fax services via its Low Earth Orbit satellite constellation. The constellation operates in a 1410 km orbit inclined at 52 degrees. In early 2022, Globalstar c",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-49",
-   "date": "2026-08-12T04:46:47Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 10-19",
-   "date": "2026-08-11T15:58:26Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Cape Canaveral SFS, FL, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
-   "date": "2026-08-20T13:00:00Z",
-   "agency": "Rocket Lab",
-   "status": "Go",
-   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 10-39",
-   "date": "2026-08-20T15:38:44Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-20",
-   "date": "2026-08-22T07:25:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 5 | Chang'e 7",
-   "date": "2026-08-24T00:00:00Z",
+   "name": "Long March 6C | Unknown Payload",
+   "date": "2026-08-25T03:20:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
-   "status": "TBC",
-   "desc": "Chang'e 7/CE-7 is scheduled to launch in 2026, including an orbiter, a lander, a mini-hopping probe, and a rover. The mission will land in the South Pole regions of the Moon to study lunar surface environment around the South Pole, especially in looking for wa",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_5_tj_image_20260612043435.jpg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-6c_on_the_la_image_20240507065151.jpg",
+   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 10-49",
@@ -122,7 +95,7 @@
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 15-22",
-   "date": "2026-08-25T09:42:00Z",
+   "date": "2026-08-26T09:27:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
@@ -146,6 +119,33 @@
    "desc": "The Nancy Grace Roman Space Telescope is a NASA infrared space telescope with a 2.4 m (7.9 ft) wide field of view primary mirror and two scientific instruments. The Wide-Field Instrument (WFI) is a 300.8-megapixel multi-band visible and near-infrared camera, p",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
    "pad": "Kennedy Space Center, FL, USA"
+  },
+  {
+   "name": "Angara 1.2 | Kosmos (Unknown Payload)",
+   "date": "2026-08-31T00:00:00Z",
+   "agency": "Russian Space Forces",
+   "status": "TBD",
+   "desc": "Unknown classified satellite(s) for the Russian military.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/angara25201.2_image_20190224012254.jpeg",
+   "pad": "Plesetsk Cosmodrome, Russian Federation"
+  },
+  {
+   "name": "Long March 12A | Flight 2",
+   "date": "2026-08-31T00:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "TBD",
+   "desc": "Second test launch of CASC/SAST’s Long March 12A rocket. Payload identities are TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_12a__image_20251224005749.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Mir | Demo Flight",
+   "date": "2026-08-31T00:00:00Z",
+   "agency": "Agency for Defense Development",
+   "status": "TBD",
+   "desc": "Note: Launch vehicle name is provisional. First orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/south2520korea_image_20231204145331.png",
+   "pad": "Sea Launch"
   }
  ]
 }
