@@ -1,6 +1,24 @@
 {
- "updated": "2026-08-27",
+ "updated": "2026-08-31",
  "previous": [
+  {
+   "name": "Falcon Heavy | Nancy Grace Roman Space Telescope",
+   "date": "2026-08-30T11:26:04Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "The Nancy Grace Roman Space Telescope is a NASA infrared space telescope with a 2.4 m (7.9 ft) wide field of view primary mirror and two scientific instruments. The Wide-Field Instrument (WFI) is a 300.8-megapixel multi-band visible and near-infrared camera, p",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_on_image_20260830111425.jpeg",
+   "pad": "Kennedy Space Center, FL, USA"
+  },
+  {
+   "name": "Ariane 62 | MTG-I2",
+   "date": "2026-08-27T20:11:00Z",
+   "agency": "Arianespace",
+   "status": "Success",
+   "desc": "Third of EUMETSAT's third generation of weather satellite.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_62_lifto_image_20240711132056.jpeg",
+   "pad": "Guiana Space Centre, French Guiana"
+  },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 15-22",
    "date": "2026-08-26T09:35:11Z",
@@ -54,63 +72,9 @@
    "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
-   "date": "2026-08-20T13:04:45Z",
-   "agency": "Rocket Lab",
-   "status": "Success",
-   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 17-50",
-   "date": "2026-08-19T04:01:07Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
   }
  ],
  "upcoming": [
-  {
-   "name": "Ariane 62 | MTG-I2",
-   "date": "2026-08-27T20:10:00Z",
-   "agency": "Arianespace",
-   "status": "Go",
-   "desc": "Third of EUMETSAT's third generation of weather satellite.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_62_lifto_image_20240711132056.jpeg",
-   "pad": "Guiana Space Centre, French Guiana"
-  },
-  {
-   "name": "Falcon Heavy | Nancy Grace Roman Space Telescope",
-   "date": "2026-08-30T11:26:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "The Nancy Grace Roman Space Telescope is a NASA infrared space telescope with a 2.4 m (7.9 ft) wide field of view primary mirror and two scientific instruments. The Wide-Field Instrument (WFI) is a 300.8-megapixel multi-band visible and near-infrared camera, p",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
-   "pad": "Kennedy Space Center, FL, USA"
-  },
-  {
-   "name": "Angara 1.2 | Kosmos (Unknown Payload)",
-   "date": "2026-08-31T00:00:00Z",
-   "agency": "Russian Space Forces",
-   "status": "TBD",
-   "desc": "Unknown classified satellite(s) for the Russian military.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/angara25201.2_image_20190224012254.jpeg",
-   "pad": "Plesetsk Cosmodrome, Russian Federation"
-  },
-  {
-   "name": "Electron | Owl Around The World (StriX Launch 11)",
-   "date": "2026-08-31T12:05:00Z",
-   "agency": "Rocket Lab",
-   "status": "Go",
-   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
   {
    "name": "Pallas-1 | Demo Flight",
    "date": "2026-09-01T02:00:00Z",
@@ -119,6 +83,15 @@
    "desc": "First test launch of Galactic Energy’s Pallas-1 rocket.",
    "img": null,
    "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Electron | Owl Around The World (StriX Launch 11)",
+   "date": "2026-09-01T11:38:00Z",
+   "agency": "Rocket Lab",
+   "status": "Go",
+   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
   },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 15-23",
@@ -131,10 +104,10 @@
   },
   {
    "name": "GSLV Mk II | GISAT-1A (EOS-05)",
-   "date": "2026-09-03T21:00:00Z",
+   "date": "2026-09-03T21:25:00Z",
    "agency": "Indian Space Research Organization",
-   "status": "TBC",
-   "desc": "GISAT-1A (GEO Imaging Satellite) is an Indian earth observing satellite operating from geostationary orbit to facilitate continuous observation of Indian sub-continent, quick monitoring of natural hazards and disaster.",
+   "status": "Go",
+   "desc": "GISAT-1A (GEO Imaging Satellite) is an Indian earth observing satellite operating from geostationary orbit to facilitate continuous observation of Indian sub-continent, quick monitoring of natural hazards and disaster. EOS-05/GISAT-1A will replace EOS-03/GISAT",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk2520ii_image_20190825171642.jpg",
    "pad": "Satish Dhawan Space Centre, India"
   },
@@ -146,6 +119,33 @@
    "desc": "Second test flight of the Isar Spectrum launch vehicle. This launch will carry 5 cubesats and 1 non-separable experiment as part of European Space Agency (ESA)'s “Boost!” program: * CyBEEsat (TU Berlin) * TriSat-S (University of Maribor) * Platform 6 (EnduroSa",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/spectrum_on_the_image_20250321072643.jpeg",
    "pad": "Andøya Spaceport"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-24",
+   "date": "2026-09-06T10:59:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Soyuz 2.1b | Progress MS-35 (96P)",
+   "date": "2026-09-09T16:15:03Z",
+   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
+   "status": "Go",
+   "desc": "Progress resupply mission to the International Space Station.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
+   "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
+  },
+  {
+   "name": "Long March 8A | Unknown Payload",
+   "date": "2026-09-11T16:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "TBC",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
   }
  ]
 }
