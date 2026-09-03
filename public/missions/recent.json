@@ -1,6 +1,33 @@
 {
- "updated": "2026-08-31",
+ "updated": "2026-09-03",
  "previous": [
+  {
+   "name": "Electron | Owl Around The World (StriX Launch 11)",
+   "date": "2026-09-02T12:01:00Z",
+   "agency": "Rocket Lab",
+   "status": "Success",
+   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-23",
+   "date": "2026-09-02T08:42:12Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Pallas-1 | Demo Flight",
+   "date": "2026-09-01T02:00:00Z",
+   "agency": "Galactic Energy",
+   "status": "Success",
+   "desc": "First test launch of Galactic Energy’s Pallas-1 rocket, with a dummy payload on board.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/pallas-1_y1_image_20260901030251.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
   {
    "name": "Falcon Heavy | Nancy Grace Roman Space Telescope",
    "date": "2026-08-30T11:26:04Z",
@@ -45,63 +72,9 @@
    "desc": "Share ride of 7 satellites to sun-synchronous orbit, including the ham radio satellite BY70-4. Details TBD.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-6c_on_the_la_image_20240507065151.jpg",
    "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Soyuz 2.1b/Fregat | Glonass-K1 No. 19",
-   "date": "2026-08-24T02:40:00Z",
-   "agency": "Russian Space Forces",
-   "status": "Success",
-   "desc": "Note: Payload identity not confirmed. Glonass-K are the third generation of satellite design for GLONASS satellite navigation system. GLONASS is a Russian space-based navigation system comparable to the similar GPS and Galileo systems. This generation improves",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
-   "pad": "Plesetsk Cosmodrome, Russian Federation"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-20",
-   "date": "2026-08-22T07:25:16Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 10-39",
-   "date": "2026-08-21T15:14:22Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Cape Canaveral SFS, FL, USA"
   }
  ],
  "upcoming": [
-  {
-   "name": "Pallas-1 | Demo Flight",
-   "date": "2026-09-01T02:00:00Z",
-   "agency": "Galactic Energy",
-   "status": "Go",
-   "desc": "First test launch of Galactic Energy’s Pallas-1 rocket.",
-   "img": null,
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Electron | Owl Around The World (StriX Launch 11)",
-   "date": "2026-09-01T11:38:00Z",
-   "agency": "Rocket Lab",
-   "status": "Go",
-   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-23",
-   "date": "2026-09-02T07:46:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
   {
    "name": "GSLV Mk II | GISAT-1A (EOS-05)",
    "date": "2026-09-03T21:25:00Z",
@@ -130,6 +103,15 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
+   "name": "Long March 2D/YZ-3 | Unknown Payload",
+   "date": "2026-09-09T09:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_2d2_image_20231123203521.jpeg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
    "name": "Soyuz 2.1b | Progress MS-35 (96P)",
    "date": "2026-09-09T16:15:03Z",
    "agency": "Russian Federal Space Agency (ROSCOSMOS)",
@@ -139,6 +121,15 @@
    "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
   },
   {
+   "name": "Falcon 9 Block 5 | USSF-153",
+   "date": "2026-09-10T15:37:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "USSF-153 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with p",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
    "name": "Long March 8A | Unknown Payload",
    "date": "2026-09-11T16:00:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
@@ -146,6 +137,15 @@
    "desc": "Details TBD.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
+   "name": "Vega-C | Sentinel-3C & FLEX",
+   "date": "2026-09-15T01:21:07Z",
+   "agency": "Avio S.p.A",
+   "status": "Go",
+   "desc": "Sentinel-3C is the third satellite in the Sentinel-3 constellation, which provides high-accuracy optical, radar and altimetry data for marine and land services. The Fluorescence Explorer (FLEX) satellite is a part of ESA's Earth Explorer program. The satellite",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vega-c_image_20220713154437.jpg",
+   "pad": "Guiana Space Centre, French Guiana"
   }
  ]
 }
