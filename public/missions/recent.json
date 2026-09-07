@@ -1,6 +1,33 @@
 {
- "updated": "2026-09-03",
+ "updated": "2026-09-07",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-24",
+   "date": "2026-09-06T14:26:54Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Spectrum | Onward and Upward",
+   "date": "2026-09-05T20:12:00Z",
+   "agency": "Isar Aerospace",
+   "status": "Success",
+   "desc": "Second test flight of the Isar Spectrum launch vehicle. This launch will carry 5 cubesats and 1 non-separable experiment as part of European Space Agency (ESA)'s “Boost!” program: * CyBEEsat (TU Berlin) * TriSat-S (University of Maribor) * Platform 6 (EnduroSa",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/spectrum_on_the_image_20250321072643.jpeg",
+   "pad": "Andøya Spaceport"
+  },
+  {
+   "name": "GSLV Mk II | GISAT-1A (EOS-05)",
+   "date": "2026-09-03T21:25:00Z",
+   "agency": "Indian Space Research Organization",
+   "status": "Success",
+   "desc": "GISAT-1A (GEO Imaging Satellite) is an Indian earth observing satellite operating from geostationary orbit to facilitate continuous observation of Indian sub-continent, quick monitoring of natural hazards and disaster. EOS-05/GISAT-1A will replace EOS-03/GISAT",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk2520ii_image_20190825171642.jpg",
+   "pad": "Satish Dhawan Space Centre, India"
+  },
   {
    "name": "Electron | Owl Around The World (StriX Launch 11)",
    "date": "2026-09-02T12:01:00Z",
@@ -45,63 +72,9 @@
    "desc": "Third of EUMETSAT's third generation of weather satellite.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_62_lifto_image_20240711132056.jpeg",
    "pad": "Guiana Space Centre, French Guiana"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-22",
-   "date": "2026-08-26T09:35:11Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 10-49",
-   "date": "2026-08-25T09:33:38Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Long March 6C | 7 satellites",
-   "date": "2026-08-25T03:21:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "Share ride of 7 satellites to sun-synchronous orbit, including the ham radio satellite BY70-4. Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-6c_on_the_la_image_20240507065151.jpg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
   }
  ],
  "upcoming": [
-  {
-   "name": "GSLV Mk II | GISAT-1A (EOS-05)",
-   "date": "2026-09-03T21:25:00Z",
-   "agency": "Indian Space Research Organization",
-   "status": "Go",
-   "desc": "GISAT-1A (GEO Imaging Satellite) is an Indian earth observing satellite operating from geostationary orbit to facilitate continuous observation of Indian sub-continent, quick monitoring of natural hazards and disaster. EOS-05/GISAT-1A will replace EOS-03/GISAT",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk2520ii_image_20190825171642.jpg",
-   "pad": "Satish Dhawan Space Centre, India"
-  },
-  {
-   "name": "Spectrum | Onward and Upward",
-   "date": "2026-09-04T20:00:00Z",
-   "agency": "Isar Aerospace",
-   "status": "TBC",
-   "desc": "Second test flight of the Isar Spectrum launch vehicle. This launch will carry 5 cubesats and 1 non-separable experiment as part of European Space Agency (ESA)'s “Boost!” program: * CyBEEsat (TU Berlin) * TriSat-S (University of Maribor) * Platform 6 (EnduroSa",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/spectrum_on_the_image_20250321072643.jpeg",
-   "pad": "Andøya Spaceport"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-24",
-   "date": "2026-09-06T10:59:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
   {
    "name": "Long March 2D/YZ-3 | Unknown Payload",
    "date": "2026-09-09T09:00:00Z",
@@ -139,6 +112,15 @@
    "pad": "Wenchang Space Launch Site, People's Republic of China"
   },
   {
+   "name": "Falcon 9 Block 5 | O3b mPower 11-13",
+   "date": "2026-09-13T18:50:00Z",
+   "agency": "SpaceX",
+   "status": "TBC",
+   "desc": "3 high-throughput communications satellites in Medium Earth Orbit (MEO) built by Boeing and operated by SES.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
    "name": "Vega-C | Sentinel-3C & FLEX",
    "date": "2026-09-15T01:21:07Z",
    "agency": "Avio S.p.A",
@@ -146,6 +128,24 @@
    "desc": "Sentinel-3C is the third satellite in the Sentinel-3 constellation, which provides high-accuracy optical, radar and altimetry data for marine and land services. The Fluorescence Explorer (FLEX) satellite is a part of ESA's Earth Explorer program. The satellite",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vega-c_image_20220713154437.jpg",
    "pad": "Guiana Space Centre, French Guiana"
+  },
+  {
+   "name": "Electron | LOXSAT 1",
+   "date": "2026-09-30T00:00:00Z",
+   "agency": "Rocket Lab",
+   "status": "TBD",
+   "desc": "LOXSAT 1 is a demonstration satellite of a complete cryogenic oxygen fluid management system in orbit, developed by Eta Space and sponsored by NASA's Tipping Point program. The system will be integrated on a Rocket Lab Photon-LEO satellite bus and collect crit",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Crew-13",
+   "date": "2026-09-30T00:00:00Z",
+   "agency": "SpaceX",
+   "status": "TBD",
+   "desc": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
   }
  ]
 }
