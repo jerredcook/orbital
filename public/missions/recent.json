@@ -1,6 +1,15 @@
 {
- "updated": "2026-09-07",
+ "updated": "2026-09-10",
  "previous": [
+  {
+   "name": "Long March 4B | Yaogan 53-01 to 03/56-01 to 03",
+   "date": "2026-09-10T09:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "6 Chinese military “remote sensing” satellite of unknown purposes.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_4b_l_image_20251209044050.jpeg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
   {
    "name": "Falcon 9 Block 5 | Starlink Group 15-24",
    "date": "2026-09-06T14:26:54Z",
@@ -63,62 +72,44 @@
    "desc": "The Nancy Grace Roman Space Telescope is a NASA infrared space telescope with a 2.4 m (7.9 ft) wide field of view primary mirror and two scientific instruments. The Wide-Field Instrument (WFI) is a 300.8-megapixel multi-band visible and near-infrared camera, p",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_on_image_20260830111425.jpeg",
    "pad": "Kennedy Space Center, FL, USA"
-  },
-  {
-   "name": "Ariane 62 | MTG-I2",
-   "date": "2026-08-27T20:11:00Z",
-   "agency": "Arianespace",
-   "status": "Success",
-   "desc": "Third of EUMETSAT's third generation of weather satellite.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_62_lifto_image_20240711132056.jpeg",
-   "pad": "Guiana Space Centre, French Guiana"
   }
  ],
  "upcoming": [
   {
-   "name": "Long March 2D/YZ-3 | Unknown Payload",
-   "date": "2026-09-09T09:00:00Z",
+   "name": "Long March 4B | Yaogan 53-01 to 03/56-01 to 03",
+   "date": "2026-09-10T09:00:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_2d2_image_20231123203521.jpeg",
+   "status": "Success",
+   "desc": "6 Chinese military “remote sensing” satellite of unknown purposes.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_4b_l_image_20251209044050.jpeg",
    "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
   },
   {
-   "name": "Soyuz 2.1b | Progress MS-35 (96P)",
-   "date": "2026-09-09T16:15:03Z",
-   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
-   "status": "Go",
-   "desc": "Progress resupply mission to the International Space Station.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
-   "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
-  },
-  {
    "name": "Falcon 9 Block 5 | USSF-153",
-   "date": "2026-09-10T15:37:00Z",
+   "date": "2026-09-10T15:42:00Z",
    "agency": "SpaceX",
    "status": "Go",
-   "desc": "USSF-153 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with p",
+   "desc": "USSF-153 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 l",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
-   "name": "Long March 8A | Unknown Payload",
-   "date": "2026-09-11T16:00:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "TBC",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
    "name": "Falcon 9 Block 5 | O3b mPower 11-13",
-   "date": "2026-09-13T18:50:00Z",
+   "date": "2026-09-13T18:49:00Z",
    "agency": "SpaceX",
-   "status": "TBC",
+   "status": "Go",
    "desc": "3 high-throughput communications satellites in Medium Earth Orbit (MEO) built by Boeing and operated by SES.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
    "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Starship | Flight 14",
+   "date": "2026-09-15T00:00:00Z",
+   "agency": "SpaceX",
+   "status": "TBD",
+   "desc": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites) into stable Low Earth Orbit.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
+   "pad": "SpaceX Starbase, TX, USA"
   },
   {
    "name": "Vega-C | Sentinel-3C & FLEX",
@@ -130,22 +121,31 @@
    "pad": "Guiana Space Centre, French Guiana"
   },
   {
-   "name": "Electron | LOXSAT 1",
-   "date": "2026-09-30T00:00:00Z",
-   "agency": "Rocket Lab",
-   "status": "TBD",
-   "desc": "LOXSAT 1 is a demonstration satellite of a complete cryogenic oxygen fluid management system in orbit, developed by Eta Space and sponsored by NASA's Tipping Point program. The system will be integrated on a Rocket Lab Photon-LEO satellite bus and collect crit",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+   "name": "Zhuque-2E Block 2 | Unknown Payload",
+   "date": "2026-09-15T06:25:00Z",
+   "agency": "LandSpace",
+   "status": "Go",
+   "desc": "Possibly launch of a batch of SpaceSail LEO communication satellites. Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhuque-2e_y6_la_image_20260609122825.jpeg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
   },
   {
-   "name": "Falcon 9 Block 5 | Crew-13",
-   "date": "2026-09-30T00:00:00Z",
+   "name": "Gravity-1 | Unknown Payload",
+   "date": "2026-09-15T21:55:00Z",
+   "agency": "Orienspace Technology",
+   "status": "Go",
+   "desc": "Possibly launch of a batch of SpaceSail LEO communication satellites. Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gravity-1_image_20240108105446.jpeg",
+   "pad": "Haiyang Oriental Spaceport"
+  },
+  {
+   "name": "Falcon 9 Block 5 | USSF-259",
+   "date": "2026-09-16T01:00:00Z",
    "agency": "SpaceX",
-   "status": "TBD",
-   "desc": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
+   "status": "Go",
+   "desc": "USSF-259 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Laye",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
   }
  ]
 }
