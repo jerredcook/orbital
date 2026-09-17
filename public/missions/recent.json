@@ -1,151 +1,151 @@
 {
- "updated": "2026-09-14",
+ "updated": "2026-09-17",
  "previous": [
   {
-   "name": "Falcon 9 Block 5 | O3b mPower 11-13",
-   "date": "2026-09-13T18:49:00Z",
-   "agency": "SpaceX",
+   "name": "Kuaizhou 11 | SpaceTY-51 & 52",
+   "date": "2026-09-17T02:40:00Z",
+   "agency": "ExPace",
    "status": "Success",
-   "desc": "3 high-throughput communications satellites in Medium Earth Orbit (MEO) built by Boeing and operated by SES.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Electron | Happily Ever Faster (BlackSky Gen-3 5)",
-   "date": "2026-09-11T03:28:00Z",
-   "agency": "Rocket Lab",
-   "status": "Success",
-   "desc": "Note: Payload and customer identities were not publicly announced. 5th of the BlackSky Gen-3 high resolution Earth-imaging satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-153",
-   "date": "2026-09-10T15:42:30Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "USSF-153 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 l",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 4B | Yaogan 53-01 to 03/56-01 to 03",
-   "date": "2026-09-10T09:00:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "6 Chinese military “remote sensing” satellite of unknown purposes.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_4b_l_image_20251209044050.jpeg",
+   "desc": "2 Earth observation radar satellites built by the Chinese satellite manufacturer SpaceTY.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/kuaizhou_11_lif_image_20240520155835.jpg",
    "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-24",
-   "date": "2026-09-06T14:26:54Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Spectrum | Onward and Upward",
-   "date": "2026-09-05T20:12:00Z",
-   "agency": "Isar Aerospace",
-   "status": "Success",
-   "desc": "Second test flight of the Isar Spectrum launch vehicle. This launch will carry 5 cubesats and 1 non-separable experiment as part of European Space Agency (ESA)'s “Boost!” program: * CyBEEsat (TU Berlin) * TriSat-S (University of Maribor) * Platform 6 (EnduroSa",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/spectrum_on_the_image_20250321072643.jpeg",
-   "pad": "Andøya Spaceport"
-  },
-  {
-   "name": "GSLV Mk II | GISAT-1A (EOS-05)",
-   "date": "2026-09-03T21:25:00Z",
-   "agency": "Indian Space Research Organization",
-   "status": "Success",
-   "desc": "GISAT-1A (GEO Imaging Satellite) is an Indian earth observing satellite operating from geostationary orbit to facilitate continuous observation of Indian sub-continent, quick monitoring of natural hazards and disaster. EOS-05/GISAT-1A will replace EOS-03/GISAT",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk2520ii_image_20190825171642.jpg",
-   "pad": "Satish Dhawan Space Centre, India"
-  },
-  {
-   "name": "Electron | Owl Around The World (StriX Launch 11)",
-   "date": "2026-09-02T12:01:00Z",
-   "agency": "Rocket Lab",
-   "status": "Success",
-   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  }
- ],
- "upcoming": [
-  {
-   "name": "Falcon 9 Block 5 | O3b mPower 11-13",
-   "date": "2026-09-13T18:49:00Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "3 high-throughput communications satellites in Medium Earth Orbit (MEO) built by Boeing and operated by SES.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Vega-C | Sentinel-3C & FLEX",
-   "date": "2026-09-15T01:21:07Z",
-   "agency": "Avio S.p.A",
-   "status": "Go",
-   "desc": "Sentinel-3C is the third satellite in the Sentinel-3 constellation, which provides high-accuracy optical, radar and altimetry data for marine and land services. The Fluorescence Explorer (FLEX) satellite is a part of ESA's Earth Explorer program. The satellite",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vega-c_image_20220713154437.jpg",
-   "pad": "Guiana Space Centre, French Guiana"
-  },
-  {
-   "name": "Zhuque-2E Block 2 | Unknown Payload",
-   "date": "2026-09-15T06:25:00Z",
-   "agency": "LandSpace",
-   "status": "Go",
-   "desc": "Possibly launch of a batch of SpaceSail LEO communication satellites. Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhuque-2e_y6_la_image_20260609122825.jpeg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Gravity-1 | Unknown Payload",
-   "date": "2026-09-15T21:55:00Z",
-   "agency": "Orienspace Technology",
-   "status": "Go",
-   "desc": "Possibly launch of a batch of SpaceSail LEO communication satellites. Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gravity-1_image_20240108105446.jpeg",
-   "pad": "Haiyang Oriental Spaceport"
   },
   {
    "name": "Falcon 9 Block 5 | USSF-259",
-   "date": "2026-09-16T01:00:00Z",
+   "date": "2026-09-17T01:07:56Z",
    "agency": "SpaceX",
-   "status": "Go",
+   "status": "Success",
    "desc": "USSF-259 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Laye",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
+   "name": "Long March 12 | SatNet LEO Group 25",
+   "date": "2026-09-17T00:32:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
    "name": "Soyuz 2.1b | Progress MS-35 (96P)",
-   "date": "2026-09-16T13:33:53Z",
+   "date": "2026-09-16T13:33:54Z",
    "agency": "Russian Federal Space Agency (ROSCOSMOS)",
-   "status": "Go",
+   "status": "Success",
    "desc": "Progress resupply mission to the International Space Station.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
    "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
   },
   {
-   "name": "Long March 12 | Unknown Payload",
-   "date": "2026-09-17T00:30:00Z",
+   "name": "Gravity-1 | SpaceSail Polar Group #16",
+   "date": "2026-09-15T22:00:00Z",
+   "agency": "Orienspace Technology",
+   "status": "Success",
+   "desc": "9 Low Earth Orbit communication satellites with Ku, Q and V band payloads for the G60 constellation operated by Shanghai Spacesail Technologies with funding backed by the Shanghai local government. Initial constellation will consist of 1296 satellites by 2027 ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gravity-1_image_20240108105446.jpeg",
+   "pad": "Haiyang Oriental Spaceport"
+  },
+  {
+   "name": "Zhuque-2E Block 2 | SpaceSail Polar Group #15",
+   "date": "2026-09-15T06:26:00Z",
+   "agency": "LandSpace",
+   "status": "Success",
+   "desc": "10 Low Earth Orbit communication satellites with Ku, Q and V band payloads for the G60 constellation operated by Shanghai Spacesail Technologies with funding backed by the Shanghai local government. Initial constellation will consist of 1296 satellites by 2027",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhuque-2e_y6_la_image_20260609122825.jpeg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Vega-C | Sentinel-3C & FLEX",
+   "date": "2026-09-15T01:21:07Z",
+   "agency": "Avio S.p.A",
+   "status": "Success",
+   "desc": "Sentinel-3C is the third satellite in the Sentinel-3 constellation, which provides high-accuracy optical, radar and altimetry data for marine and land services. The Fluorescence Explorer (FLEX) satellite is a part of ESA's Earth Explorer program. The satellite",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vega-c_image_20220713154437.jpg",
+   "pad": "Guiana Space Centre, French Guiana"
+  },
+  {
+   "name": "Falcon 9 Block 5 | O3b mPower 11-13",
+   "date": "2026-09-13T18:49:00Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "3 high-throughput communications satellites in Medium Earth Orbit (MEO) built by Boeing and operated by SES.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  }
+ ],
+ "upcoming": [
+  {
+   "name": "Long March 12 | SatNet LEO Group 25",
+   "date": "2026-09-17T00:32:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
+   "status": "Success",
+   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
   },
   {
-   "name": "Kuaizhou 11 | Unknown Payload",
-   "date": "2026-09-17T02:35:00Z",
+   "name": "Falcon 9 Block 5 | USSF-259",
+   "date": "2026-09-17T01:07:56Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "USSF-259 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Laye",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Kuaizhou 11 | SpaceTY-51 & 52",
+   "date": "2026-09-17T02:40:00Z",
    "agency": "ExPace",
-   "status": "Go",
-   "desc": "Details TBD.",
+   "status": "Success",
+   "desc": "2 Earth observation radar satellites built by the Chinese satellite manufacturer SpaceTY.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/kuaizhou_11_lif_image_20240520155835.jpg",
    "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Electron | Owl By The Dozen (StriX Launch 12)",
+   "date": "2026-09-19T03:15:00Z",
+   "agency": "Rocket Lab",
+   "status": "Go",
+   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Long March 2D | Unknown Payload",
+   "date": "2026-09-19T10:50:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
+   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-27",
+   "date": "2026-09-20T01:47:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Kinetica 1 | Unknown Payload",
+   "date": "2026-09-20T04:00:00Z",
+   "agency": "CAS Space",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhongke-1a_image_20220912002218.png",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Starship | Starlink Group 31-1 (Starship Flight 14)",
+   "date": "2026-09-22T12:15:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth Orbit. The ship is expected to fly at an",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
+   "pad": "SpaceX Starbase, TX, USA"
   }
  ]
 }
