@@ -1,13 +1,22 @@
 {
- "updated": "2026-09-28",
+ "updated": "2026-10-01",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | Crew-13",
+   "date": "2026-10-01T15:10:06Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
   {
    "name": "Starship | Starlink Group 31-1 (Starship Flight 14)",
    "date": "2026-09-28T12:48:59Z",
    "agency": "SpaceX",
    "status": "Success",
    "desc": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth Orbit. The ship is expected to fly at an",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_liftof_image_20260929153327.jpg",
    "pad": "SpaceX Starbase, TX, USA"
   },
   {
@@ -63,32 +72,14 @@
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 2D | PIESAT-2 13-16",
-   "date": "2026-09-19T10:50:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "4 X-band synthetic-aperture radar Earth observation satellites for the Chinese Earth observation satellite company PIESAT.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
   }
  ],
  "upcoming": [
   {
-   "name": "Starship | Starlink Group 31-1 (Starship Flight 14)",
-   "date": "2026-09-28T12:48:59Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth Orbit. The ship is expected to fly at an",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
-   "pad": "SpaceX Starbase, TX, USA"
-  },
-  {
    "name": "Falcon 9 Block 5 | Crew-13",
    "date": "2026-10-01T15:10:06Z",
    "agency": "SpaceX",
-   "status": "Go",
+   "status": "Success",
    "desc": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
    "pad": "Cape Canaveral SFS, FL, USA"
@@ -112,19 +103,10 @@
    "pad": "Kennedy Space Center, FL, USA"
   },
   {
-   "name": "SR75 | Flight 2",
-   "date": "2026-10-05T00:00:00Z",
-   "agency": "HyImpulse",
-   "status": "TBD",
-   "desc": "Test flight of HyImpulse's SR75 sounding rocket.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/sr-75_liftoff__image_20240503065630.jpeg",
-   "pad": "SaxaVord Spaceport"
-  },
-  {
    "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A",
-   "date": "2026-10-05T08:06:00Z",
+   "date": "2026-10-05T08:16:00Z",
    "agency": "SpaceX",
-   "status": "TBC",
+   "status": "Go",
    "desc": "Tranche 1 Transport Layer A is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-lat",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
    "pad": "Vandenberg SFB, CA, USA"
@@ -139,13 +121,31 @@
    "pad": "Naro Space Center, South Korea"
   },
   {
+   "name": "Long March 12 | Unknown Payload",
+   "date": "2026-10-09T19:25:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
    "name": "Falcon 9 Block 5 | Starlink Group 15-25",
-   "date": "2026-10-10T16:00:00Z",
+   "date": "2026-10-10T23:00:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "GSLV Mk II | IRNSS-1L (NVS-03)",
+   "date": "2026-10-13T17:00:00Z",
+   "agency": "Indian Space Research Organization",
+   "status": "TBC",
+   "desc": "This is a replacement satellite for the Indian Regional Navigation Satellite System. The constellation will provide India with an alternative to GPS and will be used for military and civilian use. Located at a geosynchronous orbit, the system will be operated ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk252_image_20240101090337.jpg",
+   "pad": "Satish Dhawan Space Centre, India"
   }
  ]
 }
