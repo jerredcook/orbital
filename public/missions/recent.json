@@ -1,6 +1,24 @@
 {
- "updated": "2026-10-01",
+ "updated": "2026-10-05",
  "previous": [
+  {
+   "name": "Falcon Heavy | NROL-97",
+   "date": "2026-10-02T03:54:00Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "Classified payload for the US National Reconnaissance Office.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
+   "pad": "Kennedy Space Center, FL, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Transporter 18 (Dedicated SSO Rideshare)",
+   "date": "2026-10-01T18:32:00Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "Dedicated rideshare flight to a sun-synchronous orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
   {
    "name": "Falcon 9 Block 5 | Crew-13",
    "date": "2026-10-01T15:10:06Z",
@@ -54,57 +72,12 @@
    "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Kinetica 1 | 9 satellites",
-   "date": "2026-09-20T04:03:00Z",
-   "agency": "CAS Space",
-   "status": "Success",
-   "desc": "Share-ride of 9 commercial Earth observation and technology demonstration satellites to SSO, details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhongke-1a_image_20220912002218.png",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-27",
-   "date": "2026-09-20T01:47:00Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Falcon 9 Block 5 | Crew-13",
-   "date": "2026-10-01T15:10:06Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Transporter 18 (Dedicated SSO Rideshare)",
-   "date": "2026-10-01T18:18:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "Dedicated rideshare flight to a sun-synchronous orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon Heavy | NROL-97",
-   "date": "2026-10-02T03:53:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "Classified payload for the US National Reconnaissance Office.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
-   "pad": "Kennedy Space Center, FL, USA"
-  },
-  {
    "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A",
-   "date": "2026-10-05T08:16:00Z",
+   "date": "2026-10-06T08:17:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "Tranche 1 Transport Layer A is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-lat",
@@ -139,13 +112,40 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
-   "name": "GSLV Mk II | IRNSS-1L (NVS-03)",
-   "date": "2026-10-13T17:00:00Z",
-   "agency": "Indian Space Research Organization",
-   "status": "TBC",
-   "desc": "This is a replacement satellite for the Indian Regional Navigation Satellite System. The constellation will provide India with an alternative to GPS and will be used for military and civilian use. Located at a geosynchronous orbit, the system will be operated ",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk252_image_20240101090337.jpg",
-   "pad": "Satish Dhawan Space Centre, India"
+   "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
+   "date": "2026-10-13T10:33:44Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "35th commercial resupply services mission to the International Space Station operated by SpaceX. The flight will be conducted under the second Commercial Resupply Services contract with NASA. Cargo Dragon 2 brings supplies and payloads, including critical mate",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20210520085648.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "H3-24 | Martian Moon eXplorer (MMX)",
+   "date": "2026-10-19T19:41:03Z",
+   "agency": "Mitsubishi Heavy Industries",
+   "status": "Go",
+   "desc": "MMX is a Japanese scientific mission to land on Phobos, one of the two moons of Mars, to collect samples before bringing them back to Earth. The mission includes a small French/German rover to explore the surface of Phobos.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-24_liftoff__image_20251028184029.jpeg",
+   "pad": "Tanegashima Space Center, Japan"
+  },
+  {
+   "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
+   "date": "2026-10-31T00:00:00Z",
+   "agency": "Arianespace",
+   "status": "TBD",
+   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_64_lifto_image_20260618063419.jpg",
+   "pad": "Guiana Space Centre, French Guiana"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
+   "date": "2026-10-31T00:00:00Z",
+   "agency": "SpaceX",
+   "status": "TBD",
+   "desc": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20251102082912.jpg",
+   "pad": "Cape Canaveral SFS, FL, USA"
   }
  ]
 }
