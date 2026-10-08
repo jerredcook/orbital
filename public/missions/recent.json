@@ -1,6 +1,15 @@
 {
- "updated": "2026-10-05",
+ "updated": "2026-10-08",
  "previous": [
+  {
+   "name": "Nuri | NeonSat-2 to 6",
+   "date": "2026-10-07T03:25:00Z",
+   "agency": "Korea Aerospace Research Institute",
+   "status": "Success",
+   "desc": "NeonSat-2 to 6 are part of the South Korean government's Earth observation micro-satellite constellation NeonSat (New-space Earth Observation Satellite). The NeonSat constellation is the first satellite system developed by the government using a mass-productio",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/nuri_liftoff_2_image_20240820080542.jpeg",
+   "pad": "Naro Space Center, South Korea"
+  },
   {
    "name": "Falcon Heavy | NROL-97",
    "date": "2026-10-02T03:54:00Z",
@@ -63,36 +72,9 @@
    "desc": "3 Chinese reconnaissance satellites of unknown purposes, officially reported as for \"Electromagnetic environment probing\".",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_20251209050223.jpeg",
    "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 8A | SatNet LEO Group 26",
-   "date": "2026-09-23T13:32:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
   }
  ],
  "upcoming": [
-  {
-   "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A",
-   "date": "2026-10-06T08:17:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "Tranche 1 Transport Layer A is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-lat",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Nuri | NeonSat-2 to 6",
-   "date": "2026-10-07T03:23:00Z",
-   "agency": "Korea Aerospace Research Institute",
-   "status": "Go",
-   "desc": "NeonSat-2 to 6 are part of the South Korean government's Earth observation micro-satellite constellation NeonSat (New-space Earth Observation Satellite). The NeonSat constellation is the first satellite system developed by the government using a mass-productio",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/nuri_liftoff_2_image_20240820080542.jpeg",
-   "pad": "Naro Space Center, South Korea"
-  },
   {
    "name": "Long March 12 | Unknown Payload",
    "date": "2026-10-09T19:25:00Z",
@@ -103,8 +85,17 @@
    "pad": "Wenchang Space Launch Site, People's Republic of China"
   },
   {
+   "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A",
+   "date": "2026-10-10T07:29:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "Tranche 1 Transport Layer A is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-lat",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
    "name": "Falcon 9 Block 5 | Starlink Group 15-25",
-   "date": "2026-10-10T23:00:00Z",
+   "date": "2026-10-12T23:00:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
@@ -119,6 +110,15 @@
    "desc": "35th commercial resupply services mission to the International Space Station operated by SpaceX. The flight will be conducted under the second Commercial Resupply Services contract with NASA. Cargo Dragon 2 brings supplies and payloads, including critical mate",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20210520085648.jpeg",
    "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | USSF-481",
+   "date": "2026-10-15T23:44:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
   },
   {
    "name": "H3-24 | Martian Moon eXplorer (MMX)",
