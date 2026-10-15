@@ -1,6 +1,33 @@
 {
- "updated": "2026-10-12",
+ "updated": "2026-10-15",
  "previous": [
+  {
+   "name": "Zhuque-2E Block 2 | 10 satellites",
+   "date": "2026-10-14T11:40:00Z",
+   "agency": "LandSpace",
+   "status": "Success",
+   "desc": "Ride-share of 10 satellites to sun-synchronous orbit, including LandSpace's own Guangchuan-03 & 04 for testing and demonstrating LEO communication satellite constellation technologies. Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhuque-2e_y6_la_image_20260609122825.jpeg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
+   "date": "2026-10-13T10:33:44Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "35th commercial resupply services mission to the International Space Station operated by SpaceX. The flight will be conducted under the second Commercial Resupply Services contract with NASA. Cargo Dragon 2 brings supplies and payloads, including critical mate",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20210520085648.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-25",
+   "date": "2026-10-13T00:28:11Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
   {
    "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A",
    "date": "2026-10-10T07:39:44Z",
@@ -45,62 +72,26 @@
    "desc": "Dedicated rideshare flight to a sun-synchronous orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
    "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Crew-13",
-   "date": "2026-10-01T15:10:06Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Starship | Starlink Group 31-1 (Starship Flight 14)",
-   "date": "2026-09-28T12:48:59Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth Orbit. The ship is expected to fly at an",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_liftof_image_20260929153327.jpg",
-   "pad": "SpaceX Starbase, TX, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-385",
-   "date": "2026-09-26T14:00:54Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-25",
-   "date": "2026-10-13T00:11:44Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
-   "date": "2026-10-13T10:33:44Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "35th commercial resupply services mission to the International Space Station operated by SpaceX. The flight will be conducted under the second Commercial Resupply Services contract with NASA. Cargo Dragon 2 brings supplies and payloads, including critical mate",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20210520085648.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
    "name": "Falcon 9 Block 5 | USSF-481",
-   "date": "2026-10-15T23:44:00Z",
+   "date": "2026-10-15T23:57:05Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
    "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
+   "date": "2026-10-19T10:30:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20251102082912.jpg",
+   "pad": "Cape Canaveral SFS, FL, USA"
   },
   {
    "name": "H3-24 | Martian Moons eXploration (MMX)",
@@ -121,6 +112,24 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
+   "name": "Electron | We're Not Hawking Around (3x HawkEye 360)",
+   "date": "2026-10-21T00:00:00Z",
+   "agency": "Rocket Lab",
+   "status": "TBD",
+   "desc": "HawkEye 360 is a a space-based civil global intelligence satellite network using radio frequency (RF) technology to help monitor transportation across air, land and sea and assist with emergencies, and to provide civil SIGINT (Signal Intelligence) mission. The",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-16",
+   "date": "2026-10-24T05:29:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
    "name": "Vulcan VC6L | Amazon Leo (LV-01)",
    "date": "2026-10-29T00:00:00Z",
    "agency": "United Launch Alliance",
@@ -130,22 +139,13 @@
    "pad": "Cape Canaveral SFS, FL, USA"
   },
   {
-   "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
+   "name": "GSLV Mk II | IRNSS-1L (NVS-03)",
    "date": "2026-10-31T00:00:00Z",
-   "agency": "Arianespace",
+   "agency": "Indian Space Research Organization",
    "status": "TBD",
-   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_64_lifto_image_20260618063419.jpg",
-   "pad": "Guiana Space Centre, French Guiana"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
-   "date": "2026-10-31T00:00:00Z",
-   "agency": "SpaceX",
-   "status": "TBD",
-   "desc": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20251102082912.jpg",
-   "pad": "Cape Canaveral SFS, FL, USA"
+   "desc": "This is a replacement satellite for the Indian Regional Navigation Satellite System. The constellation will provide India with an alternative to GPS and will be used for military and civilian use. Located at a geosynchronous orbit, the system will be operated ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk252_image_20240101090337.jpg",
+   "pad": "Satish Dhawan Space Centre, India"
   }
  ]
 }
