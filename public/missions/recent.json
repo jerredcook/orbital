@@ -1,6 +1,33 @@
 {
- "updated": "2026-10-19",
+ "updated": "2026-10-22",
  "previous": [
+  {
+   "name": "Ceres-1S | Xiguang-4 01",
+   "date": "2026-10-21T03:39:00Z",
+   "agency": "Galactic Energy",
+   "status": "Success",
+   "desc": "0.5 meter resolution Earth observation satellite for the city of Guangzhou government and Guangzhou University with multi-spectral imaging capability. Prototype of a proposed 25 satellites constellation.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-1s_image_20230905114324.jpeg",
+   "pad": "Haiyang Oriental Spaceport"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
+   "date": "2026-10-20T11:04:00Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers. This launch also carries the second demonstration mission for SpaceX’s Project Starfall, which aims to mass-p",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20251102082912.jpg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "H3-24 | Martian Moons eXploration (MMX)",
+   "date": "2026-10-19T19:41:03Z",
+   "agency": "Mitsubishi Heavy Industries",
+   "status": "Success",
+   "desc": "MMX is a Japanese scientific mission to land on Phobos, one of the two moons of Mars, to collect samples before bringing them back to Earth. The mission includes a small French/German rover to explore the surface of Phobos.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-24_liftoff__image_20251028184029.jpeg",
+   "pad": "Tanegashima Space Center, Japan"
+  },
   {
    "name": "Falcon 9 Block 5 | USSF-481",
    "date": "2026-10-16T00:01:05Z",
@@ -45,57 +72,12 @@
    "desc": "Tranche 1 Transport Layer A is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-lat",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
    "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 12 | SatNet LEO Group 27",
-   "date": "2026-10-09T19:27:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Nuri | NeonSat-2 to 6",
-   "date": "2026-10-07T03:25:00Z",
-   "agency": "Korea Aerospace Research Institute",
-   "status": "Success",
-   "desc": "NeonSat-2 to 6 are part of the South Korean government's Earth observation micro-satellite constellation NeonSat (New-space Earth Observation Satellite). The NeonSat constellation is the first satellite system developed by the government using a mass-productio",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/nuri_liftoff_2_image_20240820080542.jpeg",
-   "pad": "Naro Space Center, South Korea"
-  },
-  {
-   "name": "Falcon Heavy | NROL-97",
-   "date": "2026-10-02T03:54:00Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "Classified payload for the US National Reconnaissance Office.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg",
-   "pad": "Kennedy Space Center, FL, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "H3-24 | Martian Moons eXploration (MMX)",
-   "date": "2026-10-19T19:41:03Z",
-   "agency": "Mitsubishi Heavy Industries",
-   "status": "Go",
-   "desc": "MMX is a Japanese scientific mission to land on Phobos, one of the two moons of Mars, to collect samples before bringing them back to Earth. The mission includes a small French/German rover to explore the surface of Phobos.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-24_liftoff__image_20251028184029.jpeg",
-   "pad": "Tanegashima Space Center, Japan"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
-   "date": "2026-10-20T10:30:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers. This launch also carries the second demonstration mission for SpaceX’s Project Starfall, which aims to mass-p",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20251102082912.jpg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
    "name": "Falcon 9 Block 5 | Starlink Group 15-15",
-   "date": "2026-10-20T22:14:00Z",
+   "date": "2026-10-22T22:51:18Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
@@ -103,31 +85,13 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
-   "name": "Ceres-1S | Unknown Payload",
-   "date": "2026-10-21T03:35:00Z",
-   "agency": "Galactic Energy",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-1s_image_20230905114324.jpeg",
-   "pad": "Haiyang Oriental Spaceport"
-  },
-  {
    "name": "Electron | We're Not Hawking Around (3x HawkEye 360)",
-   "date": "2026-10-21T05:00:00Z",
+   "date": "2026-10-23T07:00:00Z",
    "agency": "Rocket Lab",
    "status": "TBC",
    "desc": "HawkEye 360 is a a space-based civil global intelligence satellite network using radio frequency (RF) technology to help monitor transportation across air, land and sea and assist with emergencies, and to provide civil SIGINT (Signal Intelligence) mission. The",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
    "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Long March 8A | Unknown Payload",
-   "date": "2026-10-22T02:57:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
   },
   {
    "name": "Long March 6A | Unknown Payload",
@@ -146,6 +110,42 @@
    "desc": "Details TBD.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_4b_l_image_20251209044050.jpeg",
    "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Long March 8A | Unknown Payload",
+   "date": "2026-10-25T01:50:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-16",
+   "date": "2026-10-26T05:00:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Vulcan VC6L | Amazon Leo (LV-01)",
+   "date": "2026-10-29T00:00:00Z",
+   "agency": "United Launch Alliance",
+   "status": "TBD",
+   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vulcan_vc6l_image_20220406123130.jpg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-18",
+   "date": "2026-10-29T04:17:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
   }
  ]
 }
