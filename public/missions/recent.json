@@ -1,6 +1,51 @@
 {
- "updated": "2026-10-22",
+ "updated": "2026-10-26",
  "previous": [
+  {
+   "name": "Long March 8A | SatNet LEO Group 28",
+   "date": "2026-10-25T02:03:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Starlink Group 15-15",
+   "date": "2026-10-23T22:48:44Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Long March 4B | Yaogan 53-07 to 09/56-19 to 21",
+   "date": "2026-10-23T19:25:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "6 Chinese military “remote sensing” satellite of unknown purposes.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_4b_l_image_20251209044050.jpeg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Long March 6A | Yaogan 50-03",
+   "date": "2026-10-23T10:15:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "The Yaogan 50-03 is a Chinese military “remote sensing” satellite of unknown purposes.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_20251209050223.jpeg",
+   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Electron | We're Not Hawking Around (3x HawkEye 360)",
+   "date": "2026-10-23T07:11:00Z",
+   "agency": "Rocket Lab",
+   "status": "Success",
+   "desc": "HawkEye 360 is a a space-based civil global intelligence satellite network using radio frequency (RF) technology to help monitor transportation across air, land and sea and assist with emergencies, and to provide civil SIGINT (Signal Intelligence) mission. The",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
   {
    "name": "Ceres-1S | Xiguang-4 01",
    "date": "2026-10-21T03:39:00Z",
@@ -27,57 +72,12 @@
    "desc": "MMX is a Japanese scientific mission to land on Phobos, one of the two moons of Mars, to collect samples before bringing them back to Earth. The mission includes a small French/German rover to explore the surface of Phobos.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/h3-24_liftoff__image_20251028184029.jpeg",
    "pad": "Tanegashima Space Center, Japan"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-481",
-   "date": "2026-10-16T00:01:05Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Zhuque-2E Block 2 | 10 satellites",
-   "date": "2026-10-14T11:40:00Z",
-   "agency": "LandSpace",
-   "status": "Success",
-   "desc": "Ride-share of 10 satellites to sun-synchronous orbit, including: * Guangchuan-03 & 04 (LT-03/04) from LandSpace's subsidiary LandTower for testing and demonstrating LEO communication satellite constellation technologies, including high-speed laser communicatio",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhuque-2e_y6_la_image_20260609122825.jpeg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
-   "date": "2026-10-13T10:33:44Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "35th commercial resupply services mission to the International Space Station operated by SpaceX. The flight will be conducted under the second Commercial Resupply Services contract with NASA. Cargo Dragon 2 brings supplies and payloads, including critical mate",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20210520085648.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-25",
-   "date": "2026-10-13T00:28:11Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A",
-   "date": "2026-10-10T07:39:44Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "Tranche 1 Transport Layer A is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-lat",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-   "pad": "Vandenberg SFB, CA, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-15",
-   "date": "2026-10-22T22:51:18Z",
+   "name": "Falcon 9 Block 5 | Starlink Group 15-16",
+   "date": "2026-10-27T04:45:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
@@ -85,44 +85,35 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
-   "name": "Electron | We're Not Hawking Around (3x HawkEye 360)",
-   "date": "2026-10-23T07:00:00Z",
+   "name": "Falcon 9 Block 5 | Starlink Group 15-18",
+   "date": "2026-10-30T04:02:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "GSLV Mk II | IRNSS-1L (NVS-03)",
+   "date": "2026-10-30T18:21:00Z",
+   "agency": "Indian Space Research Organization",
+   "status": "Go",
+   "desc": "This is a replacement satellite for the Indian Regional Navigation Satellite System. The constellation will provide India with an alternative to GPS and will be used for military and civilian use. Located at a geosynchronous orbit, the system will be operated ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv2520mk252_image_20240101090337.jpg",
+   "pad": "Satish Dhawan Space Centre, India"
+  },
+  {
+   "name": "Electron | The Sea God Surveys (iQPS Launch 9)",
+   "date": "2026-11-03T00:00:00Z",
    "agency": "Rocket Lab",
-   "status": "TBC",
-   "desc": "HawkEye 360 is a a space-based civil global intelligence satellite network using radio frequency (RF) technology to help monitor transportation across air, land and sea and assist with emergencies, and to provide civil SIGINT (Signal Intelligence) mission. The",
+   "status": "TBD",
+   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
    "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
   },
   {
-   "name": "Long March 6A | Unknown Payload",
-   "date": "2026-10-23T10:15:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_20251209050223.jpeg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 4B | Unknown Payload",
-   "date": "2026-10-23T19:25:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_4b_l_image_20251209044050.jpeg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 8A | Unknown Payload",
-   "date": "2026-10-25T01:50:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-16",
-   "date": "2026-10-26T05:00:00Z",
+   "name": "Falcon 9 Block 5 | Starlink Group 15-21",
+   "date": "2026-11-05T05:14:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
@@ -130,22 +121,31 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
-   "name": "Vulcan VC6L | Amazon Leo (LV-01)",
-   "date": "2026-10-29T00:00:00Z",
-   "agency": "United Launch Alliance",
+   "name": "Falcon 9 Block 5 | NROL-195",
+   "date": "2026-11-05T22:34:00Z",
+   "agency": "SpaceX",
+   "status": "TBC",
+   "desc": "Fifteenth batch of satellites for a reconnaissance satellite constellation built by SpaceX and Northrop Grumman for the National Reconnaissance Office to provide imaging and other reconnaissance capabilities.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_on_slc_image_20241024165956.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Electron | The Mountain God Rises (iQPS Launch 10)",
+   "date": "2026-11-10T00:00:00Z",
+   "agency": "Rocket Lab",
+   "status": "TBD",
+   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
+   "date": "2026-11-23T00:00:00Z",
+   "agency": "Arianespace",
    "status": "TBD",
    "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vulcan_vc6l_image_20220406123130.jpg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-18",
-   "date": "2026-10-29T04:17:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_64_lifto_image_20260618063419.jpg",
+   "pad": "Guiana Space Centre, French Guiana"
   }
  ]
 }
