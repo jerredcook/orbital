@@ -1,6 +1,42 @@
 {
- "updated": "2026-11-05",
+ "updated": "2026-11-09",
  "previous": [
+  {
+   "name": "Long March 12 | SatNet LEO Group 29",
+   "date": "2026-11-08T20:24:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
+  {
+   "name": "Soyuz 2.1b/Fregat | Glonass-K1? (Kosmos 2621?)",
+   "date": "2026-11-07T13:22:00Z",
+   "agency": "Russian Space Forces",
+   "status": "Success",
+   "desc": "Note: Payload identity uncertain. Glonass-K are the third generation of satellite design for GLONASS satellite navigation system. GLONASS is a Russian space-based navigation system comparable to the similar GPS and Galileo systems. This generation improves on ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
+   "pad": "Plesetsk Cosmodrome, Russian Federation"
+  },
+  {
+   "name": "Falcon 9 Block 5 | USSF-432",
+   "date": "2026-11-07T00:48:42Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Ceres-2 | 4 satellites",
+   "date": "2026-11-06T23:37:00Z",
+   "agency": "Galactic Energy",
+   "status": "Success",
+   "desc": "Share-ride of 4 commercial Earth observation and technology demonstration satellites to SSO, details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-2_y3_lift_image_20261107010855.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
   {
    "name": "Long March 2C | Yaogan 51-07 to 09",
    "date": "2026-11-05T15:58:00Z",
@@ -36,84 +72,21 @@
    "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
    "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "GSLV Mk II | IRNSS-1L (NVS-03)",
-   "date": "2026-10-30T18:21:00Z",
-   "agency": "Indian Space Research Organization",
-   "status": "Success",
-   "desc": "This is a replacement satellite for the Indian Regional Navigation Satellite System. The constellation will provide India with an alternative to GPS and will be used for military and civilian use. Located at a geosynchronous orbit, the system will be operated ",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv-f182fnvs-_image_20261030172350.jpeg",
-   "pad": "Satish Dhawan Space Centre, India"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-16",
-   "date": "2026-10-27T07:25:51Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 8A | SatNet LEO Group 28",
-   "date": "2026-10-25T02:03:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | Starlink Group 15-15",
-   "date": "2026-10-23T22:48:44Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-   "pad": "Vandenberg SFB, CA, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Long March 2C | Yaogan 51-07 to 09",
-   "date": "2026-11-05T15:58:00Z",
+   "name": "Long March 12 | SatNet LEO Group 29",
+   "date": "2026-11-08T20:24:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
    "status": "Success",
-   "desc": "3 Chinese military “remote sensing” satellite of unknown purposes.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_2_image_20230803100234.jpeg",
-   "pad": "Xichang Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Ceres-2 | Unknown Payload",
-   "date": "2026-11-06T23:35:00Z",
-   "agency": "Galactic Energy",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-2_illustr_image_20251210054657.png",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-432",
-   "date": "2026-11-07T00:46:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 12 | SatNet LEO Group TBD?",
-   "date": "2026-11-08T20:25:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
    "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
   },
   {
    "name": "Falcon 9 Block 5 | USSF-627",
-   "date": "2026-11-10T03:03:00Z",
+   "date": "2026-11-10T04:59:49Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
@@ -122,7 +95,7 @@
   },
   {
    "name": "Mir | Demo Flight",
-   "date": "2026-11-10T06:00:00Z",
+   "date": "2026-11-11T05:00:00Z",
    "agency": "Agency for Defense Development",
    "status": "Go",
    "desc": "Note: Launch vehicle name is provisional. First orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd ",
@@ -139,6 +112,15 @@
    "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
   },
   {
+   "name": "Kuaizhou 11 | Unknown Payload",
+   "date": "2026-11-12T19:50:00Z",
+   "agency": "ExPace",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/kuaizhou_11_lif_image_20240520155835.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
    "name": "Falcon 9 Block 5 | USSF-317",
    "date": "2026-11-13T04:23:00Z",
    "agency": "SpaceX",
@@ -146,6 +128,24 @@
    "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
    "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Vulcan VC6L | Amazon Leo (LV-01)",
+   "date": "2026-11-13T17:54:00Z",
+   "agency": "United Launch Alliance",
+   "status": "Go",
+   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vulcan_vc6l_image_20220406123130.jpg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Starship | Starlink Group 31-2 (Starship Flight 15)",
+   "date": "2026-11-13T22:45:00Z",
+   "agency": "SpaceX",
+   "status": "TBC",
+   "desc": "15th test flight of the two-stage Starship launch vehicle and 4th flight of Starship V3. Second Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-2) into stable Low Earth Orbit and first ever to attempt returning t",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_20260724044615.jpg",
+   "pad": "SpaceX Starbase, TX, USA"
   }
  ]
 }
