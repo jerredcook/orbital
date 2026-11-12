@@ -209,6 +209,16 @@
   margin-top: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
   background: #FFB454; color: #06090F; border: 0; font: 600 13px Inter, system-ui, sans-serif;
 }
+/* "Later" beside Refresh in the new-version toast (version.js). */
+.toast-later {
+  margin: 8px 0 0 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  background: transparent; color: #A9B8CB; border: 1px solid #2A3A4E; font: 600 13px Inter, system-ui, sans-serif;
+}
+/* Version + build at the foot of the welcome card: for bug reports, not for reading. */
+.welcome-version {
+  margin: 12px 0 0; text-align: center; font: 10.5px ui-monospace, monospace;
+  letter-spacing: 0.06em; color: #5C6B7E; user-select: text;
+}
 
 /* Link from the quick guide to the full illustrated guide page. */
 .guide-full-link {

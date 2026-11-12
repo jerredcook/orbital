@@ -374,6 +374,28 @@ await scenario('hostileLinks', {}, async ({ p, errs }) => {
   check('hostileLinks:noPageErrorsOrDialogs', errs.length === 0);
 });
 
+// ============================================================ a newer build ====
+
+// A long-lived session while a newer build is deployed: the app notices (it
+// re-reads version.json when the connection comes back) and OFFERS a refresh —
+// it must not reload under the visitor.
+await scenario('newVersionDeployed', {}, async ({ ctx, p }) => {
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  await booted(p);
+  const running = await O(p, () => window.__orbital.version);
+  check('newVersion:buildIsLabelled', /^v\d+\.\d+\.\d+ · \S+$/.test(await O(p, () => document.getElementById('app-version').textContent)));
+  if (running.build === 'dev') { notes.newVersion = 'dev server: no build id, update check is off — run against a build to exercise it'; return; }
+  await ctx.route('**/version.json', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ version: '9.9.9', build: 'fffffff' }) }));
+  let loads = 0; p.on('load', () => { loads++; });
+  await ctx.setOffline(true); await sleep(300); await ctx.setOffline(false);   // a real 'online' event
+  const offered = await poll(() => O(p, () => !!document.querySelector('.toast.update #update-refresh')), (v) => v, 10000);
+  check('newVersion:refreshIsOffered', offered && (await state(p)).events.includes('update/offered'));
+  await sleep(1500);
+  check('newVersion:neverReloadsByItself', loads === 0);
+  await Promise.all([p.waitForEvent('load', { timeout: 30000 }), p.locator('#update-refresh').click()]);
+  check('newVersion:refreshReloads', (await booted(p)).catalog > 5000);
+});
+
 await b.close();
 
 const fails = Object.entries(R).filter(([, v]) => v === 'FAIL').map(([k]) => k);

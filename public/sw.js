@@ -33,6 +33,9 @@ self.addEventListener('activate', (e) => {
 });
 
 const HEAVY = (path) => path.includes('/models/') || path.includes('/textures/') || path.includes('/fallback/');
+// version.json is how a running page learns a newer build is live (version.js);
+// a cached copy would defeat it, so it always goes to the network.
+const LIVE = (path) => path.endsWith('/version.json');
 
 // The bundle name with its content hash stripped (index-Bq2yBMCG.js -> index.js),
 // so we can recognise and drop the previous deploy's copy of the same asset.
@@ -58,7 +61,7 @@ self.addEventListener('message', (e) => {
         const url = new URL(u, self.location.href);
         url.hash = '';
         if (url.origin !== self.location.origin) continue;                       // ours only
-        if (url.pathname.startsWith('/__data/') || HEAVY(url.pathname)) continue; // same exclusions as fetch
+        if (url.pathname.startsWith('/__data/') || HEAVY(url.pathname) || LIVE(url.pathname)) continue; // same exclusions as fetch
         if (await cache.match(url.href)) continue;
         const res = await fetch(url.href);   // moments after the page load, so normally straight from the HTTP cache
         if (!res.ok) continue;
@@ -76,6 +79,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== self.location.origin) return;   // tiles / TLE feeds: straight to network
   if (url.pathname.startsWith('/__data/')) return;   // data.js's Cache API namespace, not ours
   if (HEAVY(url.pathname)) return;                   // big assets ride the HTTP cache
+  if (LIVE(url.pathname)) return;                    // must never be answered from cache
 
   if (req.mode === 'navigate') {                      // app shell: network-first (3 s) → cache fallback
     e.respondWith((async () => {

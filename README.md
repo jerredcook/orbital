@@ -446,6 +446,20 @@ Design notes for the 3D close-up view:
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).
 
+## Versions and releases
+
+The version lives in `package.json`; the build is the commit it was built from.
+Both are baked into the bundle and written to `version.json` beside it
+(`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
+as `v0.1.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+to the foreground or comes back online, and offers a refresh if the build has
+changed — it never reloads by itself.
+
+To cut a release: bump `version` in `package.json`, add an entry to
+[`CHANGELOG.md`](CHANGELOG.md), commit, then `git tag vX.Y.Z && git push --tags`
+once that commit has passed the deploy gate.  The automated mission-data commits
+change the build, not the version.
+
 ## Recording a clip
 
 Add `?clip` to the URL (`…/orbital/?clip`, or `?clip=60` for a ~60 s run) for
@@ -487,6 +501,8 @@ What the app does about its own bad days (`src/recover.js`,
 | The device takes the graphics context | Reloads quietly on return if the tab was in the background (at most once a minute); otherwise a card with **Reload**. The URL hash restores the view |
 | No network on a later launch | Opens from the service worker's cache |
 | Corrupt saved settings, malformed links | Ignored; defaults apply |
+| A newer build is deployed mid-session | A toast offers **Refresh** (or **Later**) |
+| The launch-data API returns junk | The scheduled refresh fails validation (`tools/launch-data.mjs`), commits nothing, and the site keeps the last good file |
 
 All of it is exercised in a real browser by `npm run smoke:failures`
 (`scripts/smoke-failures.mjs`), which the deploy is gated on alongside the

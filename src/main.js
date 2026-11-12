@@ -32,6 +32,7 @@ import { initAnalytics, track, trackedEvents } from './analytics.js';
 import { initClip, clipMode } from './clip.js';
 import { guardWorker } from './worker-guard.js';
 import { initRecovery, watchViewer, reloadCard } from './recover.js';
+import { VERSION, BUILD, versionLabel, initUpdateCheck } from './version.js';
 
 initAnalytics();   // anonymous feature-use + return-visit counts; inert off the production host
 initRecovery();    // count failures; recover from a lost graphics context (recover.js)
@@ -845,6 +846,29 @@ if ('serviceWorker' in navigator) {
     }, 4000)).catch(() => { /* not fatal */ });
   });
 }
+// Which build this is (foot of the welcome card — the "?" button reopens it),
+// and a nudge when a newer one has been deployed under a long-lived session.
+// Offered, never forced: a reload would drop whatever the visitor is watching.
+$('app-version').textContent = versionLabel;
+initUpdateCheck({
+  onUpdate: () => {
+    if (clipMode) return;
+    track('update/offered');
+    const el = document.createElement('div');
+    el.className = 'toast update';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<div class="t-head">Orbital has been updated</div><div>Refresh to get the latest version.</div>';
+    const go = document.createElement('button');
+    go.type = 'button'; go.className = 'toast-retry'; go.id = 'update-refresh'; go.textContent = 'Refresh';
+    go.addEventListener('click', () => location.reload());
+    const later = document.createElement('button');
+    later.type = 'button'; later.className = 'toast-later'; later.id = 'update-later'; later.textContent = 'Later';
+    later.addEventListener('click', () => el.remove());
+    el.append(go, later);
+    $('toasts').appendChild(el);
+  },
+});
+
 let deferredInstall = null;
 const installBtn = $('welcome-install');
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -1256,6 +1280,7 @@ window.__orbital = {
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   get lastBuf() { return lastBuf; },                       // debug: latest positions (ECF metres, xyz per satellite)
   get events() { return trackedEvents(); },                // debug: usage/error events recorded this load (sent or not)
+  version: { version: VERSION, build: BUILD },             // debug: which build is running
   get engine() { return { alive: worker.alive, restarts: worker.restarts, gaveUp: worker.gaveUp }; },   // debug: position worker health
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter
