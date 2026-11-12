@@ -11,6 +11,10 @@ updates:
       interval: monthly
     open-pull-requests-limit: 3
     groups:
+      # vitest and its coverage plugin must move together, majors included —
+      # bumped separately, `npm ci` cannot resolve them.
+      vitest:
+        patterns: ['vitest', '@vitest/*']
       minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: github-actions

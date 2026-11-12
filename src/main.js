@@ -120,7 +120,8 @@ const status = (msg) => { $('status').textContent = msg; };
 // --------------------------------------------------------------- worker ----
 
 let workerBusy = false;
-let busyTicks = 0;         // consecutive 600 ms ticks spent waiting on one answer (stall watchdog)
+let busyMs = 0;            // foreground time spent waiting on one answer (stall watchdog)
+let lastTickMs = 0;
 // Catalog generation: bumped on every hot-swap / in-place element refresh.
 // Stamped on outbound worker requests and echoed back, so a response computed
 // against the previous catalog (indices now point at different satellites) is
@@ -135,7 +136,7 @@ const initMsg = () => ({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => 
 const worker = guardWorker({
   create: () => new Worker(new URL('./propagator.worker.js', import.meta.url), { type: 'module' }),
   onDown: (err) => {
-    workerBusy = false; busyTicks = 0;
+    workerBusy = false; busyMs = 0;
     console.error('propagator worker error', err);
     track('error/worker-propagator');
     status('position engine hiccuped — restarting…');
@@ -153,7 +154,7 @@ const worker = guardWorker({
       return;
     }
     if (msg.type === 'positions') {
-      workerBusy = false; busyTicks = 0;
+      workerBusy = false; busyMs = 0;
       if (msg.gen !== catalogGen) return;   // computed against a now-replaced catalog — drop it
       lastBuf = msg.buf;
       posTicks++;                           // debug: applied full-catalog updates (idle-pause check)
@@ -166,16 +167,21 @@ const worker = guardWorker({
 // A worker stuck in a loop raises no error, so nothing above would ever fire.
 // A full-catalog pass takes well under a second even on a slow phone; 30 s of
 // visible, foreground waiting on one answer means it is not coming.
-const STALL_TICKS = 50;   // × 600 ms
+const STALL_MS = 30_000;
+const STALL_STEP_CAP_MS = 2000;   // most one tick may add — see the watchdog below
 
 // Ask the worker for a full-catalog update ~every 600 ms of wall time,
 // evaluated at the simulation clock's current moment.
 setInterval(() => {
   if (catalog.length === 0) return;
+  const tickMs = performance.now();
+  const sinceLast = tickMs - lastTickMs; lastTickMs = tickMs;
   if (workerBusy) {
-    // Only foreground ticks count: a hidden tab's timers and workers are both
-    // throttled or frozen, which is not a stall.
-    if (!document.hidden && ++busyTicks >= STALL_TICKS) worker.restart('propagator stalled');
+    // Count real elapsed time (ticks arrive late on a busy main thread), but
+    // only in the foreground and at most 2 s per tick: a hidden or frozen tab's
+    // timers and workers stop together, and that gap is not a stall.
+    if (!document.hidden) busyMs += Math.min(sinceLast, STALL_STEP_CAP_MS);
+    if (busyMs >= STALL_MS) worker.restart('propagator stalled');
     return;
   }
   // Don't propagate the whole catalog when the Earth view isn't on screen — a
@@ -192,7 +198,7 @@ setInterval(() => {
     conjKm: $('toggle-conj').checked ? Number($('conj-range').value) : 0,
     gen: catalogGen,
   });
-  busyTicks = 0;
+  busyMs = 0;
   updateDriftBadge();
 }, 600);
 
