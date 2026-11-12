@@ -28,5 +28,11 @@ export default defineConfig(({ command }) => {
     build: {
       chunkSizeWarningLimit: 6000,
     },
+    // `npm run coverage`: which lines of src/ the unit tests execute.  It only
+    // sees vitest — the two browser smoke suites exercise the UI modules
+    // (main.js, solarsystem.js, …) that show as 0 % here.
+    test: {
+      coverage: { provider: 'v8', include: ['src/**/*.js'], reporter: ['text'], reportsDirectory: 'coverage' },
+    },
   };
 });

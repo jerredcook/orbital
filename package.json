@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "smoke": "node scripts/smoke.mjs",
     "smoke:phone": "node scripts/smoke-phone.mjs",
     "serve:dist": "node scripts/serve-dist.mjs"
@@ -17,6 +18,7 @@
     "satellite.js": "^5.0.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.9",
     "playwright-core": "^1.61.1",
     "vite": "^5.4.0",
     "vite-plugin-static-copy": "^1.0.6",
