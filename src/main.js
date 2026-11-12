@@ -28,6 +28,9 @@ import { initTour } from './tour.js';
 import { initMissions } from './missions.js';
 import { initCatalogBrowser } from './catalog-browser.js';
 import { esc } from './esc.js';
+import { initAnalytics, track } from './analytics.js';
+
+initAnalytics();   // anonymous feature-use + return-visit counts; inert off the production host
 
 // ---------------------------------------------------------------- scene ----
 
@@ -405,6 +408,7 @@ function currentPosition(satrec) {
 }
 
 function selectByIndex(index) {
+  track('use/select-satellite');
   clearSelection();
   const sat = catalog[index];
   const satrec = satellite.twoline2satrec(sat.l1, sat.l2);
@@ -1108,7 +1112,7 @@ function addOption(innerHTML, action) {
   row.setAttribute('aria-selected', 'false');
   row.tabIndex = -1;
   row.innerHTML = innerHTML;
-  const go = () => { action(); closeResults(); searchBox.value = ''; };
+  const go = () => { track('use/search'); action(); closeResults(); searchBox.value = ''; };
   row.addEventListener('click', go);
   resultsEl.appendChild(row);
   options.push({ el: row, go });

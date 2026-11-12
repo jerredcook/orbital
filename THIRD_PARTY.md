@@ -28,6 +28,7 @@ personal, non-commercial use only**.
 | [NASA Solar System Treks](https://trek.nasa.gov/) | Mars / Mercury / Ceres / Moon surface tile pyramids | NASA media guidelines, attributed on-screen |
 | Caltech Murray Lab / Esri | Mars CTX high-res mosaic | attributed on-screen |
 | Cesium ion | Earth terrain/credit widget default | attributed on-screen |
+| [GoatCounter](https://www.goatcounter.com/) | anonymous usage counts on the live site only (`src/analytics.js`) — no cookies, no personal data | free for non-commercial use |
 
 ## Libraries
 

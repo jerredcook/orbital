@@ -6,6 +6,23 @@
   <title>Orbital — live satellite tracker</title>
   <meta name="description" content="Every satellite orbiting Earth, live — and the whole solar system to fly through." />
 
+  <!-- Link preview (Reddit, Discord, Slack, iMessage…).  Scrapers need absolute
+       URLs.  The card is public/og.jpg — regenerate with tools/make-og-image.mjs. -->
+  <link rel="canonical" href="https://jerredcook.github.io/orbital/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Orbital" />
+  <meta property="og:url" content="https://jerredcook.github.io/orbital/" />
+  <meta property="og:title" content="Orbital — every satellite orbiting Earth, live in 3D" />
+  <meta property="og:description" content="Track 17,000+ satellites and debris in real time, replay every launch since 1957, then fly out through the whole solar system. Free, no sign-up." />
+  <meta property="og:image" content="https://jerredcook.github.io/orbital/og.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Earth surrounded by thousands of live satellite positions" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Orbital — every satellite orbiting Earth, live in 3D" />
+  <meta name="twitter:description" content="Track 17,000+ satellites and debris in real time, replay every launch since 1957, then fly out through the whole solar system." />
+  <meta name="twitter:image" content="https://jerredcook.github.io/orbital/og.jpg" />
+
   <!-- Warm the connections on the critical path: the CelesTrak catalog and the
        Esri Earth imagery both load during boot.  The NASA Trek / ArcGIS globe
        imagery is only fetched when you open the Moon or a planet, so it gets the
