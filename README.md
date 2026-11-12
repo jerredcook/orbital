@@ -448,8 +448,8 @@ Design notes for the 3D close-up view:
 
 The live site (not local dev, forks, or tests) sends anonymous usage counts to
 [GoatCounter](https://www.goatcounter.com/): a page view, which features were
-opened (`use/…`), and a coarse "which visit is this" bucket (`visit/…`,
-`back-after/…`).  No cookies, no fingerprinting, nothing that identifies a
+opened (`orbital/use/…`), and a coarse "which visit is this" bucket
+(`orbital/visit/…`, `orbital/back-after/…`).  No cookies, no fingerprinting, nothing that identifies a
 person; the visit counter itself stays in the browser's localStorage.  See
 `src/analytics.js`.  To exclude your own device, open the site once with
 `#toggle-goatcounter` on the end of the URL.

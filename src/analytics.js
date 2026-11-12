@@ -62,8 +62,12 @@ let ready = false;
 const sent = new Set();
 const queue = [];
 
+// The GoatCounter site is shared with other projects, so every event carries an
+// `orbital/` prefix — typing "orbital" in the dashboard's filter box then shows
+// this app's page views (/orbital/) and events together, and nothing else.
 function send(name) {
-  try { window.goatcounter.count({ path: name, title: name, event: true }); } catch { /* never break the app */ }
+  const path = `orbital/${name}`;
+  try { window.goatcounter.count({ path, title: path, event: true }); } catch { /* never break the app */ }
 }
 
 // Record one named event (once per page load).  Safe to call anywhere, any time.
