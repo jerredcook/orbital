@@ -29,8 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30   # the three smoke suites take ~8-10 min; anything past this is a hang
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24   # match the npm major that writes package-lock.json (npm 11 optionals choke npm 10)
           cache: npm
@@ -87,11 +87,11 @@ jobs:
           exit 1
       # enablement: true turns Pages on for the repo on the first run, so no
       # manual Settings → Pages toggle is needed.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         if: github.event_name != 'pull_request'
         with:
           enablement: true
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
         with:
           path: dist
@@ -116,7 +116,7 @@ jobs:
       # whole deploy up to 3× with a backoff. A transient flake now self-heals
       # inside the run; a genuine, persistent failure still fails the job.
       - id: deploy1
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
         continue-on-error: true
         with:
           timeout: 600000           # 10 min ceiling (the action caps here anyway)
@@ -128,7 +128,7 @@ jobs:
         run: echo "Pages deploy attempt 1 returned a transient failure; waiting for the backend to settle." && sleep 60
       - id: deploy2
         if: steps.deploy1.outcome == 'failure'
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
         continue-on-error: true
         with:
           timeout: 600000
@@ -140,7 +140,7 @@ jobs:
         run: echo "Pages deploy attempt 2 also flaked; waiting before the final retry." && sleep 90
       - id: deploy3
         if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
-        uses: actions/deploy-pages@v4   # no continue-on-error: a third failure is real, let the run go red
+        uses: actions/deploy-pages@v5   # no continue-on-error: a third failure is real, let the run go red
         with:
           timeout: 600000
           error_count: 25
