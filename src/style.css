@@ -1018,6 +1018,22 @@ body:not(.system-mode) #system-legend { display: none; }
   #system-attr, #body-attr { left: 8px; right: 8px; bottom: 8px; font-size: 9px; line-height: 1.3; }
 }
 
+/* ---------- capture mode (?clip): a clean stage for recording the timeline ---------- */
+/* Everything interactive goes; the globe, the era banner and the imagery credit
+   (which the providers require on screen) stay.  See src/clip.js. */
+body.clip-mode #topbar, body.clip-mode #legend, body.clip-mode #legend-scrim, body.clip-mode #timebar,
+body.clip-mode #infopanel, body.clip-mode #toasts, body.clip-mode #boot-chip, body.clip-mode #drift-badge,
+body.clip-mode #tour-card { display: none !important; }
+#clip-hud { position: absolute; inset: 0; z-index: 40; font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #E8EFF8; }
+.clip-mark { position: absolute; top: 4.5vh; left: 4vw; font-weight: 700; font-size: clamp(14px, 1.5vw, 22px); letter-spacing: 0.42em; color: #7FD4F5; }
+.clip-url { position: absolute; top: 4.5vh; right: 4vw; font-size: clamp(11px, 1.1vw, 16px); letter-spacing: 0.06em; color: rgba(232,239,248,0.6); }
+.clip-readout { position: absolute; left: 4vw; bottom: 7vh; text-shadow: 0 2px 14px #05070C; }
+.clip-year { font-family: -apple-system, "Helvetica Neue", "Segoe UI", sans-serif; font-weight: 700; font-size: clamp(56px, 10vw, 150px); line-height: 0.95; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.clip-count { margin-top: 0.6vh; font-size: clamp(13px, 1.7vw, 26px); letter-spacing: 0.05em; color: #A9B8CB; font-variant-numeric: tabular-nums; }
+.clip-hint { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 14px; letter-spacing: 0.05em; color: #FFD166; text-shadow: 0 2px 8px #05070C; }
+.clip-hint[hidden] { display: none; }
+body.clip-mode #tl-era { top: auto; bottom: 7vh; left: auto; right: 4vw; text-align: right; font-size: clamp(14px, 1.7vw, 26px); max-width: 46vw; }
+
 /* ---------- narrow phones: the wordmark gives its room to the search box ---------- */
 @media (max-width: 480px) {
   .brand { display: none; }

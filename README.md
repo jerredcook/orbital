@@ -444,6 +444,16 @@ Design notes for the 3D close-up view:
 - Authoritative upstream: US Space Force 18th SDS via space-track.org
   (free account; needed only if you outgrow CelesTrak).
 
+## Recording a clip
+
+Add `?clip` to the URL (`…/orbital/?clip`, or `?clip=60` for a ~60 s run) for
+capture mode: every panel and button is hidden, leaving the globe, a large year
+and count, the era banners and a small wordmark + address.  Start your screen
+recorder, press **Space** (or tap), and the launch timeline plays 1957 → today
+while the globe turns; **R** replays, **Esc** exits.  The count is today's
+tracked objects launched by that year — "still in orbit today", not a census
+of that year.  See `src/clip.js`.
+
 ## Privacy & usage counts
 
 The live site (not local dev, forks, or tests) sends anonymous usage counts to

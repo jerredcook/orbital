@@ -29,6 +29,7 @@ import { initMissions } from './missions.js';
 import { initCatalogBrowser } from './catalog-browser.js';
 import { esc } from './esc.js';
 import { initAnalytics, track } from './analytics.js';
+import { initClip, clipMode } from './clip.js';
 
 initAnalytics();   // anonymous feature-use + return-visit counts; inert off the production host
 
@@ -795,8 +796,9 @@ guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); }
 // First-timers see it — unless they followed a shared deep-link, which lands
 // them straight on the thing the sender pointed at (the flag stays unset, so
 // they still get the intro on a later visit to the bare page).
-try { if (!location.hash && !localStorage.getItem('orbital.welcomed')) openModal(welcome, $('welcome-go')); }
-catch { if (!location.hash) openModal(welcome, $('welcome-go')); }
+// (Capture mode — ?clip — records a clean globe, so it never opens the intro.)
+try { if (!clipMode && !location.hash && !localStorage.getItem('orbital.welcomed')) openModal(welcome, $('welcome-go')); }
+catch { if (!clipMode && !location.hash) openModal(welcome, $('welcome-go')); }
 
 // Installable-app (PWA) plumbing.  Register the service worker, and when Chrome
 // decides the app is installable, reveal the welcome's "Install" button and use
@@ -1198,6 +1200,9 @@ document.addEventListener('keydown', (e) => {
   if (systemView.visible) { systemView.stepBack(); return; } // (handles body globe + selections)
   if (!leaveShowpiece()) { clearSelection(); $('infopanel').hidden = true; }   // Earth view
 }, true);
+
+// Capture mode (?clip): a chrome-free launch-timeline run for screen recording.
+initClip({ viewer, isReady: () => catalog.length > 500 && !!lastBuf });
 
 // ----------------------------------------------------------------- debug ----
 
