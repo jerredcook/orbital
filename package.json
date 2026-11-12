@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "cesium": "^1.147.0",
-    "satellite.js": "^5.0.0"
+    "satellite.js": "^7.1.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.12",
