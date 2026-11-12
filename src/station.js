@@ -17,6 +17,8 @@ import { CAT_CSS } from './palette.js';
 import { esc } from './esc.js';
 import { altBandOf } from './orbit.js';
 import { flySeconds } from './motion.js';
+import { guardWorker } from './worker-guard.js';
+import { track } from './analytics.js';
 
 const PASS_HORIZON_H = 24;
 const PASS_STORE_KEY = 'orbital.station';
@@ -38,11 +40,24 @@ export function initStation({
   const sky = { canvas: null, ctx: null, obs: null, frame: null, plotted: [] };
   const alertedPasses = new Set();
 
-  const passesWorker = new Worker(new URL('./passes.worker.js', import.meta.url), { type: 'module' });
-  passesWorker.onerror = passesWorker.onmessageerror = (err) => {
-    console.error('passes worker error', err);
-    if (passing) { passing.active = false; updatePassStatus('pass scan failed — toggle the station to retry'); }
-  };
+  // Stateless worker (each scan carries its own candidates): after a failure the
+  // guard replaces it and the scan that died is simply started again.
+  let rescanOnRestart = false;
+  const passesWorker = guardWorker({
+    create: () => new Worker(new URL('./passes.worker.js', import.meta.url), { type: 'module' }),
+    onDown: (err) => {
+      console.error('passes worker error', err);
+      track('error/worker-passes');
+      rescanOnRestart = !!passing?.active;
+      if (passing) { passing.active = false; updatePassStatus('pass scan interrupted — restarting…'); }
+    },
+    onRestart: () => {
+      if (rescanOnRestart && $('toggle-station').checked && station) startPasses();
+      rescanOnRestart = false;
+    },
+    onGiveUp: () => updatePassStatus('pass scan failed — reload the page to retry'),
+    onMessage: (e) => onPassesMessage(e),
+  });
 
   function drawStation() {
     stationPoints.removeAll();
@@ -292,7 +307,7 @@ export function initStation({
     // does (e.g. changing the min-elevation filter mid-scan).
     const scanId = ++passScanId;
     passing = { passes: [], active: true, scanId };
-    passesWorker.postMessage({
+    const sent = passesWorker.post({
       type: 'passes',
       gen: getGen(),
       scanId,
@@ -302,11 +317,17 @@ export function initStation({
       station: { latRad: station.lat * DEG2RAD, lonRad: station.lon * DEG2RAD, altM: 0 },
       candidates,
     });
+    if (!sent) {   // worker mid-restart (it rescans when it is back) or given up
+      passing.active = false;
+      rescanOnRestart = !passesWorker.gaveUp;
+      updatePassStatus(passesWorker.gaveUp ? 'pass scan failed — reload the page to retry' : 'pass scan restarting…');
+      return;
+    }
     updatePassStatus(`scanning ${candidates.length.toLocaleString()} satellites… 0%`);
   }
 
   function cancelPasses() {
-    if (passing?.active) passesWorker.postMessage({ type: 'passes-cancel' });
+    if (passing?.active) passesWorker.post({ type: 'passes-cancel' });
     passing = null;
   }
 
@@ -372,7 +393,7 @@ export function initStation({
     setLegendOpen(false);
   }
 
-  passesWorker.onmessage = (e) => {
+  function onPassesMessage(e) {
     const msg = e.data;
     if (!passing || msg.gen !== getGen() || msg.scanId !== passing.scanId) return;   // stale scan (hot-swap or a restart) — drop it
     if (msg.type === 'passes-progress') {
@@ -385,7 +406,7 @@ export function initStation({
       renderPasses();
       updatePassStatus();
     }
-  };
+  }
 
   // ---- DOM wiring ----
   $('toggle-station').addEventListener('change', (e) => {

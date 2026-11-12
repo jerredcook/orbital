@@ -21,6 +21,7 @@ import {
 } from 'cesium';
 import { BODIES } from './ephemeris.js';
 import { SURFACE, addSurfaceMarkers } from './surface.js';
+import { watchViewer } from './recover.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
@@ -97,6 +98,7 @@ function makeViewer(name) {
     sceneModePicker: false, navigationHelpButton: false, animation: false,
     timeline: false, fullscreenButton: false, infoBox: false, selectionIndicator: false,
   });
+  watchViewer(v);
 
   // The mosaics are uniformly-lit albedo maps; leave lighting off so the whole
   // globe reads (enabling it would re-impose a terminator and black out half).

@@ -2,6 +2,9 @@
 // fingerprinting, nothing that identifies a person).  Two questions only:
 //   • which features do visitors actually open?   → `use/<feature>` events
 //   • do people come back?                         → `visit/<nth>` + `back-after/<span>`
+// …and one about the app itself:
+//   • did it break for them?                       → `error/<kind>` + `degraded/<what>`
+//     (recover.js, data.js — a bare category, never a message or a stack)
 // The visit count lives in this browser's localStorage and never leaves it —
 // only the coarse bucket ("3rd-5th visit", "7-29 days") is sent.  Each event
 // is sent at most once per page load, so a count reads as "visitors who did X".
@@ -71,11 +74,17 @@ function send(name) {
 }
 
 // Record one named event (once per page load).  Safe to call anywhere, any time.
+// The name is remembered even when nothing is sent (local dev, the test
+// suites), so a test can ask what WOULD have been reported — see trackedEvents.
 export function track(name) {
-  if (!enabled || sent.has(name)) return;
+  if (sent.has(name)) return;
   sent.add(name);
+  if (!enabled) return;
   if (ready) send(name); else queue.push(name);
 }
+
+// Every event recorded this page load, sent or not (debug + the smoke suites).
+export const trackedEvents = () => [...sent];
 
 function featureFor(target) {
   for (let el = target, hops = 0; el && el.nodeType === 1 && hops < 5; el = el.parentElement, hops++) {

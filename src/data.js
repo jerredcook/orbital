@@ -4,6 +4,8 @@
 // Both endpoints send CORS headers, so this works straight from the browser.
 // Be polite: CelesTrak rate-limits aggressive clients, so responses are cached.
 
+import { track } from './analytics.js';
+
 const gp = (group) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
 
 // A snapshot bundled with the app (tools/fetch-fallback-tle.mjs).  Last-resort
@@ -118,6 +120,7 @@ async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
     // re-fetch the big files too often.  Yesterday's elements beat no elements…
     if (stale !== null) {
       console.warn(`${url} failed — serving stale cache`, err);
+      track('degraded/catalog-stale');
       return stale;
     }
     // …and a bundled snapshot beats an empty sky.  Same-origin, so it's reliable
@@ -127,6 +130,7 @@ async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
         const fb = await fetch(fallbackUrl);
         if (fb.ok) {
           console.warn(`${url} failed — using bundled fallback ${fallbackUrl}`, err);
+          track('degraded/catalog-bundled');
           return await fb.text();
         }
       } catch { /* fall through to throw */ }

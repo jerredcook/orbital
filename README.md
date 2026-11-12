@@ -30,7 +30,9 @@ welcome screen; on iPhone, Share → **Add to Home Screen**.  It then launches
 full-screen from a home-screen icon and updates itself whenever the site is
 redeployed (the service worker serves navigations network-first, and caches the
 app's own hashed assets stale-while-revalidate; cross-origin tiles/TLE feeds are
-left to the network).
+left to the network).  The first visit hands the service worker a list of what
+the page loaded, so one visit is enough for the app to reopen on a dead
+connection (from the cached shell and the cached element sets).
 
 ## Controls
 
@@ -463,3 +465,29 @@ opened (`orbital/use/…`), and a coarse "which visit is this" bucket
 person; the visit counter itself stays in the browser's localStorage.  See
 `src/analytics.js`.  To exclude your own device, open the site once with
 `#toggle-goatcounter` on the end of the URL.
+
+It also counts failures, as a bare category with no message, stack or detail:
+`orbital/error/…` (`script`, `promise`, `network`, `boot`, `render`,
+`webgl-lost`, `worker-propagator`, `worker-tca`, `worker-passes`,
+`worker-gave-up`) and `orbital/degraded/…` (`catalog-stale`, `catalog-bundled`
+— the live feed failed and older elements were shown instead).  Each is sent at
+most once per page load, so a count reads as "visitors this happened to".
+
+## When things break
+
+What the app does about its own bad days (`src/recover.js`,
+`src/worker-guard.js`, `src/data.js`, `public/sw.js`):
+
+| Failure | What the visitor gets |
+| --- | --- |
+| CelesTrak refuses or hangs | Yesterday's cached elements, else the bundled snapshot; a 15 s timeout, then a 10 min cooldown so later requests skip the wait |
+| Every data source is gone | A "couldn't load" notice with **Retry**; system, Moon and guide views still open |
+| Map imagery blocked | Satellites, search and selection work over a blank globe |
+| A worker fails to load, crashes, or stalls (30 s watchdog) | It is replaced and re-sent its state; after 3 failures in a minute the app stops retrying and offers a reload |
+| The device takes the graphics context | Reloads quietly on return if the tab was in the background (at most once a minute); otherwise a card with **Reload**. The URL hash restores the view |
+| No network on a later launch | Opens from the service worker's cache |
+| Corrupt saved settings, malformed links | Ignored; defaults apply |
+
+All of it is exercised in a real browser by `npm run smoke:failures`
+(`scripts/smoke-failures.mjs`), which the deploy is gated on alongside the
+desktop and phone passes.

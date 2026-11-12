@@ -1,0 +1,22 @@
+# Dependency updates, once a month, as one pull request per ecosystem.  Each PR
+# runs the full gate (unit tests, build, the three browser suites — see
+# workflows/deploy.yml) without deploying; merge it if it is green.
+# Major-version jumps are left out of the group and arrive as their own PRs,
+# since those are the ones that need reading.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

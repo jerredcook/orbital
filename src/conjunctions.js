@@ -14,6 +14,8 @@ import { CONJ_COLOR } from './palette.js';
 import { esc } from './esc.js';
 import { altBandOf } from './orbit.js';
 import { flySeconds } from './motion.js';
+import { guardWorker } from './worker-guard.js';
+import { track } from './analytics.js';
 
 const SCREEN_REPORT_KM = 25;
 const SCREEN_BAND_MARGIN_KM = 75;
@@ -26,18 +28,27 @@ export function initConjunctions({
   const $ = (id) => document.getElementById(id);
   const bufPos = (i) => { const b = getLastBuf(); return new Cartesian3(b[i * 3], b[i * 3 + 1], b[i * 3 + 2]); };
 
-  const tcaWorker = new Worker(new URL('./tca.worker.js', import.meta.url), { type: 'module' });
   const tcaCache = new Map();    // "i:j" → { tcaMs, missM } (missM null = no result)
   const tcaPending = new Set();  // keys requested but not yet answered
   let screening = null;          // { targetIndex, found: [{i, tcaMs, missM}], done, active }
   let lastRowsSig = '';          // signature of the rendered rows, to skip no-op rebuilds
 
-  tcaWorker.onerror = tcaWorker.onmessageerror = (err) => {
-    console.error('tca worker error', err);
-    tcaPending.clear();          // let the rows re-request instead of "computing…" forever
-  };
+  // The worker is stateless (every request carries its own elements), so a
+  // replacement needs nothing re-sent: the rows simply ask again.
+  const tcaWorker = guardWorker({
+    create: () => new Worker(new URL('./tca.worker.js', import.meta.url), { type: 'module' }),
+    onDown: (err) => {
+      console.error('tca worker error', err);
+      track('error/worker-tca');
+      tcaPending.clear();          // let the rows re-request instead of "computing…" forever
+      // A screen that was running died with the worker — put its button back so
+      // it can be pressed again, rather than stuck at "Screening… NN%".
+      if (screening?.active) { screening = null; resetScreenUi(); }
+    },
+    onMessage: (e) => onTcaMessage(e),
+  });
 
-  tcaWorker.onmessage = (e) => {
+  function onTcaMessage(e) {
     const msg = e.data;
     if (msg.gen !== getGen()) return;   // stale: keys index the previous catalog
     if (msg.type === 'tca-results') {
@@ -63,7 +74,7 @@ export function initConjunctions({
       $('info-screen').classList.remove('active');
       renderScreenResults();
     }
-  };
+  }
 
   function requestTca(pairs) {
     const catalog = getCatalog();
@@ -92,13 +103,16 @@ export function initConjunctions({
       }
     }
     if (batch.length) {
-      tcaWorker.postMessage({
+      const sent = tcaWorker.post({
         type: 'tca',
         gen: getGen(),
         startIso: JulianDate.toIso8601(viewer.clock.currentTime),
         horizonHours: 24,
         pairs: batch,
       });
+      // Worker down (restarting, or given up): don't leave these rows saying
+      // "computing…" for an answer nobody is working on.
+      if (!sent) for (const b of batch) tcaPending.delete(b.key);
     }
   }
 
@@ -212,7 +226,7 @@ export function initConjunctions({
     $('info-screen').textContent = `Screening ${candidates.length.toLocaleString()} candidates… 0%`;
     $('info-screen').classList.add('active');
     $('screen-results').innerHTML = '';
-    tcaWorker.postMessage({
+    const sent = tcaWorker.post({
       type: 'screen',
       gen: getGen(),
       targetL1: target.l1, targetL2: target.l2,
@@ -221,11 +235,16 @@ export function initConjunctions({
       horizonHours: 24,
       reportKm: SCREEN_REPORT_KM,
     });
+    if (!sent) {
+      screening = null;
+      resetScreenUi();
+      $('info-screen').textContent = 'Screening is unavailable right now · try again';
+    }
   }
 
   function cancelScreening() {
     if (!screening) return;
-    if (screening.active) tcaWorker.postMessage({ type: 'screen-cancel' });
+    if (screening.active) tcaWorker.post({ type: 'screen-cancel' });
     screening = null;
   }
 

@@ -9,7 +9,13 @@
 //   • leave models/ and textures/ to the plain HTTP cache — they're large
 //     (multi-MB), immutable-ish, and double-storing them bloated phones'
 //     Cache Storage without making anything faster;
-//   • leave cross-origin requests (map tiles, TLE feeds) untouched.
+//   • leave cross-origin requests (map tiles, TLE feeds) untouched;
+//   • warm the cache on the FIRST visit.  A service worker only sees requests
+//     made after it takes control, and on a first visit that is after the page
+//     has already loaded its shell and bundles — so without help the cache is
+//     empty until the second visit, and "install it, then open it on a bad
+//     connection" got the browser's error page.  The page sends a 'warm'
+//     message listing what it loaded (main.js) and we store copies.
 // Bump the version on strategy changes; activate() drops old app caches but
 // spares the orbital-data-* caches data.js owns.
 const CACHE = 'orbital-v2';
@@ -41,6 +47,27 @@ async function evictOldSiblings(cache, keepPath) {
     if (p !== keepPath && p.includes('/assets/') && family(p) === fam) cache.delete(r);
   }
 }
+
+self.addEventListener('message', (e) => {
+  const urls = e.data?.type === 'warm' && Array.isArray(e.data.urls) ? e.data.urls.slice(0, 300) : null;
+  if (!urls) return;
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    for (const u of urls) {
+      try {
+        const url = new URL(u, self.location.href);
+        url.hash = '';
+        if (url.origin !== self.location.origin) continue;                       // ours only
+        if (url.pathname.startsWith('/__data/') || HEAVY(url.pathname)) continue; // same exclusions as fetch
+        if (await cache.match(url.href)) continue;
+        const res = await fetch(url.href);   // moments after the page load, so normally straight from the HTTP cache
+        if (!res.ok) continue;
+        await cache.put(url.href, res);
+        if (url.pathname.includes('/assets/')) await evictOldSiblings(cache, url.pathname);
+      } catch { /* offline or a bad URL — skip it */ }
+    }
+  })());
+});
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;

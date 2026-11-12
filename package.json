@@ -11,6 +11,7 @@
     "coverage": "vitest run --coverage",
     "smoke": "node scripts/smoke.mjs",
     "smoke:phone": "node scripts/smoke-phone.mjs",
+    "smoke:failures": "node scripts/smoke-failures.mjs",
     "serve:dist": "node scripts/serve-dist.mjs"
   },
   "dependencies": {
@@ -18,10 +19,10 @@
     "satellite.js": "^5.0.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.12",
     "playwright-core": "^1.61.1",
     "vite": "^5.4.0",
     "vite-plugin-static-copy": "^1.0.6",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.12"
   }
 }

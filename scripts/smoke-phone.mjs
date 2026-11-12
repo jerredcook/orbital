@@ -326,6 +326,8 @@ try {
   await sleep(300);
   check('landscapeWelcomeDismissable', await O(() => document.getElementById('welcome').hidden));
 
+  // The recovery card (recover.js) is for real failures; a healthy run must never raise it.
+  check('noRecoveryCard', await p.evaluate(() => !document.getElementById('recover-card') && !window.__orbital.events.some((e) => e.startsWith('error/'))));
   check('noPageErrors', pageErrors.length === 0);
 } catch (e) {
   R._fatal = String(e).slice(0, 400);

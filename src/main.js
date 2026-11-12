@@ -28,10 +28,13 @@ import { initTour } from './tour.js';
 import { initMissions } from './missions.js';
 import { initCatalogBrowser } from './catalog-browser.js';
 import { esc } from './esc.js';
-import { initAnalytics, track } from './analytics.js';
+import { initAnalytics, track, trackedEvents } from './analytics.js';
 import { initClip, clipMode } from './clip.js';
+import { guardWorker } from './worker-guard.js';
+import { initRecovery, watchViewer, reloadCard } from './recover.js';
 
 initAnalytics();   // anonymous feature-use + return-visit counts; inert off the production host
+initRecovery();    // count failures; recover from a lost graphics context (recover.js)
 
 // ---------------------------------------------------------------- scene ----
 
@@ -55,6 +58,7 @@ const viewer = new Viewer('cesiumContainer', {
   timeline: false, fullscreenButton: false, infoBox: false,
   selectionIndicator: false,
 });
+watchViewer(viewer);
 
 viewer.scene.moon = new Moon();
 viewer.scene.globe.enableLighting = true;
@@ -115,46 +119,65 @@ const status = (msg) => { $('status').textContent = msg; };
 
 // --------------------------------------------------------------- worker ----
 
-const worker = new Worker(
-  new URL('./propagator.worker.js', import.meta.url),
-  { type: 'module' },
-);
-
 let workerBusy = false;
+let busyTicks = 0;         // consecutive 600 ms ticks spent waiting on one answer (stall watchdog)
 // Catalog generation: bumped on every hot-swap / in-place element refresh.
 // Stamped on outbound worker requests and echoed back, so a response computed
 // against the previous catalog (indices now point at different satellites) is
 // dropped instead of mis-indexing conjunctions, TCA keys, or pass lists.
 let catalogGen = 0;
 let posTicks = 0;   // debug: count of applied full-catalog updates (idle-pause verification)
-// A crashed worker must never deadlock the tracker: clear the busy latch and
-// tell the user, instead of silently freezing every dot at its last position.
-worker.onerror = worker.onmessageerror = (err) => {
-  workerBusy = false;
-  console.error('propagator worker error', err);
-  status('position engine hiccuped — retrying…');
-};
-worker.onmessage = (e) => {
-  const msg = e.data;
-  if (msg.type === 'ready') {
-    status(`${msg.count.toLocaleString()} objects on orbit`);
-    return;
-  }
-  if (msg.type === 'positions') {
-    workerBusy = false;
-    if (msg.gen !== catalogGen) return;   // computed against a now-replaced catalog — drop it
-    lastBuf = msg.buf;
-    posTicks++;                           // debug: applied full-catalog updates (idle-pause check)
-    swarm?.updatePositions(msg.buf);
-    conj.render(msg.pairs ?? []);
-    groundStation.renderSky();
-  }
-};
+const initMsg = () => ({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
+// A crashed worker must never deadlock the tracker, and a dead one must not
+// stay dead (every dot would freeze at its last position): the guard replaces
+// it and we hand the new one the catalog again.  If it keeps dying, stop and
+// say so rather than loop.
+const worker = guardWorker({
+  create: () => new Worker(new URL('./propagator.worker.js', import.meta.url), { type: 'module' }),
+  onDown: (err) => {
+    workerBusy = false; busyTicks = 0;
+    console.error('propagator worker error', err);
+    track('error/worker-propagator');
+    status('position engine hiccuped — restarting…');
+  },
+  onRestart: () => { if (catalog.length) worker.post(initMsg()); },
+  onGiveUp: () => {
+    track('error/worker-gave-up');
+    status('position engine stopped');
+    reloadCard('Satellite positions stopped updating', 'The part of the app that moves the satellites keeps failing on this device. Reload to try again.');
+  },
+  onMessage: (e) => {
+    const msg = e.data;
+    if (msg.type === 'ready') {
+      status(`${msg.count.toLocaleString()} objects on orbit`);
+      return;
+    }
+    if (msg.type === 'positions') {
+      workerBusy = false; busyTicks = 0;
+      if (msg.gen !== catalogGen) return;   // computed against a now-replaced catalog — drop it
+      lastBuf = msg.buf;
+      posTicks++;                           // debug: applied full-catalog updates (idle-pause check)
+      swarm?.updatePositions(msg.buf);
+      conj.render(msg.pairs ?? []);
+      groundStation.renderSky();
+    }
+  },
+});
+// A worker stuck in a loop raises no error, so nothing above would ever fire.
+// A full-catalog pass takes well under a second even on a slow phone; 30 s of
+// visible, foreground waiting on one answer means it is not coming.
+const STALL_TICKS = 50;   // × 600 ms
 
 // Ask the worker for a full-catalog update ~every 600 ms of wall time,
 // evaluated at the simulation clock's current moment.
 setInterval(() => {
-  if (workerBusy || catalog.length === 0) return;
+  if (catalog.length === 0) return;
+  if (workerBusy) {
+    // Only foreground ticks count: a hidden tab's timers and workers are both
+    // throttled or frozen, which is not a stall.
+    if (!document.hidden && ++busyTicks >= STALL_TICKS) worker.restart('propagator stalled');
+    return;
+  }
   // Don't propagate the whole catalog when the Earth view isn't on screen — a
   // System / Moon view is up (its own render loop drives the shared clock), or
   // the tab is backgrounded.  The swarm, conjunctions and sky chart are all
@@ -163,13 +186,13 @@ setInterval(() => {
   if (document.hidden) return;
   const mode = document.body.classList;
   if (mode.contains('system-mode') || mode.contains('moon-mode')) return;
-  workerBusy = true;
-  worker.postMessage({
+  workerBusy = worker.post({   // false while the worker is being restarted — try again next tick
     type: 'propagate',
     isoTime: JulianDate.toIso8601(viewer.clock.currentTime),
     conjKm: $('toggle-conj').checked ? Number($('conj-range').value) : 0,
     gen: catalogGen,
   });
+  busyTicks = 0;
   updateDriftBadge();
 }, 600);
 
@@ -226,10 +249,7 @@ function applyCatalog(list) {
   // describe the dots on screen (group-filtered; year-filtered while scrubbing).
   timeline.refreshCounts();
 
-  worker.postMessage({
-    type: 'init',
-    tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })),
-  });
+  worker.post(initMsg());   // if the worker is mid-restart, its onRestart sends this instead
 
   // A hot-swap renumbers every index, so any pass results point at the wrong
   // satellites now — drop them and re-scan if the station feature is live.
@@ -268,6 +288,7 @@ async function boot() {
     applyCatalog(list);
   } catch (err) {
     console.error(err);
+    track('error/boot');
     bootFailed();
   } finally {
     bootSettled = true;
@@ -364,7 +385,7 @@ async function refreshCatalog() {
       catalogGen++;   // drop any in-flight results propagated from the old elements
       catalogEpochMs = medianEpochMs(catalog);
       conj.onElementsRefresh();   // clears TCA cache and resets any running screen (indices still valid)
-      worker.postMessage({ type: 'init', tles: catalog.map(({ norad, l1, l2 }) => ({ norad, l1, l2 })) });
+      worker.post(initMsg());
       groundStation.onElementsRefresh();
       // The swarm/passes/TCA now use the fresh elements, but the selected
       // satellite's satrec (and its model's CallbackProperties, readout, orbit
@@ -807,6 +828,15 @@ catch { if (!clipMode && !location.hash) openModal(welcome, $('welcome-go')); }
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => { /* not fatal */ });
+    // Hand the worker the list of what this page loaded so it can keep copies:
+    // on a first visit it took control too late to see those requests itself
+    // (see sw.js).  A few seconds in, so late-loading pieces are on the list.
+    navigator.serviceWorker.ready.then((reg) => setTimeout(() => {
+      try {
+        const own = performance.getEntriesByType('resource').map((r) => r.name).filter((u) => u.startsWith(location.origin));
+        reg.active?.postMessage({ type: 'warm', urls: [location.origin + location.pathname, ...new Set(own)] });
+      } catch { /* not fatal */ }
+    }, 4000)).catch(() => { /* not fatal */ });
   });
 }
 let deferredInstall = null;
@@ -1219,6 +1249,8 @@ window.__orbital = {
   get skyPlotted() { return groundStation.skyPlotted; },   // debug: dots in the overhead chart
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   get lastBuf() { return lastBuf; },                       // debug: latest positions (ECF metres, xyz per satellite)
+  get events() { return trackedEvents(); },                // debug: usage/error events recorded this load (sent or not)
+  get engine() { return { alive: worker.alive, restarts: worker.restarts, gaveUp: worker.gaveUp }; },   // debug: position worker health
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter
   tour,                                                     // debug: the guided tour

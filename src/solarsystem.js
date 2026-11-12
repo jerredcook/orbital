@@ -47,6 +47,7 @@ import {
 import { MOONS, MOON_FACTS, MOON_TEX, MOON_TEX_DIR } from './moon-data.js';
 import { PROBES, PROBE_FACTS } from './probe-data.js';
 import { initProbes, nowYear } from './sys-probes.js';
+import { watchViewer } from './recover.js';
 
 // Planets with a solid surface to descend onto (the rest show their cloud tops).
 const ROCKY = new Set(['Mercury', 'Venus', 'Mars', 'Ceres']);
@@ -1018,6 +1019,7 @@ function createViewer() {
     timeline: false, fullscreenButton: false, infoBox: false,
     selectionIndicator: false,
   });
+  watchViewer(v);
 
   v.scene.backgroundColor = Color.BLACK;
   v.scene.sun.show = false;          // the real Sun lives at our origin instead

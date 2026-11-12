@@ -15,6 +15,7 @@ import {
 } from 'cesium';
 import { SURFACE, addSurfaceMarkers } from './surface.js';
 import { writeHash } from './deeplink.js';
+import { watchViewer } from './recover.js';
 
 // LRO Wide Angle Camera global mosaic, 303 px/deg (~100 m/px), served
 // keylessly by NASA's Solar System Treks as a plain equirectangular tile pyramid
@@ -55,6 +56,7 @@ function createMoonViewer() {
     timeline: false, fullscreenButton: false, infoBox: false,
     selectionIndicator: false,
   });
+  watchViewer(v);
 
   // The WAC mosaic is already a uniformly-lit albedo map, so leave globe
   // lighting off (enabling it would re-impose a day/night terminator and

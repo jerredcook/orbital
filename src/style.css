@@ -1046,3 +1046,28 @@ body.clip-mode #tl-era { top: auto; bottom: 7vh; left: auto; right: 4vw; text-al
     max-height: calc(100dvh - 76px); overflow-y: auto;
   }
 }
+
+/* ---------- recovery card (recover.js) ----------
+   Shown when the page cannot continue without a reload: the device took the
+   graphics context, the render loop stopped, or the position worker keeps
+   dying.  Sits above everything, including the welcome dialog. */
+#recover-card {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(4, 7, 12, 0.82);
+}
+.recover-box {
+  width: min(380px, 100%); padding: 20px 20px 18px;
+  background: #0D131D; border: 1px solid #FFB454; border-radius: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  font: 14.5px/1.5 Inter, system-ui, sans-serif; color: #D7E0EC;
+}
+.recover-title { font-weight: 700; font-size: 16.5px; color: #FFB454; margin-bottom: 6px; }
+.recover-box p { margin: 0 0 16px; }
+#recover-reload {
+  display: block; width: 100%; min-height: 44px; border: 0; border-radius: 10px; cursor: pointer;
+  background: #FFB454; color: #06090F; font: 700 15px Inter, system-ui, sans-serif;
+}
+/* Our card replaces Cesium's own render-error panel (a stack trace with an OK
+   button) — recover.js listens for the same failure. */
+.cesium-widget-errorPanel { display: none !important; }

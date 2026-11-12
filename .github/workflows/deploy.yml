@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Pull requests (in practice: Dependabot's dependency updates) run the whole
+  # gate — unit tests, build, all three browser suites — but never deploy.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 # Let the workflow publish Pages and mint the deployment's OIDC token.
@@ -17,13 +21,13 @@ permissions:
 # deploy-pages step with "Deployment failed, try again later."  A newer push
 # waits for the in-flight one to finish instead of killing it.
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25   # the smoke gate takes ~4-6 min; anything past this is a hang
+    timeout-minutes: 30   # the three smoke suites take ~8-10 min; anything past this is a hang
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,17 +73,32 @@ jobs:
             echo "phone smoke attempt $attempt failed"
           done
           exit 1
+      # The bad-day pass (scripts/smoke-failures.mjs): the same build with its
+      # dependencies broken one at a time — the data feed refusing or hanging,
+      # imagery blocked, workers failing to load / crashing / stalling, the
+      # graphics context lost, no network on relaunch, corrupt saved state and
+      # hostile links.  CelesTrak is stubbed, so this step needs no outside host.
+      - name: Smoke test the production build on a bad day
+        run: |
+          for attempt in 1 2; do
+            if SMOKE_URL=http://localhost:4173/orbital/ node scripts/smoke-failures.mjs; then exit 0; fi
+            echo "failure-path smoke attempt $attempt failed"
+          done
+          exit 1
       # enablement: true turns Pages on for the repo on the first run, so no
       # manual Settings → Pages toggle is needed.
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: dist
 
   deploy:
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
