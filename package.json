@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:phone": "node scripts/smoke-phone.mjs",
     "serve:dist": "node scripts/serve-dist.mjs"
   },
   "dependencies": {

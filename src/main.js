@@ -1213,6 +1213,7 @@ window.__orbital = {
   get selected() { return selected; },
   get skyPlotted() { return groundStation.skyPlotted; },   // debug: dots in the overhead chart
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
+  get lastBuf() { return lastBuf; },                       // debug: latest positions (ECF metres, xyz per satellite)
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter
   tour,                                                     // debug: the guided tour

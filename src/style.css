@@ -265,7 +265,9 @@ body.body-mode .cesium-credit-container, body.body-mode .cesium-widget-credits {
 #moonContainer { position: absolute; inset: 0; z-index: 5; background: #05070C; }
 #moonContainer[hidden] { display: none; }
 
-#moon-toggle {
+/* Missions + Catalog share the Moon button's look (they were once left as
+   unstyled browser-default buttons — the phone smoke pass caught it). */
+#moon-toggle, #missions-toggle, #catalog-toggle {
   z-index: 10; pointer-events: auto;
   padding: 8px 14px;
   background: rgba(13,19,29,0.9); color: #C9D4E3;
@@ -274,7 +276,7 @@ body.body-mode .cesium-credit-container, body.body-mode .cesium-widget-credits {
   letter-spacing: 0.08em; cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
-#moon-toggle:hover { border-color: #FFB454; color: #E8EFF8; }
+#moon-toggle:hover, #missions-toggle:hover, #catalog-toggle:hover { border-color: #FFB454; color: #E8EFF8; }
 #moon-toggle.active { border-color: #FFB454; color: #FFB454; }
 
 #moon-exit {
@@ -943,8 +945,16 @@ body:not(.system-mode) #system-legend { display: none; }
   .brand-sub { display: none; }
   .brand-mark { font-size: 13px; letter-spacing: 0.18em; }
   #topbar { padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px; gap: 6px; }   /* keep the notch inset the wide layout has */
-  #system-toggle, #moon-toggle { padding: 6px 9px; font-size: 11px; }
-  #search { width: 38vw; max-width: 150px; }
+  /* Six icon buttons + search must fit a 360 px phone without spilling off the
+     right edge (they once did — the page became wider than the screen), and
+     each must be a real finger target: 36 px square. */
+  #legend-toggle, #system-toggle, #moon-toggle, #missions-toggle, #catalog-toggle, #help-toggle {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    min-width: 36px; width: auto; height: 36px; padding: 0 8px; font-size: 13px;
+  }
+  .topbar-right { flex: 1 1 0; min-width: 0; max-width: 220px; }
+  #search { width: 100%; max-width: none; min-height: 36px; box-sizing: border-box; }
+  #search-results { max-width: calc(100vw - 20px); }
 
   /* body / moon / spacecraft panels: keep them off to the left and a touch more
      see-through, so the body you flew to stays visible beside and behind them */
@@ -982,6 +992,10 @@ body:not(.system-mode) #system-legend { display: none; }
   body.system-mode #system-legend-toggle:hover { border-color: #FFB454; color: #FFB454; }
   body.system-mode.body-mode #system-legend-toggle { display: none; }   /* not inside a surface globe */
   #system-legend {
+    /* fixed, not absolute: parked off the right edge, an absolute drawer made
+       the whole page ~300 px wider than the phone (the browser zooms out to
+       show it); a fixed one doesn't count toward the page's width. */
+    position: fixed;
     top: 0; right: 0; bottom: 0; left: auto; width: min(86vw, 300px);
     max-height: 100dvh; border-radius: 0; border-right: none; border-top: none; overflow-y: auto;
     transform: translateX(105%); transition: transform 0.22s ease; z-index: 32;
@@ -1002,6 +1016,11 @@ body:not(.system-mode) #system-legend { display: none; }
   body.system-mode #timebar { bottom: 56px; }
   #probe-timeline { left: 8px; right: 8px; bottom: 96px; }
   #system-attr, #body-attr { left: 8px; right: 8px; bottom: 8px; font-size: 9px; line-height: 1.3; }
+}
+
+/* ---------- narrow phones: the wordmark gives its room to the search box ---------- */
+@media (max-width: 480px) {
+  .brand { display: none; }
 }
 
 /* ---------- short / landscape viewports: let any tall panel scroll ---------- */

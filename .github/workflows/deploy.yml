@@ -57,6 +57,18 @@ jobs:
             echo "smoke attempt $attempt failed"
           done
           exit 1
+      # The phone pass (scripts/smoke-phone.mjs): the same build on an emulated
+      # Android phone, driven by real taps, drags and pinches — layout fits the
+      # screen, touch targets are finger-sized, and every phone-only path (the
+      # drawers, tap-to-place station, the compact follow strip) works.  The
+      # static server from the step above is still running.
+      - name: Smoke test the production build as a phone
+        run: |
+          for attempt in 1 2; do
+            if SMOKE_URL=http://localhost:4173/orbital/ node scripts/smoke-phone.mjs; then exit 0; fi
+            echo "phone smoke attempt $attempt failed"
+          done
+          exit 1
       # enablement: true turns Pages on for the repo on the first run, so no
       # manual Settings → Pages toggle is needed.
       - uses: actions/configure-pages@v5
