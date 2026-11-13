@@ -331,6 +331,18 @@ try {
   // …and must not claim a newer version exists when the server has this very build.
   check('noFalseUpdatePrompt', await p.evaluate(() => !document.querySelector('.toast.update')));
   check('noPageErrors', pageErrors.length === 0);
+
+  // ---- capture mode on a phone: there is no Space key, so a tap starts it.
+  {
+    const c = await ctx.newPage();
+    await c.goto(`${URL}?clip=10`, { waitUntil: 'load', timeout: 30000 });
+    await c.waitForFunction(() => /tap to play/.test(document.getElementById('clip-hint')?.textContent || ''), { timeout: 45000 });
+    await c.touchscreen.tap(W / 2, Math.round(H / 2));   // a fresh page is portrait again, whatever the suite last rotated to
+    let cy = 1957;
+    for (let i = 0; i < 30 && cy === 1957; i++) { await sleep(300); cy = await c.evaluate(() => Number(document.getElementById('clip-year').textContent)); }
+    check('clipStartsOnTap', cy > 1957);
+    await c.close();
+  }
 } catch (e) {
   R._fatal = String(e).slice(0, 400);
 } finally {

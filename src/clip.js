@@ -6,8 +6,13 @@
 //
 // Every panel and button is hidden, leaving the globe, a large year + object
 // count, the era banners and a small wordmark + address.  Start your screen
-// recorder, then press Space (or tap): the timeline plays 1957 → today while
-// the globe turns slowly, and holds on the final frame.  R replays, Esc leaves.
+// recorder, then press Space (on a touchscreen: tap): the opening frame holds
+// for a couple of seconds, the timeline plays 1957 → today while the globe
+// turns slowly, and it holds on the final frame.  R replays, Esc leaves.
+//
+// A MOUSE click deliberately does nothing: setting up a screen recording means
+// clicking around — to focus the window, to dismiss the recorder's toolbar —
+// and any of those used to start the clip before the recording had.
 //
 // It drives the existing timeline through its own controls (the same DOM
 // contract the smoke suite uses) rather than reaching into timeline.js, so the
@@ -59,7 +64,8 @@ export function initClip({ viewer, isReady }) {
   document.body.appendChild(hud);
 
   const endYear = parseInt($('tl-year').max, 10) || new Date().getUTCFullYear();
-  const HOLD_MS = 1200;                       // a beat on 1957 before the years start to run
+  const HOLD_MS = 2500;                       // the opening frame holds on 1957 before the years start to run
+  const touch = !!window.matchMedia?.('(pointer: coarse)').matches;
   const SPIN_RAD_PER_S = (2 * Math.PI) / 150; // one slow turn every 2½ minutes
   let state = 'loading', t0 = 0, shownYear = null, lastFrame = 0;
 
@@ -81,7 +87,9 @@ export function initClip({ viewer, isReady }) {
     if (!t.checked) t.click();                // timeline on → the swarm empties back to 1957
     shownYear = null; setYear(1957);
     state = 'armed';
-    $('clip-hint').textContent = 'start recording, then press Space or tap · R replays · Esc exits';
+    $('clip-hint').textContent = touch
+      ? 'start your screen recording, then tap to play'
+      : 'start your screen recording, then press Space · R replays · Esc exits';
     $('clip-hint').hidden = false;
   }
   function play() {
@@ -108,5 +116,6 @@ export function initClip({ viewer, isReady }) {
     else if (e.key === 'r' || e.key === 'R') { if (state === 'playing' || state === 'done') { state = 'done'; play(); } }
     else if (e.key === 'Escape') { e.stopImmediatePropagation(); location.href = location.pathname; }
   }, true);
-  hud.addEventListener('pointerdown', () => play());
+  // Fingers only — see the note at the top about mouse clicks.
+  hud.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' || e.pointerType === 'pen') play(); });
 }

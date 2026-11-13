@@ -415,6 +415,41 @@ try {
   // …and must not claim a newer version exists when the server has this very build.
   check('noFalseUpdatePrompt', await p.evaluate(() => !document.querySelector('.toast.update')));
   check('noPageErrors', pageErrors.length === 0);
+
+  // ---- capture mode (?clip): it must wait for Space.  A mouse click — which
+  // setting up a screen recording always involves — must NOT start it.
+  {
+    // A fresh profile, so stand in for CelesTrak with the bundled snapshot
+    // rather than ask the real one for the catalog a second time in one run.
+    const { readFileSync } = await import('node:fs');
+    const snapshot = readFileSync(`${import.meta.dirname}/../public/fallback/active.tle`, 'utf8');
+    const c = await b.newPage({ viewport: { width: 1280, height: 720 } });
+    await c.route(/^https:\/\/celestrak\.org\//, (route) => (route.request().url().includes('GROUP=active')
+      ? route.fulfill({ status: 200, contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body: snapshot })
+      : route.fulfill({ status: 404, headers: { 'access-control-allow-origin': '*' }, body: '' })));
+    await c.goto(`${URL}?clip=10`, { waitUntil: 'load', timeout: 30000 });
+    await c.waitForFunction(() => /press Space/.test(document.getElementById('clip-hint')?.textContent || ''), { timeout: 45000 });
+    const clip = () => c.evaluate(() => ({ year: Number(document.getElementById('clip-year').textContent), hint: !document.getElementById('clip-hint').hidden, end: Number(document.getElementById('tl-year').max) }));
+    await c.mouse.click(640, 360); await c.mouse.click(200, 500);
+    await sleep(1800);
+    const idle = await clip();
+    check('clipIgnoresMouseClicks', idle.year === 1957 && idle.hint);
+    await c.keyboard.press('Space');
+    await sleep(1200);
+    const held = await clip();
+    check('clipHoldsOpeningFrame', held.year === 1957 && !held.hint);   // playing, but still on the first frame
+    let moved = held;
+    for (let i = 0; i < 20 && moved.year === 1957; i++) { await sleep(300); moved = await clip(); }
+    check('clipStartsOnSpace', moved.year > 1957);
+    let fin = moved;
+    for (let i = 0; i < 60 && fin.year < fin.end; i++) { await sleep(500); fin = await clip(); }
+    await sleep(1200);
+    check('clipHoldsFinalFrame', fin.year === fin.end && (await clip()).year === fin.end);
+    await c.keyboard.press('r');
+    await sleep(600);
+    check('clipReplays', (await clip()).year < fin.end);
+    await c.close();
+  }
 } catch (e) {
   R._fatal = String(e).slice(0, 240);
 } finally {

@@ -465,8 +465,10 @@ change the build, not the version.
 Add `?clip` to the URL (`…/orbital/?clip`, or `?clip=60` for a ~60 s run) for
 capture mode: every panel and button is hidden, leaving the globe, a large year
 and count, the era banners and a small wordmark + address.  Start your screen
-recorder, press **Space** (or tap), and the launch timeline plays 1957 → today
-while the globe turns; **R** replays, **Esc** exits.  The count is today's
+recorder, then press **Space** (on a touchscreen, tap): the opening frame holds
+for a couple of seconds, then the launch timeline plays 1957 → today while the
+globe turns; **R** replays, **Esc** exits.  Mouse clicks are ignored, so
+clicking the window while setting up the recording will not start it.  The count is today's
 tracked objects launched by that year — "still in orbit today", not a census
 of that year.  See `src/clip.js`.
 
