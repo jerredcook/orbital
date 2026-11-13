@@ -8,7 +8,8 @@ import { track } from './analytics.js';
 
 const gp = (group) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
 
-// A snapshot bundled with the app (tools/fetch-fallback-tle.mjs).  Last-resort
+// A snapshot bundled with the app — CelesTrak's active list, saved by
+// tools/fetch-fallback-tle.mjs.  Last-resort
 // source for the main catalog when CelesTrak is unreachable AND there's no warm
 // cache — so the sky is never empty.  Base-relative for the GitHub Pages subpath.
 const FALLBACK_ACTIVE = `${import.meta.env.BASE_URL}fallback/active.tle`;
@@ -140,6 +141,11 @@ async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
     clearTimeout(timer);
   }
 }
+
+// A fragment or a spent rocket stage, by CelesTrak's naming ("FENGYUN 1C DEB",
+// "SL-6 R/B(2)").  The active list should contain none — but whatever a source
+// hands us, junk is filed under Debris, never drawn and counted as a satellite.
+export const isJunkName = (name) => /\bDEB\b|\bR\/B/.test(name);
 
 /** Parse a 3-line-element text blob into [{ name, l1, l2, norad }]. */
 export function parseTLEs(text) {
@@ -304,7 +310,7 @@ export async function loadCatalog(onStatus) {
     for (const t of parseTLEs(texts[g])) {
       if (seen.has(t.norad)) continue;
       seen.add(t.norad);
-      tles.push({ ...t, kind: TLE_GROUPS[g].kind });
+      tles.push({ ...t, kind: isJunkName(t.name) ? 'DEB' : TLE_GROUPS[g].kind });
     }
   }
 

@@ -1262,7 +1262,7 @@ document.addEventListener('keydown', (e) => {
 }, true);
 
 // Capture mode (?clip): a chrome-free launch-timeline run for screen recording.
-initClip({
+const clip = initClip({
   viewer,
   isReady: () => catalog.length > 500 && !!lastBuf,
   dataAgeDays: () => (catalogEpochMs == null ? 0 : (Date.now() - catalogEpochMs) / 86_400_000),
@@ -1285,6 +1285,7 @@ window.__orbital = {
   get lastBuf() { return lastBuf; },                       // debug: latest positions (ECF metres, xyz per satellite)
   get events() { return trackedEvents(); },                // debug: usage/error events recorded this load (sent or not)
   version: { version: VERSION, build: BUILD },             // debug: which build is running
+  clip,                                                     // capture mode's still-frame hook (undefined outside ?clip)
   get engine() { return { alive: worker.alive, restarts: worker.restarts, gaveUp: worker.gaveUp }; },   // debug: position worker health
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter

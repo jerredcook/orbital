@@ -66,6 +66,10 @@ export function initClip({ viewer, isReady, dataAgeDays }) {
   const endYear = parseInt($('tl-year').max, 10) || new Date().getUTCFullYear();
   const HOLD_MS = 2500;                       // the opening frame holds on 1957 before the years start to run
   const touch = !!window.matchMedia?.('(pointer: coarse)').matches;
+  const STALE_DAYS = 3;
+  const dataAge = () => Math.round(dataAgeDays?.() ?? 0);
+  const dataDate = () => new Date(Date.now() - (dataAgeDays?.() ?? 0) * 86_400_000)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   const SPIN_RAD_PER_S = (2 * Math.PI) / 150; // one slow turn every 2½ minutes
   let state = 'loading', t0 = 0, shownYear = null, lastFrame = 0;
 
@@ -85,7 +89,10 @@ export function initClip({ viewer, isReady, dataAgeDays }) {
     const num = (id) => Number(String($(id).textContent).replace(/\D/g, '')) || 0;
     const total = Number((/·(.*)/.exec($('tl-label').textContent)?.[1] ?? '').replace(/\D/g, '')) || 0;
     const sats = Math.max(0, total - num('count-DEB'));
-    $('clip-count').textContent = `${sats.toLocaleString()} of today’s active satellites`;
+    // "Today" only when the data is: on a saved snapshot, give its date instead.
+    $('clip-count').textContent = dataAge() >= STALE_DAYS
+      ? `${sats.toLocaleString()} active satellites as of ${dataDate()}`
+      : `${sats.toLocaleString()} of today’s active satellites`;
   }
 
   function arm() {
@@ -103,8 +110,8 @@ export function initClip({ viewer, isReady, dataAgeDays }) {
     // The clip hides the app's own "data is old" badge, so say it here, before
     // anyone records: when the live feed is unreachable the app is showing a
     // saved snapshot, and "today's satellites" would be weeks or months out.
-    const age = Math.round(dataAgeDays?.() ?? 0);
-    $('clip-hint').innerHTML = age >= 3
+    const age = dataAge();
+    $('clip-hint').innerHTML = age >= STALE_DAYS
       ? `<span class="clip-warn">⚠ live satellite data is unavailable — this is a snapshot about ${age} days old.<br>For current numbers, come back and record later.</span><br>${how}`
       : how;
     $('clip-hint').hidden = false;
@@ -135,4 +142,16 @@ export function initClip({ viewer, isReady, dataAgeDays }) {
   }, true);
   // Fingers only — see the note at the top about mouse clicks.
   hud.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' || e.pointerType === 'pen') play(); });
+
+  // For tools/make-timeline-stills.mjs: freeze on one year and report what is
+  // shown, so a still image carries exactly the numbers the clip would.
+  return {
+    showYear(y) {
+      state = 'still';
+      $('clip-hint').hidden = true;
+      shownYear = null; setYear(y);
+      return { year: y, count: Number($('clip-count').textContent.replace(/\D/g, '')) || 0 };
+    },
+    get state() { return state; },
+  };
 }

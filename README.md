@@ -279,8 +279,8 @@ Data freshness and resilience:
   how I know).  Defenses, weakest to strongest: every fetch is bounded by
   a timeout (so a hung CelesTrak can't wedge the load); expired cache
   entries are kept and served when a fetch fails; a **bundled offline
-  snapshot** (`public/fallback/active.tle`, ~17k objects from a CelesTrak
-  mirror via `tools/fetch-fallback-tle.mjs`) backs the main group so the
+  snapshot** (`public/fallback/active.tle` — CelesTrak's active list, saved
+  with one validated request by `tools/fetch-fallback-tle.mjs`) backs the main group so the
   sky is never empty even on a cold load with CelesTrak down; and a
   localStorage **circuit breaker** skips live CelesTrak calls for 10 min
   after a failure, so reloads during an outage drop straight to the

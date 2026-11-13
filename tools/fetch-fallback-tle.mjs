@@ -1,61 +1,54 @@
-// fetch-fallback-tle.mjs — bundle an offline TLE snapshot.
+// fetch-fallback-tle.mjs — refresh the satellite snapshot bundled with the app.
 //
-// CelesTrak is the live source, but it rate-limits clients that re-fetch the big
-// files too often, and when it does the sky goes empty for anyone without a warm
-// localStorage cache.  This snapshot — pulled from the CelesTrak-mirroring TLE
-// API at tle.ivanstanojevic.me — ships in the app as a last-resort fallback so
-// there are always satellites to render.  Regenerate occasionally:
+// public/fallback/active.tle is CelesTrak's active-satellite list, saved.  The
+// app shows it when the live feed is unreachable; the test suites and the image
+// tools use it INSTEAD of CelesTrak, so they never contact it at all.
+//
+// This makes ONE request to CelesTrak.  Run it by hand every month or so to
+// keep the snapshot from drifting — never in a loop: CelesTrak firewalls
+// clients that re-download the big files.
+//
+// The result is validated first (tools/tle-snapshot.mjs): if CelesTrak answers
+// with an error page, a partial file or stale data, nothing is written and the
+// script exits non-zero, leaving the previous snapshot in place.
 //
 //   node tools/fetch-fallback-tle.mjs
 //
-// Output: public/fallback/active.tle (CelesTrak 3-line format: name / L1 / L2).
+// (Until November 2026 this pulled from a third-party mirror instead.  That
+// mirror's catalog is not the active list — it included thousands of debris
+// fragments and rocket bodies, which the app then showed as satellites.)
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateSnapshot } from './tle-snapshot.mjs';
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'fallback', 'active.tle');
-const API = 'https://tle.ivanstanojevic.me/api/tle/';
-const PAGE = 100;            // the API's max page size
-const DELAY = 350;           // ms between requests — this free mirror throttles bursts
+const URL_ACTIVE = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const byId = new Map();
-const take = (members) => { for (const m of members || []) byId.set(m.satelliteId, m); };
-
-// One page, sequential, with backoff retries when the mirror rate-limits (it
-// answers a throttled request with an HTML error page, not JSON).
-async function getPage(page) {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    try {
-      const r = await fetch(`${API}?page-size=${PAGE}&page=${page}`);
-      const j = await r.json();         // throws on the HTML throttle page
-      return j;
-    } catch {
-      await sleep(1000 * (attempt + 1));
-    }
-  }
-  return null;
+const controller = new AbortController();
+const timer = setTimeout(() => controller.abort(), 60_000);
+let text;
+try {
+  const res = await fetch(URL_ACTIVE, {
+    signal: controller.signal,
+    headers: { 'User-Agent': 'orbital (github.com/jerredcook/orbital; hobby tracker; monthly snapshot)' },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  text = await res.text();
+} catch (err) {
+  console.error(`CelesTrak did not answer (${err.message}) — keeping the existing snapshot`);
+  process.exit(1);
+} finally {
+  clearTimeout(timer);
 }
 
-const first = await getPage(1);
-const total = first?.totalItems ?? 0;
-const pages = Math.ceil(total / PAGE);
-console.log(`mirror reports ${total} objects across ${pages} pages`);
-take(first?.member);
-
-for (let page = 2; page <= pages; page++) {
-  await sleep(DELAY);
-  const j = await getPage(page);
-  if (!j) { console.warn(`page ${page} gave up`); continue; }
-  take(j.member);
-  if (page % 25 === 0) console.log(`  …${byId.size} so far`);
-}
-
-const lines = [];
-for (const m of byId.values()) {
-  if (m.line1 && m.line2) lines.push(m.name.trim(), m.line1, m.line2);
+const { problems, count, medianEpochMs } = validateSnapshot(text);
+if (problems.length) {
+  console.error('refusing to replace the snapshot — what CelesTrak returned failed validation:');
+  for (const p of problems) console.error(`  • ${p}`);
+  process.exit(1);
 }
 await mkdir(dirname(OUT), { recursive: true });
-await writeFile(OUT, lines.join('\n') + '\n');
-console.log(`wrote ${lines.length / 3 | 0} satellites (${(lines.join('\n').length / 1024 / 1024).toFixed(1)} MB) → ${OUT}`);
+await writeFile(OUT, text.replace(/\r\n/g, '\n').replace(/\n*$/, '\n'));
+console.log(`wrote ${count.toLocaleString()} active satellites, dated ${new Date(medianEpochMs).toISOString().slice(0, 10)} → ${OUT}`);

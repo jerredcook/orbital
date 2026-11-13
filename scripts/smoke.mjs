@@ -426,9 +426,18 @@ try {
     await c.goto(`${URL}?clip=10`, { waitUntil: 'load', timeout: 30000 });
     await c.waitForFunction(() => /press Space/.test(document.getElementById('clip-hint')?.textContent || ''), { timeout: 45000 });
     const clip = () => c.evaluate(() => ({ year: Number(document.getElementById('clip-year').textContent), hint: !document.getElementById('clip-hint').hidden, end: Number(document.getElementById('tl-year').max) }));
-    // The suite's catalog is the bundled snapshot (months old), which is exactly
-    // the case the clip must warn about before anyone records it as "today".
-    check('clipWarnsWhenDataIsOld', await c.evaluate(() => /snapshot about \d+ days old/.test(document.querySelector('#clip-hint .clip-warn')?.textContent || '')));
+    // The clip hides the app's "data is old" badge, so it must carry its own
+    // warning exactly when the catalog is 3+ days old (the bundled snapshot this
+    // suite runs on is fresh just after a refresh and stale a week later).
+    const stale = await c.evaluate(() => {
+      const ep = window.__orbital.catalog.map((s) => {
+        const yy = parseInt(s.l1.slice(18, 20), 10), day = parseFloat(s.l1.slice(20, 32));
+        return Date.UTC(yy < 57 ? 2000 + yy : 1900 + yy, 0, 1) + (day - 1) * 86_400_000;
+      }).filter(Number.isFinite).sort((x, y) => x - y);
+      const ageDays = (Date.now() - ep[ep.length >> 1]) / 86_400_000;
+      return { ageDays, warned: /snapshot about \d+ days old/.test(document.querySelector('#clip-hint .clip-warn')?.textContent || '') };
+    });
+    check('clipWarnsExactlyWhenDataIsOld', stale.warned === (Math.round(stale.ageDays) >= 3));
     await c.mouse.click(640, 360); await c.mouse.click(200, 500);
     await sleep(1800);
     const idle = await clip();
@@ -446,14 +455,22 @@ try {
     check('clipHoldsFinalFrame', fin.year === fin.end && (await clip()).year === fin.end);
     // The label must say what the dots are (today's active satellites), with
     // debris out of both the picture and the number.
-    const lab = await c.evaluate(() => ({
-      text: document.getElementById('clip-count').textContent,
-      n: Number(document.getElementById('clip-count').textContent.replace(/\D/g, '')),
-      // (a handful of new objects have no launch designator yet, so no year to appear in)
-      sats: window.__orbital.catalog.filter((s) => s.kind !== 'DEB' && s.launchYear != null && s.launchYear <= new Date().getUTCFullYear()).length,
-      debOff: !document.querySelector('input[data-cat="DEB"]').checked,
-    }));
-    check('clipCountIsActiveSatellites', /of today’s active satellites$/.test(lab.text) && lab.n === lab.sats && lab.debOff);
+    const lab = await c.evaluate(() => {
+      const o = window.__orbital, text = document.getElementById('clip-count').textContent;
+      const junk = /\bDEB\b|\bR\/B/;
+      return {
+        text, n: Number(text.split(' ')[0].replace(/\D/g, '')),
+        // (a handful of new objects have no launch designator yet, so no year to appear in)
+        sats: o.catalog.filter((s) => s.kind !== 'DEB' && s.launchYear != null && s.launchYear <= new Date().getUTCFullYear()).length,
+        junkCounted: o.catalog.filter((s) => s.kind !== 'DEB' && junk.test(s.name)).length,
+        debOff: !document.querySelector('input[data-cat="DEB"]').checked,
+        stale: !!document.querySelector('#clip-hint .clip-warn'),
+      };
+    });
+    // "today's" only on current data; on an old snapshot it must give the date instead.
+    const wording = lab.stale ? /active satellites as of \d+ \w+ \d{4}$/ : /of today’s active satellites$/;
+    check('clipCountIsActiveSatellites', wording.test(lab.text) && lab.n === lab.sats && lab.debOff);
+    check('clipNeverCountsDebrisAsSatellites', lab.junkCounted === 0);
     await c.keyboard.press('r');
     await sleep(600);
     check('clipReplays', (await clip()).year < fin.end);
