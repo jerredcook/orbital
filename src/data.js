@@ -8,8 +8,8 @@ import { track } from './analytics.js';
 
 const gp = (group) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
 
-// A snapshot bundled with the app — CelesTrak's active list, saved by
-// tools/fetch-fallback-tle.mjs.  Last-resort
+// A snapshot bundled with the app — CelesTrak's active list, refreshed monthly
+// (tools/fetch-fallback-tle.mjs, .github/workflows/refresh-snapshot.yml).  Last-resort
 // source for the main catalog when CelesTrak is unreachable AND there's no warm
 // cache — so the sky is never empty.  Base-relative for the GitHub Pages subpath.
 const FALLBACK_ACTIVE = `${import.meta.env.BASE_URL}fallback/active.tle`;

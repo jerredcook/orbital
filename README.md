@@ -279,8 +279,9 @@ Data freshness and resilience:
   how I know).  Defenses, weakest to strongest: every fetch is bounded by
   a timeout (so a hung CelesTrak can't wedge the load); expired cache
   entries are kept and served when a fetch fails; a **bundled offline
-  snapshot** (`public/fallback/active.tle` — CelesTrak's active list, saved
-  with one validated request by `tools/fetch-fallback-tle.mjs`) backs the main group so the
+  snapshot** (`public/fallback/active.tle` — CelesTrak's active list, refreshed
+  on the 3rd of each month by `.github/workflows/refresh-snapshot.yml` with one
+  validated request via `tools/fetch-fallback-tle.mjs`) backs the main group so the
   sky is never empty even on a cold load with CelesTrak down; and a
   localStorage **circuit breaker** skips live CelesTrak calls for 10 min
   after a failure, so reloads during an outage drop straight to the
@@ -457,8 +458,9 @@ changed — it never reloads by itself.
 
 To cut a release: bump `version` in `package.json`, add an entry to
 [`CHANGELOG.md`](CHANGELOG.md), commit, then `git tag vX.Y.Z && git push --tags`
-once that commit has passed the deploy gate.  The automated mission-data commits
-change the build, not the version.
+once that commit has passed the deploy gate.  The automated data commits (launch
+data twice a week, the satellite snapshot once a month) change the build, not
+the version.
 
 ## Recording a clip
 

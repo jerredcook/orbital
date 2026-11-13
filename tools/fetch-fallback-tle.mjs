@@ -4,9 +4,10 @@
 // app shows it when the live feed is unreachable; the test suites and the image
 // tools use it INSTEAD of CelesTrak, so they never contact it at all.
 //
-// This makes ONE request to CelesTrak.  Run it by hand every month or so to
-// keep the snapshot from drifting — never in a loop: CelesTrak firewalls
-// clients that re-download the big files.
+// This makes ONE request to CelesTrak.  It is run on the 3rd of each month by
+// .github/workflows/refresh-snapshot.yml, from GitHub's network; there is
+// rarely a reason to run it by hand, and never a reason to run it in a loop —
+// CelesTrak firewalls clients that re-download the big files.
 //
 // The result is validated first (tools/tle-snapshot.mjs): if CelesTrak answers
 // with an error page, a partial file or stale data, nothing is written and the
@@ -27,7 +28,7 @@ const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'fallb
 const URL_ACTIVE = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
 
 const controller = new AbortController();
-const timer = setTimeout(() => controller.abort(), 60_000);
+const timer = setTimeout(() => controller.abort(), 180_000);   // CelesTrak can be slow; it is still one request
 let text;
 try {
   const res = await fetch(URL_ACTIVE, {

@@ -1,0 +1,45 @@
+name: Refresh satellite snapshot
+
+# public/fallback/active.tle is CelesTrak's active-satellite list, saved: what
+# the app shows when the live feed is unreachable, and what the test suites use
+# instead of CelesTrak.  Left alone it goes stale (it had drifted five months by
+# November 2026), so refresh it once a month — ONE request to CelesTrak.
+# The fetch validates what it got and writes nothing if it is not a current,
+# well-formed active list; then the job fails and the old snapshot stays.
+# A push made with GITHUB_TOKEN does not trigger the deploy workflow, so it is
+# dispatched explicitly — which still runs the full smoke gate.
+
+on:
+  schedule:
+    - cron: '17 6 3 * *'   # the 3rd of each month, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Fetch CelesTrak's active list (one request)
+        run: node tools/fetch-fallback-tle.mjs
+      - name: Commit and deploy if it changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet public/fallback/active.tle; then
+            echo "snapshot unchanged — nothing to do"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/fallback/active.tle
+          git commit -m "Snapshot: refresh the bundled active-satellite list (automated)"
+          git push
+          gh workflow run "Deploy to GitHub Pages" --ref main

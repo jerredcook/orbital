@@ -2,18 +2,18 @@
 
 What changed in each version of Orbital, newest first, written for the people
 who use it.  Versions follow `major.minor.patch`: a new feature bumps the
-middle number, a fix bumps the last.  The twice-weekly automated launch-data
-refresh does not change the version.
+middle number, a fix bumps the last.  The automated data refreshes (launch data
+twice a week, the bundled satellite list once a month) do not change the version.
 
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
-## 0.1.0 — not yet tagged
+## 0.1.0 — 13 November 2026
 
 The first numbered version: everything Orbital did before versions were counted.
 
-- **Every tracked satellite, live.** About 17,000 objects from CelesTrak's
-  active catalog and three large debris clouds, moving in real time on a 3D
+- **Every active satellite, live.** About 16,000 satellites from CelesTrak's
+  active catalog, plus three large debris clouds, moving in real time on a 3D
   globe.  Tap one to follow it, or search by name or NORAD number.
 - **Launch timeline.** Play the catalog forward from 1957 to today.
 - **Close approaches.** See which pairs are within 5–25 km right now, and
