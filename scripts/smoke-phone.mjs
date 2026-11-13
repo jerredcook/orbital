@@ -12,6 +12,7 @@
 //   npm run dev                  # terminal 1
 //   PORT=5173 npm run smoke:phone # terminal 2      (SMOKE_URL=… for a build)
 import { chromium } from 'playwright-core';
+import { stubCelestrak } from './celestrak-stub.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
@@ -27,6 +28,7 @@ const ctx = await b.newContext({
   viewport: { width: W, height: H }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
   userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
 });
+await stubCelestrak(ctx);   // never the real CelesTrak — see celestrak-stub.mjs
 const p = await ctx.newPage();
 const cdp = await ctx.newCDPSession(p);
 const pageErrors = []; const consoleErrors = [];

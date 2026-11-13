@@ -49,7 +49,7 @@ export function yearAt(p, endYear, pace = PACE) {
   return endYear;
 }
 
-export function initClip({ viewer, isReady }) {
+export function initClip({ viewer, isReady, dataAgeDays }) {
   if (!clipMode) return;
   const $ = (id) => document.getElementById(id);
   document.body.classList.add('clip-mode');
@@ -76,20 +76,37 @@ export function initClip({ viewer, isReady }) {
     s.value = String(y);
     s.dispatchEvent(new Event('input', { bubbles: true }));   // the timeline filters the swarm + flashes eras
     $('clip-year').textContent = String(y);
-    const m = /·\s*([\d,.\s]+)/.exec($('tl-label').textContent);
-    // Honest wording: the timeline shows today's tracked objects by launch year,
-    // so the number is "launched by then and still up", not that year's census.
-    $('clip-count').textContent = m ? `${m[1].trim()} still in orbit today` : '';
+    // Honest wording.  The dots are TODAY'S active-satellite catalog, revealed by
+    // launch year — so the number is "how many of today's active satellites had
+    // been launched by then".  It is not that year's census, and it is not
+    // "everything still in orbit": dead satellites (Vanguard 1, up since 1958)
+    // and most debris are not in this catalog at all.  Debris is left out of the
+    // clip entirely (see arm) so the count and the dots are the same set.
+    const num = (id) => Number(String($(id).textContent).replace(/\D/g, '')) || 0;
+    const total = Number((/·(.*)/.exec($('tl-label').textContent)?.[1] ?? '').replace(/\D/g, '')) || 0;
+    const sats = Math.max(0, total - num('count-DEB'));
+    $('clip-count').textContent = `${sats.toLocaleString()} of today’s active satellites`;
   }
 
   function arm() {
     const t = $('toggle-timeline');
     if (!t.checked) t.click();                // timeline on → the swarm empties back to 1957
+    // Debris off: the three breakup clouds would pop in at their PARENT'S launch
+    // year (Fengyun-1C's 2007 debris in 1999), which is not when they appeared.
+    const deb = document.querySelector('input[data-cat="DEB"]');
+    if (deb?.checked) deb.click();
     shownYear = null; setYear(1957);
     state = 'armed';
-    $('clip-hint').textContent = touch
+    const how = touch
       ? 'start your screen recording, then tap to play'
       : 'start your screen recording, then press Space · R replays · Esc exits';
+    // The clip hides the app's own "data is old" badge, so say it here, before
+    // anyone records: when the live feed is unreachable the app is showing a
+    // saved snapshot, and "today's satellites" would be weeks or months out.
+    const age = Math.round(dataAgeDays?.() ?? 0);
+    $('clip-hint').innerHTML = age >= 3
+      ? `<span class="clip-warn">⚠ live satellite data is unavailable — this is a snapshot about ${age} days old.<br>For current numbers, come back and record later.</span><br>${how}`
+      : how;
     $('clip-hint').hidden = false;
   }
   function play() {

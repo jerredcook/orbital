@@ -19,13 +19,12 @@
 //   PORT=5173 npm run smoke:failures # terminal 2      (SMOKE_URL=… for a build)
 //   ONLY=offline,gpu …               # run just the scenarios whose name matches
 import { chromium } from 'playwright-core';
-import { readFileSync } from 'node:fs';
+import { CELESTRAK, celestrakOk } from './celestrak-stub.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
 const SITE = process.env.SMOKE_URL || `http://localhost:${PORT}/`;
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
-const SNAPSHOT = readFileSync(new URL('../public/fallback/active.tle', import.meta.url), 'utf8');
 
 const b = await chromium.launch({
   channel: 'chrome', headless: true,
@@ -36,16 +35,7 @@ const R = {};
 const notes = {};
 const check = (name, cond) => { R[name] = cond ? 'PASS' : 'FAIL'; if (process.env.SMOKE_TRACE) process.stderr.write(`[${R[name]}] ${name}\n`); };
 
-const CORS = { 'access-control-allow-origin': '*' };
-// A healthy CelesTrak, played by the bundled snapshot.
-const celestrakOk = (route) => {
-  const u = route.request().url();
-  if (u.includes('GROUP=active')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: CORS, body: SNAPSHOT });
-  if (u.includes('GROUP=')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: CORS, body: '' });
-  return route.fulfill({ status: 404, headers: CORS, body: 'not found' });   // SATCAT: optional metadata
-};
 const celestrakRefuses = (route) => route.abort('connectionrefused');
-const CELESTRAK = /^https:\/\/celestrak\.org\//;
 
 async function scenario(name, { celestrak = celestrakOk, storage = {}, viewport = { width: 1280, height: 800 } } = {}, fn) {
   if (ONLY.length && !ONLY.some((o) => name.includes(o))) return;

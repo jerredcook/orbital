@@ -1262,7 +1262,11 @@ document.addEventListener('keydown', (e) => {
 }, true);
 
 // Capture mode (?clip): a chrome-free launch-timeline run for screen recording.
-initClip({ viewer, isReady: () => catalog.length > 500 && !!lastBuf });
+initClip({
+  viewer,
+  isReady: () => catalog.length > 500 && !!lastBuf,
+  dataAgeDays: () => (catalogEpochMs == null ? 0 : (Date.now() - catalogEpochMs) / 86_400_000),
+});
 
 // ----------------------------------------------------------------- debug ----
 

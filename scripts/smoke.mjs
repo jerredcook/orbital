@@ -16,6 +16,7 @@
 // Uses playwright-core with channel:'chrome', so it needs Google Chrome present
 // but downloads no browsers.  Default port 5173 (Vite's default).
 import { chromium } from 'playwright-core';
+import { stubCelestrak } from './celestrak-stub.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
@@ -28,6 +29,7 @@ const b = await chromium.launch({
   args: ['--enable-unsafe-swiftshader', '--no-sandbox', '--use-gl=angle', '--enable-gpu', '--disable-dev-shm-usage'],
 });
 const p = await b.newPage({ viewport: { width: 1280, height: 800 } });
+await stubCelestrak(p);   // never the real CelesTrak — see celestrak-stub.mjs
 await p.addInitScript(() => {
   try {
     localStorage.setItem('orbital.station', JSON.stringify({ lat: 40.7128, lon: -74.006 }));
@@ -419,17 +421,14 @@ try {
   // ---- capture mode (?clip): it must wait for Space.  A mouse click — which
   // setting up a screen recording always involves — must NOT start it.
   {
-    // A fresh profile, so stand in for CelesTrak with the bundled snapshot
-    // rather than ask the real one for the catalog a second time in one run.
-    const { readFileSync } = await import('node:fs');
-    const snapshot = readFileSync(`${import.meta.dirname}/../public/fallback/active.tle`, 'utf8');
     const c = await b.newPage({ viewport: { width: 1280, height: 720 } });
-    await c.route(/^https:\/\/celestrak\.org\//, (route) => (route.request().url().includes('GROUP=active')
-      ? route.fulfill({ status: 200, contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body: snapshot })
-      : route.fulfill({ status: 404, headers: { 'access-control-allow-origin': '*' }, body: '' })));
+    await stubCelestrak(c);
     await c.goto(`${URL}?clip=10`, { waitUntil: 'load', timeout: 30000 });
     await c.waitForFunction(() => /press Space/.test(document.getElementById('clip-hint')?.textContent || ''), { timeout: 45000 });
     const clip = () => c.evaluate(() => ({ year: Number(document.getElementById('clip-year').textContent), hint: !document.getElementById('clip-hint').hidden, end: Number(document.getElementById('tl-year').max) }));
+    // The suite's catalog is the bundled snapshot (months old), which is exactly
+    // the case the clip must warn about before anyone records it as "today".
+    check('clipWarnsWhenDataIsOld', await c.evaluate(() => /snapshot about \d+ days old/.test(document.querySelector('#clip-hint .clip-warn')?.textContent || '')));
     await c.mouse.click(640, 360); await c.mouse.click(200, 500);
     await sleep(1800);
     const idle = await clip();
@@ -445,6 +444,16 @@ try {
     for (let i = 0; i < 60 && fin.year < fin.end; i++) { await sleep(500); fin = await clip(); }
     await sleep(1200);
     check('clipHoldsFinalFrame', fin.year === fin.end && (await clip()).year === fin.end);
+    // The label must say what the dots are (today's active satellites), with
+    // debris out of both the picture and the number.
+    const lab = await c.evaluate(() => ({
+      text: document.getElementById('clip-count').textContent,
+      n: Number(document.getElementById('clip-count').textContent.replace(/\D/g, '')),
+      // (a handful of new objects have no launch designator yet, so no year to appear in)
+      sats: window.__orbital.catalog.filter((s) => s.kind !== 'DEB' && s.launchYear != null && s.launchYear <= new Date().getUTCFullYear()).length,
+      debOff: !document.querySelector('input[data-cat="DEB"]').checked,
+    }));
+    check('clipCountIsActiveSatellites', /of today’s active satellites$/.test(lab.text) && lab.n === lab.sats && lab.debOff);
     await c.keyboard.press('r');
     await sleep(600);
     check('clipReplays', (await clip()).year < fin.end);

@@ -468,9 +468,10 @@ and count, the era banners and a small wordmark + address.  Start your screen
 recorder, then press **Space** (on a touchscreen, tap): the opening frame holds
 for a couple of seconds, then the launch timeline plays 1957 → today while the
 globe turns; **R** replays, **Esc** exits.  Mouse clicks are ignored, so
-clicking the window while setting up the recording will not start it.  The count is today's
-tracked objects launched by that year — "still in orbit today", not a census
-of that year.  See `src/clip.js`.
+clicking the window while setting up the recording will not start it.  The count is how many of
+today's active satellites (CelesTrak's active catalog) had been launched by that
+year — not a census of that year, and not everything in orbit: dead satellites
+and debris are left out.  See `src/clip.js`.
 
 ## Privacy & usage counts
 
