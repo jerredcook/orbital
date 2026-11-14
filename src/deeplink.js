@@ -13,6 +13,7 @@
 //   #luna         the Moon globe
 //   #jwst         a showpiece craft, up close (also #voyager1, #soho, …)
 //   #group=starlink  the Earth view focused on a group (constellation / operator)
+//   #timeline     the launch timeline, playing 1957 → today
 //   #tour         start the guided tour (read-only; the tour never owns the hash)
 //   #guide        the full guide overlay (read-only; never written during use)
 
@@ -27,6 +28,7 @@ export function writeHash(state) {
     else if (state.show) h = state.show;
     else if (state.system) h = 'system';
     else if (state.group) h = `group=${encodeURIComponent(state.group)}`;
+    else if (state.timeline) h = 'timeline';
   }
   if (location.hash.replace(/^#/, '') === h) return;            // already there
   const target = h ? `#${h}` : `${location.pathname}${location.search}`;
@@ -42,6 +44,7 @@ export function readHash() {
   if (h === 'tour') return { tour: true };     // start the guided tour
   if (h === 'missions') return { missions: true };   // open the missions chapter
   if (h === 'catalog') return { catalog: true };     // open the catalog browser
+  if (h === 'timeline') return { timeline: true };   // play the launch timeline
   const eq = h.indexOf('=');
   if (eq < 0) return { show: h };   // a bare word is a showpiece id (jwst, voyager1, soho…)
   const k = h.slice(0, eq);

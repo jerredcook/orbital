@@ -50,6 +50,19 @@
   <div id="cesiumContainer" role="main" aria-label="3D globe and solar-system view"></div>
   <div id="boot-chip" role="status">🛰 fetching the live catalog…</div>
 
+  <!-- First visit: a small card that leaves the globe in view and offers three
+       ways in (src/starter.js).  The full welcome card below is behind "?". -->
+  <div id="starter" role="region" aria-label="Getting started" hidden>
+    <button id="starter-close" type="button" aria-label="Close this introduction">✕</button>
+    <p class="starter-head" id="starter-head">Every active satellite, where it is right now.</p>
+    <p class="starter-sub">Each dot is a real one. <span id="starter-verb">Tap</span> any dot to see what it is, or start here:</p>
+    <div class="starter-row">
+      <button id="starter-iss" class="starter-btn" type="button">🛰 Find the Space Station</button>
+      <button id="starter-timeline" class="starter-btn" type="button">▶ Watch 1957 → today</button>
+      <button id="starter-tour" class="starter-btn" type="button">🚀 Take the tour</button>
+    </div>
+  </div>
+
   <div id="tour-card" role="region" aria-label="Guided tour" hidden>
     <div class="tour-head">
       <span class="tour-step" id="tour-step">1 / 12</span>
@@ -136,7 +149,7 @@
           <li><b>“In view” coverage</b>: paints the Earth with how many satellites of the focused group are overhead everywhere right now — see Starlink's dense mid-latitude band, or why GPS works from anywhere. Line of sight, not service quality.</li>
           <li><b>Conjunctions</b>: every pair of objects passing within 5, 10 or 25 km of each other, found live. Click a row to fly to the close approach.</li>
           <li><b>Screen one satellite</b>: select it, then “Screen close approaches” to list everything that comes within 25 km of it over the next day.</li>
-          <li><b>Launch timeline</b>: replay the Space Age — drag the year slider (or press ▶) and watch the sky fill from Sputnik to the Starlink era.</li>
+          <li><b>Launch timeline</b>: replay the Space Age — drag the year slider (or press ▶) and watch the sky fill from Sputnik to the Starlink era. The year and count show on the globe while it runs, and a link ending in <b>#timeline</b> opens straight into it.</li>
         </ul>
       </section>
 
@@ -344,8 +357,8 @@
       <div class="tl-speed-row">speed <select id="tl-speed" aria-label="Timeline playback speed">
         <option value="2">fast</option>
         <option value="1" selected>normal</option>
-        <option value="0.4">slow</option>
-        <option value="0.15">crawl</option>
+        <option value="0.5">slow</option>
+        <option value="0.2">crawl</option>
       </select></div>
     </div>
     <div class="legend-divider"></div>
@@ -382,6 +395,11 @@
   </aside>
 
   <div id="tl-era" role="status" hidden></div>
+  <div id="tl-hud" role="group" aria-label="Launch timeline" hidden>
+    <button id="tl-hud-play" type="button" aria-label="Play or pause the launch timeline">▶</button>
+    <div class="tl-hud-read"><span id="tl-hud-year">1957</span><span id="tl-hud-count"></span></div>
+    <button id="tl-hud-close" type="button" aria-label="Close the launch timeline and return to today">✕</button>
+  </div>
 
   <div id="toasts" aria-live="polite"></div>
 

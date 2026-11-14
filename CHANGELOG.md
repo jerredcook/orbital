@@ -3,10 +3,31 @@
 What changed in each version of Orbital, newest first, written for the people
 who use it.  Versions follow `major.minor.patch`: a new feature bumps the
 middle number, a fix bumps the last.  The automated data refreshes (launch data
-twice a week, the bundled satellite list once a month) do not change the version.
+twice a week, the bundled satellite list once a week) do not change the version.
 
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
+
+## 0.2.0 — 14 November 2026
+
+Changes made after watching the first few dozen visitors: most looked at the
+welcome card and left without touching the globe.
+
+- **The globe comes first.** A first visit no longer opens a full-screen card
+  over a dimmed globe.  You see the satellites straight away, with a small card
+  beside them giving the live count and three ways in: find the Space Station,
+  watch the launch history, or take the tour.  The full welcome card is still
+  behind the **?** button.
+- **A link straight to the launch history.** Opening the app at `#timeline`
+  starts the 1957 → today replay at once.
+- **The launch timeline works without the side panel.** While it runs, the
+  year, the count, play/pause and close sit on the globe — on a phone you no
+  longer need the drawer open to use it.
+- **Better pacing.** The replay takes about 40 seconds and spends a third of
+  that on the years since 2019, where nearly everything happens, instead of
+  one second on every year.
+- **Fresher fallback data.** The satellite list bundled with the app, used when
+  the live feed cannot be reached, is now refreshed every week, not every month.
 
 ## 0.1.0 — 13 November 2026
 

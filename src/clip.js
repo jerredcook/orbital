@@ -19,6 +19,7 @@
 // clip always shows exactly what the real feature shows.
 
 import { Cartesian3 } from 'cesium';
+import { yearAt } from './scrubber.js';
 
 export const clipSeconds = (() => {
   try {
@@ -30,24 +31,9 @@ export const clipSeconds = (() => {
 })();
 export const clipMode = clipSeconds > 0;
 
-// Pacing: the early decades are sparse, the Starlink years are the payoff —
-// so each stretch gets a share of the running time, not a share of the years.
-//   [fromYear, share of the clip]
-const PACE = [[1957, 0.30], [1990, 0.22], [2010, 0.16], [2019, 0.32]];
-
-// Year (fractional) at progress p ∈ [0, 1] through the clip.
-export function yearAt(p, endYear, pace = PACE) {
-  if (!(p > 0)) return pace[0][0];
-  if (p >= 1) return endYear;
-  let acc = 0;
-  for (let i = 0; i < pace.length; i++) {
-    const [from, share] = pace[i];
-    const to = i + 1 < pace.length ? pace[i + 1][0] : endYear;
-    if (p <= acc + share || i === pace.length - 1) return from + (to - from) * Math.min(1, (p - acc) / share);
-    acc += share;
-  }
-  return endYear;
-}
+// Pacing (which years get how much of the running time) is shared with the
+// launch timeline itself — see yearAt in scrubber.js.
+export { yearAt };
 
 export function initClip({ viewer, isReady, dataAgeDays }) {
   if (!clipMode) return;

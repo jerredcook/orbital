@@ -40,6 +40,7 @@ describe('landingKind', () => {
     expect(landingKind('#')).toBe('home');
     expect(landingKind('#sat=25544')).toBe('sat');
     expect(landingKind('#system')).toBe('system');
+    expect(landingKind('#timeline')).toBe('timeline');
     expect(landingKind('#body=Saturn')).toBe('body');
     expect(landingKind('#<script>')).toBe('other');
   });

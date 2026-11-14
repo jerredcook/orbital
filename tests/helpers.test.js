@@ -54,6 +54,7 @@ describe('deeplink', () => {
     expect(read('#tour')).toEqual({ tour: true });
     expect(read('#missions')).toEqual({ missions: true });
     expect(read('#catalog')).toEqual({ catalog: true });
+    expect(read('#timeline')).toEqual({ timeline: true });
     expect(read('#jwst')).toEqual({ show: 'jwst' });
   });
 

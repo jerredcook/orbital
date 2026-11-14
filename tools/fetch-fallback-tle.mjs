@@ -33,7 +33,7 @@ let text;
 try {
   const res = await fetch(URL_ACTIVE, {
     signal: controller.signal,
-    headers: { 'User-Agent': 'orbital (github.com/jerredcook/orbital; hobby tracker; monthly snapshot)' },
+    headers: { 'User-Agent': 'orbital (github.com/jerredcook/orbital; hobby tracker; weekly snapshot)' },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   text = await res.text();

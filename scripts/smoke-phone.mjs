@@ -24,10 +24,11 @@ const b = await chromium.launch({
   channel: 'chrome', headless: true,
   args: ['--enable-unsafe-swiftshader', '--no-sandbox', '--use-gl=angle', '--enable-gpu', '--disable-dev-shm-usage'],
 });
-const ctx = await b.newContext({
+const PHONE = {
   viewport: { width: W, height: H }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
   userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
-});
+};
+const ctx = await b.newContext(PHONE);
 await stubCelestrak(ctx);   // never the real CelesTrak — see celestrak-stub.mjs
 const p = await ctx.newPage();
 const cdp = await ctx.newCDPSession(p);
@@ -89,19 +90,24 @@ try {
   await p.goto(URL, { waitUntil: 'load', timeout: 30000 });
 
   // ---------------------------------------------------------------- first run
-  // A brand-new visitor: the welcome card must fit the phone and be dismissable
-  // by a real tap.
-  await p.locator('#welcome').waitFor({ state: 'visible', timeout: 15000 });
+  // A brand-new visitor sees the GLOBE, not a dialog over it: the starter card
+  // (starter.js) is a small strip that fits the phone, covers none of the
+  // controls, and blocks nothing — the drag, pinch and tap checks below all run
+  // with it still up.
+  await p.locator('#starter').waitFor({ state: 'visible', timeout: 15000 });
   check('phoneEmulated', await O(() => matchMedia('(pointer: coarse)').matches && document.documentElement.clientWidth === 412));
-  const card = await rect('.welcome-card');
-  R._welcomeCard = card && { w: Math.round(card.w), h: Math.round(card.h) };
-  check('welcomeFitsWidth', !!card && card.shown && card.x >= -1 && card.r <= W + 1);
-  await p.locator('#welcome-go').tap();          // Playwright scrolls it into view if the card is tall
-  await sleep(300);
-  check('welcomeDismissesByTap', await O(() => document.getElementById('welcome').hidden));
-
   await p.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
   await sleep(1500);
+  const card = await rect('#starter');
+  R._starterCard = card && { w: Math.round(card.w), h: Math.round(card.h), y: Math.round(card.y) };
+  check('starterFitsScreen', fits(card));
+  check('firstVisitShowsTheGlobe', await O(() => document.getElementById('welcome').hidden) && !!card && card.h <= H * 0.35
+    && !overlap(card, await rect('#topbar')) && !overlap(card, await rect('#timebar')));
+  check('starterTouchTargets', (await Promise.all(['#starter-iss', '#starter-timeline', '#starter-tour', '#starter-close'].map(rect))).every((q) => fits(q) && Math.min(q.w, q.h) >= 34));
+  // …and it says how many there are, from the catalog actually loaded.
+  const head = await poll(() => O(() => document.getElementById('starter-head').textContent), (t) => /^\d/.test(t), 12);
+  const sats = await O(() => window.__orbital.catalog.filter((s) => s.kind !== 'DEB').length);
+  check('starterShowsLiveCount', head.startsWith(`${sats.toLocaleString('en-US')} satellites`) && /^Tap/.test(await O(() => document.getElementById('starter-verb').textContent)));
 
   // ---------------------------------------------------------------- layout
   const bar = {};
@@ -157,6 +163,8 @@ try {
   if (spot) await p.touchscreen.tap(spot.x, spot.y);
   const tapped = await poll(() => O(() => !!window.__orbital.selected), (v) => v, 12);
   check('tapSelectsSatellite', !!spot && tapped);
+  // Picking a satellite is the starter card's job done: it leaves, for good.
+  check('starterLeavesOnceASatelliteIsPicked', await O(() => document.getElementById('starter').hidden && localStorage.getItem('orbital.welcomed') === '1'));
   const info1 = await rect('#infopanel');
   check('infoPanelOnScreen', fits(info1));
   check('infoPanelLeavesGlobe', !!info1 && info1.h <= H * 0.5 && !overlap(info1, await rect('#topbar')));
@@ -344,6 +352,74 @@ try {
     for (let i = 0; i < 30 && cy === 1957; i++) { await sleep(300); cy = await c.evaluate(() => Number(document.getElementById('clip-year').textContent)); }
     check('clipStartsOnTap', cy > 1957);
     await c.close();
+  }
+
+  // ---- "Watch 1957 → today" from the starter card: the launch timeline has to
+  // work on a phone WITHOUT opening the drawer its controls live in.
+  {
+    const cx = await b.newContext(PHONE);   // a new visitor again (empty storage)
+    await stubCelestrak(cx);
+    const s = await cx.newPage();
+    await s.goto(URL, { waitUntil: 'load', timeout: 30000 });
+    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+    const box = (sel) => s.evaluate((q) => {
+      const el = document.querySelector(q); if (!el) return null;
+      const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
+      return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, shown: !el.hidden && cs.display !== 'none' && r.width > 0 && r.height > 0 };
+    }, sel);
+    const hudYear = () => s.evaluate(() => Number(document.getElementById('tl-hud-year').textContent));
+    await s.locator('#starter-timeline').tap();
+    await sleep(600);
+    const hud = await box('#tl-hud');
+    const on0 = await s.evaluate(() => ({
+      starterGone: document.getElementById('starter').hidden, drawerShut: !document.body.classList.contains('legend-open'),
+      year: Number(document.getElementById('tl-hud-year').textContent), playing: window.__orbital.timelinePlaying, hash: location.hash,
+    }));
+    R._timelineShow = on0;
+    check('timelineShowStartsFromTheCard', on0.starterGone && on0.drawerShut && on0.playing && on0.year === 1957 && on0.hash === '#timeline');
+    check('timelineHudOnScreen', !!hud && hud.shown && hud.x >= -1 && hud.r <= W + 1 && !overlap(hud, await box('#topbar')) && !overlap(hud, await box('#timebar')));
+    let y = 1957;
+    for (let i = 0; i < 60 && y < 1962; i++) { await sleep(300); y = await hudYear(); }
+    check('timelineShowPlays', y >= 1962);
+    // Honest label: the number is today's active satellites launched by that year.
+    const lab = await s.evaluate(() => {
+      const o = window.__orbital, yr = Number(document.getElementById('tl-hud-year').textContent), text = document.getElementById('tl-hud-count').textContent;
+      return { text, n: Number(text.split(' ')[0].replace(/\D/g, '')), want: o.catalog.filter((c) => c.kind !== 'DEB' && (c.launchYear ?? 9999) <= yr).length };
+    });
+    check('timelineHudCountsActiveSatellites', /of today’s active satellites$/.test(lab.text) && lab.n === lab.want);
+    await s.locator('#tl-hud-play').tap();           // pause…
+    await sleep(300);
+    const paused = await hudYear();
+    await sleep(1500);
+    check('timelineHudPauses', await hudYear() === paused && !(await s.evaluate(() => window.__orbital.timelinePlaying)));
+    await s.locator('#tl-hud-close').tap();          // …and ✕ returns to today's full sky
+    await sleep(500);
+    check('timelineHudCloses', await s.evaluate(() => document.getElementById('tl-hud').hidden && !document.getElementById('toggle-timeline').checked && location.hash === ''
+      && window.__orbital.swarm && document.getElementById('count-LEO').textContent.replace(/\D/g, '') > 1000));
+    await cx.close();
+  }
+
+  // ---- a shared #timeline link: straight into the show, no introduction first —
+  // and the bare page still introduces itself afterwards, where "Find the Space
+  // Station" must do what it says.
+  {
+    const cx = await b.newContext(PHONE);
+    await stubCelestrak(cx);
+    const s = await cx.newPage();
+    await s.goto(`${URL}#timeline`, { waitUntil: 'load', timeout: 30000 });
+    await s.waitForFunction(() => window.__orbital?.timelinePlaying === true, null, { timeout: 60000 });
+    let y = 1957;
+    for (let i = 0; i < 60 && y < 1960; i++) { await sleep(300); y = await s.evaluate(() => Number(document.getElementById('tl-hud-year').textContent)); }
+    check('timelineLinkPlays', y >= 1960 && await s.evaluate(() => document.getElementById('starter').hidden && document.getElementById('welcome').hidden
+      && !document.getElementById('tl-hud').hidden && location.hash === '#timeline'));
+    await s.goto(URL.replace(/#.*$/, ''), { waitUntil: 'load', timeout: 30000 });
+    await s.reload({ waitUntil: 'load' });           // a hash-only change is not a new load
+    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+    check('barePageStillIntroducesItself', await s.evaluate(() => !document.getElementById('starter').hidden));
+    await s.locator('#starter-iss').tap();
+    const iss = await (async () => { for (let i = 0; i < 20; i++) { const n = await s.evaluate(() => window.__orbital.selected ? document.getElementById('info-name').textContent : ''); if (n) return n; await sleep(300); } return ''; })();
+    check('starterFindsTheSpaceStation', /ISS|ZARYA/i.test(iss) && await s.evaluate(() => document.getElementById('starter').hidden));
+    await cx.close();
   }
 } catch (e) {
   R._fatal = String(e).slice(0, 400);

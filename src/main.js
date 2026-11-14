@@ -25,6 +25,7 @@ import { initTimeline } from './timeline.js';
 import { initGroups } from './groups.js';
 import { initCoverage } from './coverage.js';
 import { initTour } from './tour.js';
+import { initStarter } from './starter.js';
 import { initMissions } from './missions.js';
 import { initCatalogBrowser } from './catalog-browser.js';
 import { esc } from './esc.js';
@@ -438,6 +439,7 @@ function currentPosition(satrec) {
 
 function selectByIndex(index) {
   track('use/select-satellite');
+  starter.dismiss();   // they have found the dots — the first-visit card has done its job
   clearSelection();
   const sat = catalog[index];
   const satrec = satellite.twoline2satrec(sat.l1, sat.l2);
@@ -798,10 +800,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 // First-run welcome / how-to overlay — shown once, re-openable from the ? button.
-const closeWelcome = () => {
-  closeModal(welcome);
-  try { localStorage.setItem('orbital.welcomed', '1'); } catch { /* ignore */ }
-};
+const markWelcomed = () => { try { localStorage.setItem('orbital.welcomed', '1'); } catch { /* ignore */ } };
+const closeWelcome = () => { closeModal(welcome); markWelcomed(); };
 $('welcome-go').addEventListener('click', closeWelcome);
 $('welcome-tour').addEventListener('click', () => { closeWelcome(); tour.start(); });
 welcome.addEventListener('click', (e) => { if (e.target === welcome) closeWelcome(); });   // backdrop tap
@@ -825,8 +825,28 @@ guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); }
 // them straight on the thing the sender pointed at (the flag stays unset, so
 // they still get the intro on a later visit to the bare page).
 // (Capture mode — ?clip — records a clean globe, so it never opens the intro.)
-try { if (!clipMode && !location.hash && !localStorage.getItem('orbital.welcomed')) openModal(welcome, $('welcome-go')); }
-catch { if (!clipMode && !location.hash) openModal(welcome, $('welcome-go')); }
+//
+// What they see is the starter card (src/starter.js): small, beside the globe
+// rather than over it, with three ways in.  The full welcome card above stays
+// behind the "?" button.
+const starter = initStarter({
+  getCount: () => (catalog.length > 500 ? catalog.reduce((n, s) => n + (catOf(s) === 'DEB' ? 0 : 1), 0) : 0),
+  actions: {
+    'starter-iss': () => inspectByNorad('25544'),
+    'starter-timeline': () => startTimelineShow(),
+    'starter-tour': () => tour.start(),
+  },
+  onDismiss: markWelcomed,
+});
+// Any top-bar button (System, Moon, Missions, Catalog, ?, ☰) or a search means
+// they are finding their own way.
+$('topbar').addEventListener('click', (e) => { if (e.target.closest?.('button')) starter.dismiss(); }, true);
+$('topbar').addEventListener('focusin', (e) => { if (e.target.matches?.('input')) starter.dismiss(); });
+{
+  let firstVisit = true;
+  try { firstVisit = !localStorage.getItem('orbital.welcomed'); } catch { /* storage blocked: treat as new */ }
+  if (firstVisit && !clipMode && !location.hash) starter.show();
+}
 
 // Installable-app (PWA) plumbing.  Register the service worker, and when Chrome
 // decides the app is installable, reveal the welcome's "Install" button and use
@@ -942,7 +962,20 @@ const timeline = initTimeline({
   getSwarm: () => swarm,
   catVisible, catOf,
   passesGroup: (s) => groups.passes(s),
+  // Shareable: with nothing else in the address bar, a running timeline is #timeline.
+  onToggle: (on) => {
+    if (on && !location.hash) writeHash({ timeline: true });
+    else if (!on && location.hash === '#timeline') writeHash(null);
+  },
 });
+// "Watch 1957 → today": the #timeline link and the first-visit card.  It needs
+// the catalog, so on a slow cold load it says so once and starts when it lands.
+function startTimelineShow(tries = 0) {
+  if (catalog.length) { timeline.startShow(); return; }
+  if (bootSettled) return;                    // the catalog failed — boot shows its own Retry toast
+  if (tries === 0) toast('Starting as soon as the catalog finishes loading…', 6000);
+  setTimeout(() => startTimelineShow(tries + 1), 400);
+}
 
 // ------------------------------------------------------- coverage overlay ----
 // "<group> in view" heat overlay: for every point on Earth, how many satellites
@@ -1089,6 +1122,7 @@ function navigateTo(s, tries = 0) {
   if (s.tour) { tour.start(); return; }
   if (s.missions) { openMissions(); return; }
   if (s.catalog) { openCatalog(); return; }
+  if (s.timeline) { startTimelineShow(); return; }
   if (s.luna) { moonView.show(); return; }
   if (s.show) { inspectShowpiece(s.show); return; }
   if (s.system) { systemView.show(); return; }
@@ -1290,6 +1324,8 @@ window.__orbital = {
   checkPassAlerts: () => groundStation.checkPassAlerts(),   // debug: force a visible-pass check
   groups,                                                   // debug: group-focus filter
   tour,                                                     // debug: the guided tour
+  starter,                                                  // debug: the first-visit card
+  get timelinePlaying() { return timeline.playing; },       // debug: is the launch timeline running
   missions,                                                 // debug: the missions chapter
   catalogBrowser,                                           // debug: the catalog browser
   coverage,                                                 // debug: Starlink coverage overlay

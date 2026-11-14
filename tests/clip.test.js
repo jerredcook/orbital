@@ -1,6 +1,35 @@
-// Capture-mode pacing (clip.js): the year the clip shows at each moment.
+// Launch-timeline pacing (scrubber.js), shared by the timeline's ▶ and capture
+// mode: the year shown at each moment of a run, and the way back.
 import { describe, it, expect } from 'vitest';
 import { yearAt } from '../src/clip.js';
+import { yearAt as sharedYearAt, progressAt } from '../src/scrubber.js';
+
+describe('progressAt', () => {
+  const END = 2026;
+  it('capture mode and the timeline use the very same pacing', () => {
+    expect(yearAt).toBe(sharedYearAt);
+  });
+  it('is 0 at the start and 1 at the end', () => {
+    expect(progressAt(1950, END)).toBe(0);
+    expect(progressAt(1957, END)).toBe(0);
+    expect(progressAt(END, END)).toBe(1);
+    expect(progressAt(END + 5, END)).toBe(1);
+  });
+  it('undoes yearAt for every year, so pausing and resuming never jumps', () => {
+    for (let y = 1957; y <= END; y++) {
+      const back = Math.floor(yearAt(progressAt(y, END), END) + 1e-9);
+      expect(back, String(y)).toBe(y);
+    }
+  });
+  it('only ever moves forward', () => {
+    let prev = 0;
+    for (let y = 1957; y <= END; y++) {
+      const p = progressAt(y, END);
+      expect(p).toBeGreaterThanOrEqual(prev);
+      prev = p;
+    }
+  });
+});
 
 describe('yearAt', () => {
   const END = 2026;

@@ -44,9 +44,10 @@ connection (from the cached shell and the cached element sets).
 | Select satellite | click a point |
 | Search | `/` or click the search box (name or NORAD ID) |
 | Deselect / close | `Esc` or click empty space |
-| Help | first-run welcome (a 3-tip intro + quick-jump chips); the `?` button reopens it. **"See everything it can do"** opens the full in-app guide — its own scrollable page documenting every feature, also reachable at `#guide` |
+| First visit | a small starter card beside the globe (never over it): the live satellite count, and three ways in — **Find the Space Station**, **Watch 1957 → today**, **Take the tour**. It goes away for good once you pick a satellite, press one of its buttons or use the top bar (`src/starter.js`) |
+| Help | the `?` button opens the welcome card (a 3-tip intro + quick-jump chips). **"See everything it can do"** opens the full in-app guide — its own scrollable page documenting every feature, also reachable at `#guide` |
 | Time warp | − / + buttons, NOW to return to real time |
-| Launch timeline | legend toggle — scrub or ▶-play from 1957 to today (with a speed selector for the dense modern years) and watch the tracked population accumulate by launch year; era banners flash the milestones |
+| Launch timeline | legend toggle, or open the app at **`#timeline`** to land straight in it, playing — scrub or ▶-play from 1957 to today and watch the tracked population accumulate by launch year; era banners flash the milestones. A run takes about 40 s at normal speed and is paced, not linear: the sparse early decades go by quickly and the Starlink years get a third of the time (the same pacing as capture mode). While it is on, a readout on the globe shows the year, how many of today's active satellites had been launched by then, play/pause and ✕ — so it works on a phone without opening the drawer |
 | Conjunctions | legend toggle — every pair now within 5/10/25 km; click a list row to fly there |
 | Screening | select a satellite → "Screen close approaches" — its passes within 25 km over the next 24 h |
 | Ground station | legend toggle → **⌖ set location** → click the globe to drop a station; a worker predicts every satellite pass over the next 24 h (above 10/25/50°), streamed and sorted by rise time with peak elevation and duration. Click a pass to jump the clock to its peak and fly to the satellite. The station persists across sessions |
@@ -280,7 +281,7 @@ Data freshness and resilience:
   a timeout (so a hung CelesTrak can't wedge the load); expired cache
   entries are kept and served when a fetch fails; a **bundled offline
   snapshot** (`public/fallback/active.tle` — CelesTrak's active list, refreshed
-  on the 3rd of each month by `.github/workflows/refresh-snapshot.yml` with one
+  every Monday by `.github/workflows/refresh-snapshot.yml` with one
   validated request via `tools/fetch-fallback-tle.mjs`) backs the main group so the
   sky is never empty even on a cold load with CelesTrak down; and a
   localStorage **circuit breaker** skips live CelesTrak calls for 10 min
@@ -452,14 +453,14 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-as `v0.1.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.2.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
 To cut a release: bump `version` in `package.json`, add an entry to
 [`CHANGELOG.md`](CHANGELOG.md), commit, then `git tag vX.Y.Z && git push --tags`
 once that commit has passed the deploy gate.  The automated data commits (launch
-data twice a week, the satellite snapshot once a month) change the build, not
+data twice a week, the satellite snapshot once a week) change the build, not
 the version.
 
 ## Recording a clip
@@ -479,7 +480,8 @@ and debris are left out.  See `src/clip.js`.
 
 The live site (not local dev, forks, or tests) sends anonymous usage counts to
 [GoatCounter](https://www.goatcounter.com/): a page view, which features were
-opened (`orbital/use/…`), and a coarse "which visit is this" bucket
+opened (`orbital/use/…`, including which button of the first-visit card was
+pressed: `starter-iss`, `starter-timeline`, `starter-tour`, `starter-close`), and a coarse "which visit is this" bucket
 (`orbital/visit/…`, `orbital/back-after/…`).  No cookies, no fingerprinting, nothing that identifies a
 person; the visit counter itself stays in the browser's localStorage.  See
 `src/analytics.js`.  To exclude your own device, open the site once with

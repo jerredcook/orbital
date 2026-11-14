@@ -476,6 +476,53 @@ try {
     check('clipReplays', (await clip()).year < fin.end);
     await c.close();
   }
+
+  // ---- a first visit on a desktop: the starter card sits beside the globe —
+  // clear of the legend, the time bar and the top bar — and gives way the moment
+  // the visitor reaches for the top bar themselves.
+  {
+    const cx = await b.newContext({ viewport: { width: 1280, height: 800 } });   // empty storage: a new visitor
+    await stubCelestrak(cx);
+    const s = await cx.newPage();
+    await s.goto(URL, { waitUntil: 'load', timeout: 30000 });
+    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+    await sleep(1500);
+    const lay = await s.evaluate(() => {
+      const r = (id) => document.getElementById(id).getBoundingClientRect();
+      const hit = (a, c) => a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom;
+      const st = r('starter');
+      return {
+        shown: !document.getElementById('starter').hidden && st.width > 0, welcomeHidden: document.getElementById('welcome').hidden,
+        inside: st.left >= 0 && st.top >= 0 && st.right <= innerWidth && st.bottom <= innerHeight,
+        clear: !hit(st, r('legend')) && !hit(st, r('timebar')) && !hit(st, r('topbar')),
+        verb: document.getElementById('starter-verb').textContent, head: document.getElementById('starter-head').textContent,
+      };
+    });
+    R._starter = lay;
+    check('firstVisitShowsStarterNotDialog', lay.shown && lay.welcomeHidden && lay.inside && lay.clear && lay.verb === 'Click' && /^[\d,]+ satellites/.test(lay.head));
+    await s.locator('#help-toggle').click();
+    await sleep(300);
+    check('starterYieldsToTopBar', await s.evaluate(() => document.getElementById('starter').hidden && !document.getElementById('welcome').hidden && localStorage.getItem('orbital.welcomed') === '1'));
+    await s.locator('#welcome-go').click();
+    await s.reload({ waitUntil: 'load' });
+    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500, null, { timeout: 60000 });
+    check('starterShownOnlyOnce', await s.evaluate(() => document.getElementById('starter').hidden && document.getElementById('welcome').hidden));
+
+    // The legend's own ▶ and the readout on the globe are one control: starting
+    // from either shows on both, and the run is paced (sparse decades go by
+    // quickly), not a flat year per second.
+    await s.locator('#toggle-timeline').check();
+    await s.locator('#tl-play').click();
+    const t0 = Date.now();
+    let yr = 1957;
+    for (let i = 0; i < 80 && yr < 1975; i++) { await sleep(250); yr = await s.evaluate(() => Number(document.getElementById('tl-hud-year').textContent)); }
+    const took = (Date.now() - t0) / 1000;
+    R._timelinePace = { yr, took: +took.toFixed(1) };
+    const both = await s.evaluate(() => ({ hud: document.getElementById('tl-hud-play').textContent, legend: document.getElementById('tl-play').textContent,
+      label: document.getElementById('tl-label').textContent, year: document.getElementById('tl-hud-year').textContent }));
+    check('timelineReadoutMirrorsLegend', yr >= 1975 && both.hud === '⏸' && both.legend === '⏸' && both.label.startsWith(both.year));
+    await cx.close();
+  }
 } catch (e) {
   R._fatal = String(e).slice(0, 240);
 } finally {
