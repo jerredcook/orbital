@@ -96,7 +96,7 @@ try {
   // with it still up.
   await p.locator('#starter').waitFor({ state: 'visible', timeout: 15000 });
   check('phoneEmulated', await O(() => matchMedia('(pointer: coarse)').matches && document.documentElement.clientWidth === 412));
-  await p.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+  await p.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
   await sleep(1500);
   const card = await rect('#starter');
   R._starterCard = card && { w: Math.round(card.w), h: Math.round(card.h), y: Math.round(card.y) };
@@ -361,7 +361,7 @@ try {
     await stubCelestrak(cx);
     const s = await cx.newPage();
     await s.goto(URL, { waitUntil: 'load', timeout: 30000 });
-    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+    await s.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
     const box = (sel) => s.evaluate((q) => {
       const el = document.querySelector(q); if (!el) return null;
       const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
@@ -414,7 +414,7 @@ try {
       && !document.getElementById('tl-hud').hidden && location.hash === '#timeline'));
     await s.goto(URL.replace(/#.*$/, ''), { waitUntil: 'load', timeout: 30000 });
     await s.reload({ waitUntil: 'load' });           // a hash-only change is not a new load
-    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+    await s.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
     check('barePageStillIntroducesItself', await s.evaluate(() => !document.getElementById('starter').hidden));
     await s.locator('#starter-iss').tap();
     const iss = await (async () => { for (let i = 0; i < 20; i++) { const n = await s.evaluate(() => window.__orbital.selected ? document.getElementById('info-name').textContent : ''); if (n) return n; await sleep(300); } return ''; })();

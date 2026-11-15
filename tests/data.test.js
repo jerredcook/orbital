@@ -1,6 +1,6 @@
 // TLE parsing + orbit-regime classification (pure functions from data.js).
 import { describe, it, expect } from 'vitest';
-import { parseTLEs, classifyRegime, tleEpochMs } from '../src/data.js';
+import { parseTLEs, classifyRegime, tleEpochMs, feedFailureKind } from '../src/data.js';
 
 const ISS = `ISS (ZARYA)
 1 25544U 98067A   26001.50000000  .00016717  00000-0  10270-3 0  9002
@@ -44,5 +44,23 @@ describe('classifyRegime', () => {
   it('falls back to TLE mean motion when SATCAT is missing', () => {
     expect(classifyRegime(null, 15.54)).toBe('LEO');     // ISS: 1440/15.54 ≈ 93 min
     expect(classifyRegime(null, 1.0027)).toBe('GEO');    // geosynchronous
+  });
+});
+
+describe('feedFailureKind', () => {
+  it('names why the live feed did not deliver, without any detail', () => {
+    expect(feedFailureKind(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' }))).toBe('timeout');
+    expect(feedFailureKind(new Error('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle → HTTP 403'))).toBe('http-4xx');
+    expect(feedFailureKind(new Error('https://celestrak.org/x → HTTP 503'))).toBe('http-5xx');
+    expect(feedFailureKind(new Error('https://celestrak.org/x → HTTP 301'))).toBe('http-other');
+    expect(feedFailureKind(new TypeError('Failed to fetch'))).toBe('network');
+    expect(feedFailureKind(new Error('celestrak-cooldown'))).toBe('cooldown');
+  });
+  it('never throws on an odd rejection value', () => {
+    for (const v of [undefined, null, 'boom', 42, {}]) expect(feedFailureKind(v)).toBe('network');
+  });
+  it('only ever returns one of a fixed set of words', () => {
+    const kinds = new Set(['timeout', 'http-4xx', 'http-5xx', 'http-other', 'network', 'cooldown']);
+    for (const m of ['x → HTTP 404', 'x → HTTP 999', 'HTTP', 'secret-token=abc123', '']) expect(kinds.has(feedFailureKind(new Error(m)))).toBe(true);
   });
 });

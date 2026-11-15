@@ -18,6 +18,7 @@
 //   npm run dev                      # terminal 1
 //   PORT=5173 npm run smoke:failures # terminal 2      (SMOKE_URL=… for a build)
 //   ONLY=offline,gpu …               # run just the scenarios whose name matches
+import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 import { CELESTRAK, celestrakOk } from './celestrak-stub.mjs';
 
@@ -73,7 +74,7 @@ const state = (p) => O(p, () => {
   const buf = o?.lastBuf;
   if (buf) for (let i = 0; i < buf.length; i += 3) if (Number.isFinite(buf[i])) drawn++;
   return {
-    catalog: o?.catalog?.length ?? 0, drawn, ticks: o?.posTicks ?? 0,
+    catalog: o?.catalog?.length ?? 0, drawn, ticks: o?.posTicks ?? 0, settled: !!o?.feedSettled,
     events: o?.events ?? [], engine: o?.engine ?? null,
     card: !!document.getElementById('recover-card'),
     bootError: !!document.querySelector('.toast.boot-error'),
@@ -85,8 +86,13 @@ const poll = async (fn, ok, ms = 15000, gap = 250) => {
   do { v = await fn(); if (ok(v)) return v; await sleep(gap); } while (Date.now() < end);
   return v;
 };
-// Booted = a catalog is loaded and the worker has delivered positions for it.
-const booted = (p, ms = 45000) => poll(() => state(p), (s) => s.catalog > 500 && s.drawn > 500, ms);
+// Booted = a catalog is loaded, the worker has delivered positions for it, and
+// this load's attempt at the live list has finished (the app draws a saved copy
+// first and swaps the live list in behind it — a scenario about something else
+// must not start while that swap is still on its way).
+const booted = (p, ms = 45000) => poll(() => state(p), (s) => s.catalog > 500 && s.drawn > 500 && s.settled, ms);
+// On screen = satellites are drawn, whether or not the live list has answered yet.
+const onScreen = (p, ms = 45000) => poll(() => state(p), (s) => s.catalog > 500 && s.drawn > 500, ms);
 // Positions keep arriving (the dots are moving), not just a stale frame.
 const ticking = async (p, ms = 8000) => {
   const t0 = (await state(p)).ticks;
@@ -103,21 +109,99 @@ await scenario('feedRefused', { celestrak: celestrakRefuses }, async ({ p, errs 
   check('feedRefused:bundledSnapshotLoads', s.catalog > 5000 && s.drawn > 5000);
   check('feedRefused:noErrorShown', !s.bootError && !s.card);
   check('feedRefused:countedAsDegraded', s.events.includes('degraded/catalog-bundled') && !s.events.includes('error/boot'));
+  // …with the reason, so the counts can tell a refusal from a slow link.
+  check('feedRefused:reasonCounted', s.events.includes('degraded/feed-network') && s.events.filter((e) => e.startsWith('degraded/feed-')).length === 1);
   check('feedRefused:dotsKeepMoving', await ticking(p));
   check('feedRefused:noPageErrors', errs.length === 0);
 });
 
 // CelesTrak's usual failure is not a refusal but a connection that never
-// answers.  The first request must time out (15 s) and the rest must skip the
-// wait — so the globe fills in well inside a minute, not a minute per request.
+// answers.  The visitor must not wait on it: the satellites are drawn from the
+// bundled list straight away, and the hung requests are given up on together
+// (one 30 s limit, not one per request) behind the scenes.
 await scenario('feedHangs', { celestrak: () => { /* never answer */ } }, async ({ p }) => {
   const t0 = Date.now();
   await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
-  const s = await booted(p, 55000);
-  notes.feedHangsSeconds = Math.round((Date.now() - t0) / 1000);
-  check('feedHangs:fallsBackAfterTimeout', s.catalog > 5000 && s.drawn > 5000 && !s.bootError);
-  // One 15 s timeout, not four (four requests hang): 40 s leaves room for a slow CI runner.
-  check('feedHangs:oneTimeoutNotFour', Date.now() - t0 < 40000);
+  const first = await onScreen(p, 25000);
+  notes.feedHangsSecondsToSatellites = Math.round((Date.now() - t0) / 1000);
+  // Drawn while the feed is still hanging — i.e. nobody waited for it.
+  check('feedHangs:satellitesShowWithoutWaiting', first.catalog > 5000 && first.drawn > 5000 && !first.settled && !first.bootError);
+  check('feedHangs:dotsMoveWhileWaiting', await ticking(p));
+  check('feedHangs:noStaleWarningWhileWaiting', await O(p, () => document.getElementById('drift-badge').hidden));
+  const s = await booted(p, 75000);
+  notes.feedHangsSecondsToGiveUp = Math.round((Date.now() - t0) / 1000);
+  check('feedHangs:givesUpOnce', s.settled && Date.now() - t0 < 70000 && s.catalog > 5000 && s.drawn > 5000 && !s.bootError && !s.card);
+  check('feedHangs:countedAsTimeout', s.events.includes('degraded/feed-timeout') && s.events.includes('degraded/catalog-bundled'));
+  check('feedHangs:dotsKeepMoving', await ticking(p));
+});
+
+// A slow link: CelesTrak answers, but later than the old 15 s limit.  Nobody is
+// waiting on it now, so it gets the time and the live list still lands.
+await scenario('feedSlow', { celestrak: async (route) => { await sleep(18000); await celestrakOk(route).catch(() => {}); } }, async ({ p }) => {
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  const first = await onScreen(p, 25000);
+  check('feedSlow:satellitesShowWithoutWaiting', first.catalog > 5000 && first.drawn > 5000 && !first.settled);
+  const s = await booted(p, 60000);
+  const live = await O(p, () => { try { return Date.now() - JSON.parse(localStorage.getItem('orbital.tle.active')).t < 60000; } catch { return false; } });
+  check('feedSlow:liveListStillArrives', s.settled && live && !s.events.some((e) => e.startsWith('degraded/')));
+});
+
+// The ordinary first visit: the bundled list is drawn, then the live list — a
+// different list: launches since, objects gone, the debris clouds — replaces
+// it.  That swap happens in full view, so it must be invisible: the dots stay
+// put, a satellite the visitor has already picked stays picked, and a newcomer
+// is not told the catalog "updated".
+const LIVE = (() => {
+  const lines = readFileSync(new URL('../public/fallback/active.tle', import.meta.url), 'utf8').split('\n');
+  const extra = ['ORBITAL TEST DEB', '1 99001U 99025ZZZ 26310.50000000  .00000100  00000-0  10000-3 0  9990', '2 99001  98.6000 100.0000 0010000  90.0000 270.0000 14.30000000100000'];
+  return { active: lines.slice(0, 3).concat(lines.slice(3 + 3 * 40)).join('\n'), debris: extra.join('\n'), dropped: 40 };
+})();
+const celestrakDiffers = async (route) => {
+  await sleep(5000);
+  const u = route.request().url();
+  const cors = { 'access-control-allow-origin': '*' };
+  if (u.includes('GROUP=active')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: cors, body: LIVE.active }).catch(() => {});
+  if (u.includes('GROUP=fengyun')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: cors, body: LIVE.debris }).catch(() => {});
+  if (u.includes('GROUP=')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: cors, body: '' }).catch(() => {});
+  return route.fulfill({ status: 404, headers: cors, body: 'not found' }).catch(() => {});
+};
+await scenario('liveListReplacesBundled', { celestrak: celestrakDiffers }, async ({ p, errs }) => {
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  const first = await onScreen(p, 25000);
+  check('liveListReplacesBundled:bundledDrawnFirst', first.catalog > 5000 && !first.settled);
+  // The visitor picks the Space Station before the live list has arrived.
+  await O(p, () => { const o = window.__orbital; o.selectByIndex(o.catalog.findIndex((s) => s.norad === 25544)); });
+  // Watch the swap: sample the drawn count often and keep the lowest seen.
+  await O(p, () => {
+    window.__minDrawn = Infinity;
+    window.__watch = setInterval(() => {
+      // What the dot cloud itself is drawing (its per-dot "has a position" flags),
+      // not just the buffer it was last handed.
+      const alive = window.__orbital.swarm?._alive; let n = 0;
+      if (alive) for (let i = 0; i < alive.length; i++) n += alive[i];
+      window.__minDrawn = Math.min(window.__minDrawn, n);
+    }, 30);
+  });
+  const s = await booted(p, 60000);
+  await sleep(1500);
+  const after = await O(p, () => {
+    clearInterval(window.__watch);
+    const o = window.__orbital;
+    return {
+      minDrawn: window.__minDrawn, catalog: o.catalog.length, hasNew: o.catalog.some((c) => c.norad === 99001 && c.kind === 'DEB'),
+      selected: o.selected ? o.catalog[o.selected.index]?.norad : null, name: document.getElementById('info-name').textContent,
+      toasts: [...document.querySelectorAll('#toasts .toast')].map((t) => t.textContent.slice(0, 60)),
+      label: document.getElementById('count-LEO').textContent,
+    };
+  });
+  notes.liveSwap = { before: first.catalog, after: after.catalog, minDrawn: after.minDrawn, toasts: after.toasts };
+  check('liveListReplacesBundled:liveListSwappedIn', s.settled && after.catalog === first.catalog - LIVE.dropped + 1 && after.hasNew);
+  check('liveListReplacesBundled:dotsNeverVanish', after.minDrawn > first.catalog * 0.95);
+  check('liveListReplacesBundled:selectionSurvives', after.selected === 25544 && /ISS|ZARYA/i.test(after.name));
+  check('liveListReplacesBundled:newcomerSeesNoUpdateNotice', after.toasts.length === 0);
+  check('liveListReplacesBundled:notCountedAsDegraded', !s.events.some((e) => e.startsWith('degraded/') || e.startsWith('error/')));
+  check('liveListReplacesBundled:dotsKeepMoving', await ticking(p));
+  check('liveListReplacesBundled:noPageErrors', errs.length === 0);
 });
 
 await scenario('everythingDown', { celestrak: celestrakRefuses }, async ({ ctx, p }) => {

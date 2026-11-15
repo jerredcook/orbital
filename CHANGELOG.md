@@ -8,6 +8,17 @@ twice a week, the bundled satellite list once a week) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.3.0 — 15 November 2026
+
+- **Satellites appear at once.** The app used to show an empty globe until the
+  live satellite list had downloaded, and gave up after 15 seconds.  It now
+  draws the satellites immediately from a saved copy and replaces them with the
+  live list when that arrives, without the dots moving or your selection
+  changing.  For about one visitor in four, the live list was not arriving in
+  time at all.
+- **Slow connections get live data.** Because nothing is waiting on it, the
+  live list is now given 30 seconds to arrive.
+
 ## 0.2.0 — 14 November 2026
 
 Changes made after watching the first few dozen visitors: most looked at the

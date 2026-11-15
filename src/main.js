@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, cacheExpiresInMs, medianEpochMs } from './data.js';
+import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, medianEpochMs } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
@@ -114,6 +114,7 @@ let autoFollowDisabled = false; // set when the user manually stops following
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
 const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
 let catalogEpochMs = null;   // median TLE epoch — how far the propagation is being extrapolated
+let feedSettled = false;      // this load's attempt at the live list has finished, one way or the other (see boot)
 const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
 
 const $ = (id) => document.getElementById(id);
@@ -212,7 +213,10 @@ setInterval(() => {
 const DRIFT_WARN_DAYS = 3;
 function updateDriftBadge() {
   const el = $('drift-badge');
-  if (catalogEpochMs == null) { el.hidden = true; return; }
+  // Not while the live list is still on its way: boot draws a saved copy first,
+  // and warning about ITS age for the few seconds before it is replaced would
+  // be a false alarm.  If the live list never comes, the warning stands.
+  if (catalogEpochMs == null || !feedSettled) { el.hidden = true; return; }
   const days = (JulianDate.toDate(viewer.clock.currentTime).getTime() - catalogEpochMs) / 86400000;
   if (Math.abs(days) < DRIFT_WARN_DAYS) { el.hidden = true; return; }
   const n = Math.round(Math.abs(days));
@@ -234,6 +238,22 @@ function applyCatalog(list) {
   const keepNorad = selected ? catalog[selected.index]?.norad : null;
   const wasFollowing = following;
 
+  // Carry each satellite's last known position across the swap, so the dots
+  // stay where they were until the worker's first answer for the new list
+  // instead of vanishing for a beat (the saved-copy → live swap at boot happens
+  // seconds into a first visit, in full view).
+  let carried = null;
+  if (lastBuf && catalog.length) {
+    const at = new Map();
+    for (let i = 0; i < catalog.length; i++) at.set(catalog[i].norad, i);
+    carried = new Float64Array(list.length * 3).fill(NaN);
+    for (let j = 0; j < list.length; j++) {
+      const i = at.get(list[j].norad);
+      if (i === undefined || i * 3 + 2 >= lastBuf.length) continue;
+      carried[j * 3] = lastBuf[i * 3]; carried[j * 3 + 1] = lastBuf[i * 3 + 1]; carried[j * 3 + 2] = lastBuf[i * 3 + 2];
+    }
+  }
+
   catalogGen++;   // invalidate any in-flight worker results tied to the old indices
   clearSelection();
   closeResults();   // open search rows hold now-stale indices — drop them
@@ -243,6 +263,7 @@ function applyCatalog(list) {
 
   catalog = list;
   swarm = new SatSwarm(catalog.length);
+  if (carried) { swarm.updatePositions(carried); lastBuf = carried; }   // (lastBuf is indexed like the catalog — keep them in step)
   const counts = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
   for (let i = 0; i < catalog.length; i++) {
     const cat = catOf(catalog[i]);
@@ -287,9 +308,38 @@ function bootFailed() {
   $('toasts').appendChild(el);
 }
 
-let bootSettled = false;   // catalog load finished (either way) — retry loops key off this, not a fixed try-count
+// Boot draws satellites from what is already on hand — this device's saved
+// copy, else the list bundled with the app (loadCatalogLocal: no request to
+// CelesTrak, so about as fast as the page itself) — and then fetches the live
+// list behind it and swaps it in.  The visitor never waits on CelesTrak to see
+// the sky, and a slow, refusing or unreachable CelesTrak costs them nothing
+// they can see.  Only when there is nothing on hand does boot wait for the
+// live list, as it always used to.
+let bootSettled = false;   // a catalog is on screen, or the load failed — retry loops key off this, not a fixed try-count
 async function boot() {
   bootSettled = false;
+  feedSettled = false;
+  const settle = () => {
+    bootSettled = true;
+    $('boot-chip')?.remove();   // loading feedback the drawer-bound status can't give on phones
+    // Always restore the shared view: a #system / #luna / #guide / #show link
+    // needs no Earth catalog, so it must still open even if the catalog failed.
+    applyDeepLink();
+  };
+  let local = null;
+  try { local = await loadCatalogLocal(); }
+  catch (err) { console.warn('no saved catalog to start from', err); }
+  if (local) {
+    // Not diffAndToast: "what changed since your last visit" is measured against
+    // the live list, when it lands.  Just remember the names for that report.
+    prevNames = new Map(local.map((s) => [s.norad, s.name]));
+    applyCatalog(local);
+    settle();
+    // Saved less than two hours ago: it IS the live list.  Otherwise go and get it.
+    if (cacheExpiresInMs() === 0) await refreshCatalog({ patient: true });
+    feedSettled = true;
+    return;
+  }
   try {
     const list = await loadCatalog(status);
     diffAndToast(list);
@@ -299,11 +349,8 @@ async function boot() {
     track('error/boot');
     bootFailed();
   } finally {
-    bootSettled = true;
-    $('boot-chip')?.remove();   // loading feedback the drawer-bound status can't give on phones
-    // Always restore the shared view: a #system / #luna / #guide / #show link
-    // needs no Earth catalog, so it must still open even if the catalog failed.
-    applyDeepLink();
+    feedSettled = true;
+    settle();
   }
 }
 boot();
@@ -373,10 +420,10 @@ function toast(html, ms = 15_000) {
 
 let lastRefreshAttempt = 0;
 
-async function refreshCatalog() {
+async function refreshCatalog({ patient = false } = {}) {
   lastRefreshAttempt = Date.now();
   try {
-    const list = await loadCatalog(status);
+    const list = await loadCatalog(status, { patient });
     const unchanged = list.length === catalog.length
       && list.every((s, i) => s.norad === catalog[i].norad);
     if (unchanged) {
@@ -1298,7 +1345,9 @@ document.addEventListener('keydown', (e) => {
 // Capture mode (?clip): a chrome-free launch-timeline run for screen recording.
 const clip = initClip({
   viewer,
-  isReady: () => catalog.length > 500 && !!lastBuf,
+  // Not until the live list has had its chance: the saved copy drawn first may
+  // be days old, and the clip would label and warn about the wrong data.
+  isReady: () => catalog.length > 500 && !!lastBuf && feedSettled,
   dataAgeDays: () => (catalogEpochMs == null ? 0 : (Date.now() - catalogEpochMs) / 86_400_000),
 });
 
@@ -1317,6 +1366,7 @@ window.__orbital = {
   get skyPlotted() { return groundStation.skyPlotted; },   // debug: dots in the overhead chart
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   get lastBuf() { return lastBuf; },                       // debug: latest positions (ECF metres, xyz per satellite)
+  get feedSettled() { return feedSettled; },               // debug: this load's attempt at the live list has finished
   get events() { return trackedEvents(); },                // debug: usage/error events recorded this load (sent or not)
   version: { version: VERSION, build: BUILD },             // debug: which build is running
   clip,                                                     // capture mode's still-frame hook (undefined outside ?clip)

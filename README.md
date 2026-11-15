@@ -289,6 +289,14 @@ Data freshness and resilience:
   fallback in ~1 s instead of eating a timeout per request.  A group that
   fails entirely is skipped rather than failing the boot, and refresh
   attempts are spaced ≥ 20 minutes apart.
+- **Satellites first, live data behind them.**  Boot never waits on
+  CelesTrak: `loadCatalogLocal()` draws this device's saved copy (if under
+  three days old) or the bundled snapshot at once, then `loadCatalog()`
+  fetches the live list and `applyCatalog()` swaps it in, carrying each
+  dot's last position and the current selection across so the swap is not
+  visible.  The first real traffic showed why: for about one visitor in
+  four the live list never arrived inside the old 15 s limit, and they
+  waited on an empty globe for the bundled list they could have had at once.
 
 Design notes for the 3D close-up view:
 
@@ -453,7 +461,7 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.2.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.3.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
@@ -491,7 +499,9 @@ It also counts failures, as a bare category with no message, stack or detail:
 `orbital/error/…` (`script`, `promise`, `network`, `boot`, `render`,
 `webgl-lost`, `worker-propagator`, `worker-tca`, `worker-passes`,
 `worker-gave-up`) and `orbital/degraded/…` (`catalog-stale`, `catalog-bundled`
-— the live feed failed and older elements were shown instead).  Each is sent at
+— the live feed failed and older elements were shown instead — plus why it
+failed, as one of `feed-timeout`, `feed-http-4xx`, `feed-http-5xx`,
+`feed-http-other`, `feed-network`, `feed-cooldown`).  Each is sent at
 most once per page load, so a count reads as "visitors this happened to".
 
 ## When things break
@@ -501,7 +511,7 @@ What the app does about its own bad days (`src/recover.js`,
 
 | Failure | What the visitor gets |
 | --- | --- |
-| CelesTrak refuses or hangs | Yesterday's cached elements, else the bundled snapshot; a 15 s timeout, then a 10 min cooldown so later requests skip the wait |
+| CelesTrak is slow, refuses or hangs | Nothing visible: satellites are drawn at once from this device's saved copy or the bundled snapshot, and the live list is fetched behind them (30 s limit) and swapped in if it arrives. After a failure, a 10 min cooldown skips further attempts |
 | Every data source is gone | A "couldn't load" notice with **Retry**; system, Moon and guide views still open |
 | Map imagery blocked | Satellites, search and selection work over a blank globe |
 | A worker fails to load, crashes, or stalls (30 s watchdog) | It is replaced and re-sent its state; after 3 failures in a minute the app stops retrying and offers a reload |

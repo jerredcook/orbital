@@ -11,7 +11,9 @@ const gp = (group) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group
 // A snapshot bundled with the app — CelesTrak's active list, refreshed weekly
 // (tools/fetch-fallback-tle.mjs, .github/workflows/refresh-snapshot.yml).  Last-resort
 // source for the main catalog when CelesTrak is unreachable AND there's no warm
-// cache — so the sky is never empty.  Base-relative for the GitHub Pages subpath.
+// cache — so the sky is never empty — and, since 0.3.0, what a first visit
+// DRAWS FIRST (loadCatalogLocal) while the live list downloads behind it.
+// Base-relative for the GitHub Pages subpath.
 const FALLBACK_ACTIVE = `${import.meta.env.BASE_URL}fallback/active.tle`;
 
 // 'active' is everything operational; the debris groups are the three big
@@ -55,6 +57,12 @@ function cacheAgeOk(key, ttl) {
     return Date.now() - JSON.parse(s).t < ttl;
   } catch { return false; }
 }
+function cacheAgeMs(key) {
+  try {
+    const age = Date.now() - JSON.parse(localStorage.getItem(key)).t;
+    return Number.isFinite(age) && age >= 0 ? age : Infinity;
+  } catch { return Infinity; }
+}
 
 /** Milliseconds until the oldest cached element set expires (0 = stale now). */
 export function cacheExpiresInMs() {
@@ -87,7 +95,26 @@ function markCelestrak(down) {
   } catch { /* ignore */ }
 }
 
-async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
+// Why the live feed did not deliver, as a bare category for the anonymous
+// counts (analytics.js) — no URL, status text or message leaves the browser.
+//   timeout   it did not finish inside the time allowed (a hung or slow link)
+//   http-4xx  it refused us (CelesTrak answers 403 to clients it rate-limits)
+//   http-5xx  it is having trouble of its own
+//   network   no answer at all: offline, blocked, DNS, a reset connection
+//   cooldown  not asked — it failed minutes ago and the breaker is still open
+export function feedFailureKind(err) {
+  const msg = String(err?.message ?? err ?? '');
+  if (msg === 'celestrak-cooldown') return 'cooldown';
+  if (err?.name === 'AbortError' || err?.name === 'TimeoutError') return 'timeout';
+  const http = /HTTP (\d)\d\d\b/.exec(msg);
+  if (http) return http[1] === '4' ? 'http-4xx' : http[1] === '5' ? 'http-5xx' : 'http-other';
+  return 'network';
+}
+
+// `patient`: the visitor is already looking at satellites (drawn from a saved
+// copy) and this is the live list arriving behind them, so a slow phone link
+// gets the time it needs instead of being cut off at the foreground limit.
+async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS, patient = false) {
   let stale = null;
   {
     const body = await cacheBody(key);
@@ -103,7 +130,7 @@ async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
   // fallback below.  Give a cold load room to pull ~4 MB, but bail fast when we
   // already have yesterday's elements to fall back on.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), stale !== null ? 8000 : 15000);
+  const timer = setTimeout(() => controller.abort(), patient ? 30000 : (stale !== null ? 8000 : 15000));
   try {
     // Skip the live fetch entirely if CelesTrak is in its post-failure cooldown.
     if (isCelestrak(url) && celestrakDown()) throw new Error('celestrak-cooldown');
@@ -117,13 +144,18 @@ async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
     // Trip the breaker on a real failure (not on a cooldown-skip, which mustn't
     // keep extending it — let it expire so we retry CelesTrak later).
     if (isCelestrak(url) && err.message !== 'celestrak-cooldown') markCelestrak(true);
+    // Count the reason once per load, for the main list only (it is the one
+    // with a bundled stand-in, and four parallel requests fail the same way).
+    if (fallbackUrl) track(`degraded/feed-${feedFailureKind(err)}`);
     // CelesTrak rate-limits (HTTP 403, or a stalled connection) clients that
     // re-fetch the big files too often.  Yesterday's elements beat no elements…
-    if (stale !== null) {
+    // (…unless they are older than the bundled snapshot, which is refreshed weekly.)
+    const serveStale = () => {
       console.warn(`${url} failed — serving stale cache`, err);
       track('degraded/catalog-stale');
       return stale;
-    }
+    };
+    if (stale !== null && (!fallbackUrl || cacheAgeMs(key) < LOCAL_CACHE_MAX_AGE_MS)) return serveStale();
     // …and a bundled snapshot beats an empty sky.  Same-origin, so it's reliable
     // even when CelesTrak is down.  Not cached, so the next load still tries live.
     if (fallbackUrl) {
@@ -134,8 +166,9 @@ async function cachedFetch(key, url, fallbackUrl, ttl = CACHE_TTL_MS) {
           track('degraded/catalog-bundled');
           return await fb.text();
         }
-      } catch { /* fall through to throw */ }
+      } catch { /* fall through */ }
     }
+    if (stale !== null) return serveStale();
     throw err;
   } finally {
     clearTimeout(timer);
@@ -281,29 +314,9 @@ async function loadSatcat(ids, csvPromise) {
   return map;
 }
 
-export async function loadCatalog(onStatus) {
-  onStatus?.('fetching element sets…');
-  // If the parsed SATCAT cache is stale, start the (big) CSV download NOW so it
-  // rides alongside the element-set fetches instead of after them.
-  const satcatCsvPromise = cacheAgeOk(SATCAT_KEY, SATCAT_TTL_MS)
-    ? null
-    : cachedFetch('orbital.satcat.csv', SATCAT_URL, null, 0).catch((e) => { console.warn('satcat fetch failed', e); return null; });
-  // A group that fails entirely (no cache, fetch refused) is skipped rather
-  // than failing the whole load — a partial catalog still renders.
-  const texts = await Promise.all(
-    TLE_GROUPS.map(async (g) => {
-      try {
-        return await cachedFetch(g.cacheKey, g.url, g.fallback);
-      } catch (err) {
-        console.warn(`element-set group unavailable: ${g.url}`, err);
-        return '';
-      }
-    }),
-  );
-  if (texts.every((t) => !t)) throw new Error('no element sets available');
-
-  // Merge groups, first occurrence wins ('active' is first, so anything that
-  // somehow appears in both keeps its operational classification).
+// Merge the groups' element sets, first occurrence wins ('active' is first, so
+// anything that somehow appears in both keeps its operational classification).
+function mergeGroups(texts) {
   const seen = new Set();
   const tles = [];
   for (let g = 0; g < TLE_GROUPS.length; g++) {
@@ -313,6 +326,71 @@ export async function loadCatalog(onStatus) {
       tles.push({ ...t, kind: isJunkName(t.name) ? 'DEB' : TLE_GROUPS[g].kind });
     }
   }
+  return { tles, seen };
+}
+const withMeta = (tles, satcat) => tles.map((t) => {
+  const meta = satcat.get(t.norad) || null;
+  const meanMotion = tleMeanMotion(t.l2) || null;
+  return { ...t, meta, regime: classifyRegime(meta, meanMotion) };
+});
+
+// A saved copy this old is passed over for the bundled list, which is refreshed
+// weekly and so is the fresher of the two.
+const LOCAL_CACHE_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * The catalog from what is already on hand — no request to CelesTrak, so it
+ * returns in the time it takes to read a file: this device's saved copy from an
+ * earlier visit, else the list bundled with the app.  Boot draws this first and
+ * loadCatalog() replaces it with the live list when that arrives; a first visit
+ * used to show an empty globe until CelesTrak answered, which for one visitor
+ * in four was a 15-second wait that ended in this same bundled list anyway.
+ * Resolves null when there is nothing usable on hand.
+ */
+export async function loadCatalogLocal() {
+  const texts = await Promise.all(TLE_GROUPS.map(async (g) => {
+    const saved = await cacheBody(g.cacheKey);
+    if (saved && (!g.fallback || cacheAgeMs(g.cacheKey) < LOCAL_CACHE_MAX_AGE_MS)) return saved;
+    if (g.fallback) {
+      try {
+        const fb = await fetch(g.fallback);
+        if (fb.ok) return await fb.text();
+      } catch { /* offline — an old saved copy still beats nothing */ }
+    }
+    return saved || '';
+  }));
+  const { tles } = mergeGroups(texts);
+  if (tles.length < 500) return null;   // nothing, or a corrupt copy
+  let satcat = new Map();
+  try {
+    const body = await cacheBody(SATCAT_KEY);
+    if (body) satcat = new Map(JSON.parse(body));
+  } catch { /* corrupt — the live load re-fetches it */ }
+  return withMeta(tles, satcat);
+}
+
+export async function loadCatalog(onStatus, { patient = false } = {}) {
+  onStatus?.('fetching element sets…');
+  // If the parsed SATCAT cache is stale, start the (big) CSV download NOW so it
+  // rides alongside the element-set fetches instead of after them.
+  const satcatCsvPromise = cacheAgeOk(SATCAT_KEY, SATCAT_TTL_MS)
+    ? null
+    : cachedFetch('orbital.satcat.csv', SATCAT_URL, null, 0, patient).catch((e) => { console.warn('satcat fetch failed', e); return null; });
+  // A group that fails entirely (no cache, fetch refused) is skipped rather
+  // than failing the whole load — a partial catalog still renders.
+  const texts = await Promise.all(
+    TLE_GROUPS.map(async (g) => {
+      try {
+        return await cachedFetch(g.cacheKey, g.url, g.fallback, CACHE_TTL_MS, patient);
+      } catch (err) {
+        console.warn(`element-set group unavailable: ${g.url}`, err);
+        return '';
+      }
+    }),
+  );
+  if (texts.every((t) => !t)) throw new Error('no element sets available');
+
+  const { tles, seen } = mergeGroups(texts);
 
   onStatus?.(`parsing metadata for ${tles.length.toLocaleString()} objects…`);
   let satcat = new Map();
@@ -322,9 +400,5 @@ export async function loadCatalog(onStatus) {
     console.warn('SATCAT unavailable — continuing with TLE-only metadata', e);
   }
 
-  return tles.map((t) => {
-    const meta = satcat.get(t.norad) || null;
-    const meanMotion = tleMeanMotion(t.l2) || null;
-    return { ...t, meta, regime: classifyRegime(meta, meanMotion) };
-  });
+  return withMeta(tles, satcat);
 }

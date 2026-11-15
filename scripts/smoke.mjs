@@ -45,7 +45,7 @@ const check = (name, cond) => { R[name] = cond ? 'PASS' : 'FAIL'; if (process.en
 
 try {
   await p.goto(URL, { waitUntil: 'load', timeout: 30000 });
-  await p.waitForFunction(() => window.__orbital?.catalog?.length > 500, { timeout: 45000 });
+  await p.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500, { timeout: 45000 });
   check('catalogLoads', await p.evaluate(() => window.__orbital.catalog.length > 500));
 
   // baseline showpiece entity count (they live in viewer.entities)
@@ -485,7 +485,7 @@ try {
     await stubCelestrak(cx);
     const s = await cx.newPage();
     await s.goto(URL, { waitUntil: 'load', timeout: 30000 });
-    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
+    await s.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
     await sleep(1500);
     const lay = await s.evaluate(() => {
       const r = (id) => document.getElementById(id).getBoundingClientRect();
@@ -505,7 +505,7 @@ try {
     check('starterYieldsToTopBar', await s.evaluate(() => document.getElementById('starter').hidden && !document.getElementById('welcome').hidden && localStorage.getItem('orbital.welcomed') === '1'));
     await s.locator('#welcome-go').click();
     await s.reload({ waitUntil: 'load' });
-    await s.waitForFunction(() => window.__orbital?.catalog?.length > 500, null, { timeout: 60000 });
+    await s.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500, null, { timeout: 60000 });
     check('starterShownOnlyOnce', await s.evaluate(() => document.getElementById('starter').hidden && document.getElementById('welcome').hidden));
 
     // The legend's own ▶ and the readout on the globe are one control: starting
