@@ -5,6 +5,29 @@
 // build step that prepares the satellite data the site serves
 // (tools/satellite-data.mjs).
 
+// Catalogue numbers in element-set text.  The format has five characters for
+// the number, and the catalogue passed 99,999 on 11 July 2026.  "Alpha-5" is the
+// established way to keep going: the first character becomes a letter standing
+// for 10–33 (A=10 … Z=33, with I and O left out because they look like 1 and
+// 0), so A0000 is 100000 and Z9999 is 339999.  Plain numbers read as before.
+const ALPHA5 = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+export const ALPHA5_MAX = 339999;
+export function alpha5ToNumber(field) {
+  const s = String(field ?? '').trim();
+  if (/^\d{1,5}$/.test(s)) return parseInt(s, 10);
+  const lead = ALPHA5.indexOf(s[0]);
+  if (s.length !== 5 || lead < 0 || !/^\d{4}$/.test(s.slice(1))) return NaN;
+  return (lead + 10) * 10000 + parseInt(s.slice(1), 10);
+}
+/** The five-character field for a catalogue number, or null if it cannot be written (over 339999). */
+export function numberToAlpha5(n) {
+  if (!Number.isInteger(n) || n < 0 || n > ALPHA5_MAX) return null;
+  if (n < 100000) return String(n).padStart(5, '0');
+  return ALPHA5[Math.floor(n / 10000) - 10] + String(n % 10000).padStart(4, '0');
+}
+/** Matches the catalogue-number field of an element-set line (after its "1 " or "2 "). */
+export const SATNUM_FIELD = '[ \\dA-HJ-NP-Z][ \\d]{4}';
+
 // A fragment or a spent rocket stage, by CelesTrak's naming ("FENGYUN 1C DEB",
 // "SL-6 R/B(2)").  The active list should contain none — but whatever a source
 // hands us, junk is filed under Debris, never drawn and counted as a satellite.
@@ -25,7 +48,7 @@ export function parseTLEs(text) {
         name: lines[i].trim(),
         l1,
         l2: lines[i + 2],
-        norad: parseInt(l1.slice(2, 7), 10),
+        norad: alpha5ToNumber(l1.slice(2, 7)),
         launchYear,
       });
       i += 3;

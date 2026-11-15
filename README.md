@@ -271,8 +271,8 @@ Data freshness and resilience:
 
 - **The site serves its own satellite data.**  Browsers never contact
   CelesTrak.  Every four hours the deploy workflow runs
-  `tools/fetch-data.mjs`: four small requests for the active list and the
-  three debris lists, plus the 6.6 MB catalog CSV about once a day, cut down
+  `tools/fetch-data.mjs`: four requests for the active list and the
+  three debris lists (in OMM CSV), plus the 6.6 MB catalog CSV about once a day, cut down
   to the rows and fields the app uses.  The result is validated
   (`tools/satellite-data.mjs`, `tools/tle-snapshot.mjs`), built into the
   site as `data/active.tle`, `data/debris.tle`, `data/satcat.json` and
@@ -296,11 +296,25 @@ Data freshness and resilience:
   has; a code push still deploys, carrying the live data forward.  After
   three days without new elements the app's "positions extrapolated" badge
   appears.
-- **Known gap: objects catalogued since 11 July 2026 are missing.**  Catalog
-  numbers passed 99,999 that day, the TLE text format cannot carry six
-  digits, and CelesTrak leaves those objects out of TLE-format answers.  The
-  fix is to fetch the OMM (CSV/JSON) format instead and build the SGP4
-  records from it, which needs satellite.js 6 or later.
+  A run that cannot CONNECT to CelesTrak at all is different: GitHub's
+  runners share addresses with every other GitHub user and some are
+  firewalled already (about one run in three, in the first day).  That ends
+  the run's requests but starts no hold — nothing was answered, and the next
+  run comes from another address.  A scheduled run fails only when CelesTrak
+  answers with an error, or when the site's data is 12 hours old.
+- **Six-digit catalogue numbers.**  Numbers passed 99,999 on 11 July 2026.
+  The TLE text format has five characters for the number, and CelesTrak
+  leaves newer objects out of TLE-format answers entirely — until 0.4.1 the
+  app was missing about 1,400 objects, four months of launches among them.
+  The fetch now asks for OMM CSV, which carries everything, and
+  `tools/omm.mjs` writes it out as element text with Alpha-5 numbers above
+  99,999 (`A0000` = 100000 … `Z9999` = 339999, the convention Space-Track
+  uses).  SGP4 never reads the number; `src/catalog-parse.js` decodes it for
+  display, search and links.  The conversion is tested against a real
+  CelesTrak sample, against the SGP4 library's reading of each line, and by
+  reproducing all ~16,000 lines of the committed snapshot byte for byte.
+  The longer-term route is to feed OMM straight to SGP4, which needs
+  satellite.js 6 or later.
 - **What a browser does.**  It keeps the last data it downloaded (Cache
   Storage) with its stamp — a hash of the three files, from `meta.json`.
   Boot draws that saved copy at once (`loadCatalogLocal()`), then at most
@@ -484,7 +498,7 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.4.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.4.1 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 

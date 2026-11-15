@@ -7,7 +7,8 @@
 // every four hours, from one place: tools/fetch-data.mjs) and publishes them
 // with the site as four files under data/:
 //
-//   active.tle    CelesTrak's active-satellite list, as served
+//   active.tle    CelesTrak's active-satellite list — fetched as OMM CSV and written out
+//                 as element text (tools/omm.mjs), so objects numbered above 99,999 are in it
 //   debris.tle    the three tracked breakup clouds, joined
 //   satcat.json   owner / launch / orbit details for exactly those objects —
 //                 the 6.6 MB catalog CSV cut down to the rows and fields used
@@ -20,7 +21,7 @@
 
 import { createHash } from 'node:crypto';
 import { mergeGroups, parseSatcat } from '../src/catalog-parse.js';
-import { validateSnapshot, parseSnapshot } from './tle-snapshot.mjs';
+import { validateSnapshot, parseSnapshot, LINE1, LINE2 } from './tle-snapshot.mjs';
 
 export const FILES = { active: 'active.tle', debris: 'debris.tle', satcat: 'satcat.json', meta: 'meta.json' };
 const HOUR = 3_600_000;
@@ -60,7 +61,11 @@ export function assemble({ active, debris = '', satcat = '[]', fetchedAt, satcat
     satcatFetchedAt,           // when the catalog details were (they change slowly, so less often)
     source,                    // 'celestrak', or 'snapshot' (the copy committed with the code)
     epoch: Number.isFinite(medianEpochMs) ? Math.round(medianEpochMs) : null,   // the element sets' own median date
-    counts: { active: countSets(files.active), debris: countSets(files.debris), details: Math.max(0, satcatRows(files.satcat)) },
+    counts: {
+      active: countSets(files.active), debris: countSets(files.debris), details: Math.max(0, satcatRows(files.satcat)),
+      // objects catalogued since July 2026, numbered above 99,999 (written in Alpha-5)
+      sixDigit: parseSnapshot(files.active + files.debris).sets.filter((s) => /^1 [A-Z]/.test(s.l1)).length,
+    },
   };
   return { ...files, meta: `${JSON.stringify(meta, null, 1)}\n` };
 }
@@ -78,7 +83,7 @@ export function checkBundle({ active, debris, satcat, meta }, { now = Date.now()
   const d = parseSnapshot(debris);
   if (d.leftover) problems.push('debris: line count is not a multiple of three');
   if (d.sets.length > 30_000) problems.push(`debris: ${d.sets.length} objects is implausible`);
-  const badDeb = d.sets.filter((s) => !/^1 [ \d]{5}/.test(s.l1) || !/^2 [ \d]{5}/.test(s.l2)).length;
+  const badDeb = d.sets.filter((s) => !LINE1.test(s.l1) || !LINE2.test(s.l2)).length;
   if (badDeb) problems.push(`debris: ${badDeb} element sets are malformed`);
   if (satcatRows(satcat) < 0) problems.push('catalog details are not a JSON list of [number, object] rows');
   let m = null;

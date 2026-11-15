@@ -525,6 +525,34 @@ try {
     check('timelineReadoutMirrorsLegend', yr >= 1975 && both.hud === '⏸' && both.legend === '⏸' && both.label.startsWith(both.year));
     await cx.close();
   }
+  // Objects catalogued since July 2026 have six-digit numbers, which the
+  // element text can only carry in Alpha-5 form (tools/omm.mjs).  When the data
+  // has any, they must be real citizens: positioned, searchable by their real
+  // number, and shown with it — never as NaN or as the letter-coded field.
+  // (The fetched data always has them; the committed snapshot may not yet.)
+  {
+    const six = await p.evaluate(async () => {
+      const o = window.__orbital, nap = (ms) => new Promise((r) => setTimeout(r, ms));
+      const idx = []; for (let i = 0; i < o.catalog.length; i++) if (o.catalog[i].norad >= 100000) idx.push(i);
+      const noNaN = o.catalog.every((c) => Number.isInteger(c.norad) && c.norad > 0);
+      if (!idx.length) return { count: 0, noNaN };
+      let placed = 0; for (const i of idx) if (Number.isFinite(o.lastBuf[3 * i])) placed++;
+      const sat = o.catalog[idx[0]];
+      const box = document.getElementById('search');
+      box.value = String(sat.norad); box.dispatchEvent(new Event('input', { bubbles: true })); await nap(500);
+      const row = document.querySelector('#search-results .result-row'); const rowText = row?.textContent ?? '';
+      row?.click(); await nap(1200);
+      const out = { count: idx.length, placed, noNaN, norad: sat.norad, rowText, selected: o.selected ? o.catalog[o.selected.index].norad : null,
+        shown: document.getElementById('info-norad').textContent, hash: location.hash, year: sat.launchYear };
+      document.getElementById('info-close').click(); await nap(300);
+      return out;
+    });
+    R._sixDigit = six;
+    check('everyObjectHasARealNumber', six.noNaN);
+    check('sixDigitObjectsWork', six.count === 0 || (six.placed > six.count * 0.9 && six.selected === six.norad && six.shown === String(six.norad)
+      && six.hash === `#sat=${six.norad}` && six.year >= 2026));
+  }
+
   // Satellite data comes from the site itself (data/): in this whole run, no
   // page may have asked CelesTrak for anything.
   R._celestrakHits = celestrakHits.slice(0, 3);

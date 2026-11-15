@@ -10,6 +10,9 @@
 //      so several code pushes in an afternoon cost CelesTrak nothing.
 //   2. Otherwise asks CelesTrak for the active list and the three debris lists
 //      (four requests, spaced out) and, about once a day, the catalog CSV.
+//      The lists are asked for in OMM CSV — the TLE text format cannot carry
+//      catalogue numbers above 99,999, and CelesTrak omits those objects from
+//      it — and written out as element text here (tools/omm.mjs).
 //      Everything is validated before it is accepted.
 //   3. If CelesTrak answers ANY request with something other than the data —
 //      an error status, a timeout, a page that is not the list — it asks nothing
@@ -18,13 +21,18 @@
 //      cache).  That is CelesTrak's rule for automated clients: stop at the
 //      first non-200 and tell a human.  The live site's files are carried
 //      forward, so a code deploy still goes out with the data it had.
+//      (Not being able to CONNECT at all is different: GitHub's runners share
+//      addresses with everyone else on GitHub and some are firewalled already.
+//      That ends the run's requests but starts no hold — nothing was answered,
+//      and the next run comes from another address.)
 //   4. If there is nothing live either (the very first run), it writes nothing
 //      and the build falls back to the snapshot committed with the code.
 //
 //   node tools/fetch-data.mjs                 a push: steps 1–4
 //   node tools/fetch-data.mjs --scheduled     the 4-hourly refresh: exits 1 when CelesTrak
-//                                             fails it, so a failed refresh is a visible
-//                                             failure (once — not again during the hold)
+//                                             fails it (once — not again during the hold),
+//                                             or when the data has gone 12 hours without a
+//                                             refresh, so a real problem is a visible failure
 //   node tools/fetch-data.mjs --no-celestrak  a pull-request build: never asks CelesTrak
 //
 // CelesTrak firewalls clients that re-download its big files.  Do not run this
@@ -36,6 +44,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FILES, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, tidy } from './satellite-data.mjs';
 import { validateSnapshot } from './tle-snapshot.mjs';
+import { ommCsvToTle } from './omm.mjs';
 
 const args = new Set(process.argv.slice(2));
 const SCHEDULED = args.has('--scheduled');
@@ -47,7 +56,8 @@ const PAUSE_MS = Number(process.env.ORBITAL_FETCH_PAUSE_MS ?? 3000);   // betwee
 const HOLD_FILE = process.env.ORBITAL_HOLD_FILE || join(dirname(fileURLToPath(import.meta.url)), '..', '.celestrak-hold.json');
 const MAX_AGE_MS = 3.5 * 3_600_000;
 const UA = 'orbital (github.com/jerredcook/orbital; hobby tracker; one fetch per 4 h, served to visitors from our own site)';
-const gp = (group) => `${CELESTRAK}/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
+const gp = (group) => `${CELESTRAK}/NORAD/elements/gp.php?GROUP=${group}&FORMAT=csv`;
+const STALE_MS = 12 * 3_600_000;   // a scheduled run fails once the site's data is this old
 const DEBRIS_GROUPS = ['cosmos-2251-debris', 'iridium-33-debris', 'fengyun-1c-debris'];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -55,7 +65,14 @@ async function get(url, ms) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA } });
+    let res;
+    try { res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA } }); }
+    catch (err) {
+      // fetch() itself rejecting (other than our own time limit) means no HTTP
+      // answer ever began: DNS, a refused or timed-out connection, TLS.
+      if (err.name !== 'AbortError') { err.noAnswer = true; err.detail = err.cause?.code || err.cause?.message || err.message; }
+      throw err;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
   } finally { clearTimeout(timer); }
@@ -80,15 +97,36 @@ async function readLive() {
 }
 
 // ---- CelesTrak ----
-// One failed answer ends it: `refused` is set, and nothing below asks again.
-let refused = null;
+// One failed request ends it: nothing below asks again in this run.
+//   refused      CelesTrak ANSWERED with something other than the data → a hold
+//   unreachable  no connection could be made at all → no hold (see the header)
+let refused = null, unreachable = null;
 async function ask(what, url, ms) {
-  if (refused) throw new Error(`not asked — CelesTrak already failed a request in this run (${refused})`);
+  if (refused || unreachable) throw new Error(`not asked — an earlier request in this run failed (${refused || unreachable})`);
   try { return await get(url, ms); }
-  catch (err) { refused = `${what}: ${err.name === 'AbortError' ? 'no answer in time' : err.message}`; throw err; }
+  catch (err) {
+    if (err.noAnswer) unreachable = `${what}: could not connect (${err.detail})`;
+    else refused = `${what}: ${err.name === 'AbortError' ? 'no answer in time' : err.message}`;
+    throw err;
+  }
+}
+// OMM CSV → element text.  A 200 that is not OMM CSV, or one we cannot write
+// out, counts as CelesTrak not delivering.
+function toElements(what, csv) {
+  let r;
+  try { r = ommCsvToTle(csv); }
+  catch (err) { refused = `${what}: answered, but not with OMM CSV (${err.message})`; throw new Error(refused); }
+  if (r.dropped > Math.max(5, r.count * 0.01)) {
+    refused = `${what}: ${r.dropped} of ${r.count + r.dropped} objects could not be read (${r.skipped[0]})`;
+    throw new Error(refused);
+  }
+  if (r.dropped) say(`${what}: left out ${r.dropped} unreadable object${r.dropped > 1 ? 's' : ''} — ${r.skipped.slice(0, 3).join('; ')}`);
+  return r;
 }
 async function fromCelestrak(live) {
-  const active = tidy(await ask('active list', gp('active'), 180_000));
+  const act = toElements('active list', await ask('active list', gp('active'), 180_000));
+  const active = tidy(act.text);
+  say(`active list: ${act.count.toLocaleString()} objects, ${act.sixDigit.toLocaleString()} of them with six-digit catalogue numbers`);
   const { problems } = validateSnapshot(active);   // must be the active list, well formed, and current
   if (problems.length) {
     refused = `active list: answered, but not with the list (${problems[0]})`;
@@ -99,7 +137,7 @@ async function fromCelestrak(live) {
   const parts = [];
   for (const g of DEBRIS_GROUPS) {
     await sleep(PAUSE_MS);
-    try { parts.push(tidy(await ask(`debris list ${g}`, gp(g), 60_000))); }
+    try { parts.push(tidy(toElements(`debris list ${g}`, await ask(`debris list ${g}`, gp(g), 60_000)).text)); }
     catch (err) { say(`debris list ${g} unavailable (${err.message})`); break; }
   }
   const debrisOk = parts.length === DEBRIS_GROUPS.length;
@@ -109,7 +147,7 @@ async function fromCelestrak(live) {
   // Catalog details: a 6.6 MB file that changes slowly, so about once a day.
   let satcat = live?.satcat ?? '[]';
   let satcatFetchedAt = live?.info.satcatFetchedAt ?? null;
-  if (!refused && satcatIsDue({ satcatFetchedAt })) {
+  if (!refused && !unreachable && satcatIsDue({ satcatFetchedAt })) {
     await sleep(PAUSE_MS);
     try {
       const csv = await ask('catalog file', `${CELESTRAK}/pub/satcat.csv`, 180_000);
@@ -162,7 +200,7 @@ if (todo === 'reuse') {
   try {
     published = await write(await fromCelestrak(live));
   } catch (err) {
-    say(`CelesTrak fetch failed: ${err.message}`);
+    say(`CelesTrak fetch failed: ${err.detail ?? err.message}`);
     if (live) { say('carrying the live site’s data forward'); published = await write(live); }
   }
 } else if (todo === 'carry') {
@@ -180,4 +218,11 @@ if (refused) {
     console.error('satellite data: failing this scheduled refresh so it is noticed; the site keeps the data it has');
     process.exit(1);
   }
+}
+if (unreachable) say(`CelesTrak could not be reached from this runner (${unreachable}) — no hold; the next run tries from another address`);
+// However it got that way — unreachable runners, a hold — data this old means
+// the refresh is not working, and somebody should know.
+if (SCHEDULED && !(published && Date.now() - published.fetchedAt < STALE_MS)) {
+  console.error(`satellite data: the site's data ${published ? `is ${((Date.now() - published.fetchedAt) / 3_600_000).toFixed(1)} hours old` : 'could not be refreshed and there is none to carry forward'} — failing this scheduled refresh so it is noticed`);
+  process.exit(1);
 }

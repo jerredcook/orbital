@@ -8,6 +8,14 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.4.1 — 15 November 2026
+
+- **Satellites launched since July 2026 now appear.** Catalogue numbers passed
+  99,999 on 11 July, and the data format Orbital was reading cannot hold six
+  digits, so about 1,400 newer objects — four months of launches — were
+  silently missing.  They are now included, and can be searched and linked to
+  by their real numbers.
+
 ## 0.4.0 — 15 November 2026
 
 - **Orbital now serves its own satellite data.** Your browser used to download

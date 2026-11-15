@@ -9,7 +9,12 @@
 //
 // Pure — also run by the unit tests against the committed file.
 
+import { SATNUM_FIELD } from '../src/catalog-parse.js';
+
 const DAY = 86_400_000;
+// Line 1 / line 2 begin with their number and the catalogue-number field (digits, or Alpha-5 above 99,999).
+export const LINE1 = new RegExp(`^1 ${SATNUM_FIELD}`);
+export const LINE2 = new RegExp(`^2 ${SATNUM_FIELD}`);
 // Names CelesTrak gives fragments and spent stages: "FENGYUN 1C DEB", "SL-6 R/B(2)".
 export const JUNK_NAME = /\bDEB\b|\bR\/B/;
 
@@ -33,7 +38,7 @@ export function validateSnapshot(text, { now = Date.now(), fresh = true } = {}) 
   const { sets, leftover } = parseSnapshot(text);
   if (leftover) problems.push('line count is not a multiple of three (name / line 1 / line 2)');
   if (sets.length < 8000 || sets.length > 60_000) problems.push(`${sets.length} objects (expected 8,000–60,000 for the active catalog)`);
-  const bad = sets.filter((s) => !/^1 [ \d]{5}/.test(s.l1) || !/^2 [ \d]{5}/.test(s.l2) || s.l1.length < 60 || s.l2.length < 60 || s.l1.slice(2, 7) !== s.l2.slice(2, 7));
+  const bad = sets.filter((s) => !LINE1.test(s.l1) || !LINE2.test(s.l2) || s.l1.length < 60 || s.l2.length < 60 || s.l1.slice(2, 7) !== s.l2.slice(2, 7));
   if (bad.length) problems.push(`${bad.length} element sets are malformed (first: ${JSON.stringify(bad[0].name)})`);
   const junk = sets.filter((s) => JUNK_NAME.test(s.name)).length;
   if (junk > sets.length * 0.01) problems.push(`${junk} objects are named as debris or rocket bodies — this is not the active-satellite list`);
