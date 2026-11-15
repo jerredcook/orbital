@@ -12,6 +12,7 @@
 import { Cartesian3, Material, JulianDate } from 'cesium';
 import { CONJ_COLOR } from './palette.js';
 import { esc } from './esc.js';
+import { KIND_LABEL } from './catalog-parse.js';
 import { altBandOf } from './orbit.js';
 import { flySeconds } from './motion.js';
 import { guardWorker } from './worker-guard.js';
@@ -279,7 +280,7 @@ export function initConjunctions({
         `<div class="conj-main">` +
         `<span class="cnames">${esc(sat.name)}</span>` +
         `<span class="ckm">${(r.missM / 1000).toFixed(2)} km</span></div>` +
-        `<div class="conj-sub">${when}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
+        `<div class="conj-sub">${when}${sat.kind !== 'SAT' && KIND_LABEL[sat.kind] ? ` · ${KIND_LABEL[sat.kind]}` : ''}</div>`;
       row.addEventListener('click', () => selectByIndex(r.i));
       listEl.appendChild(row);
     }
@@ -291,6 +292,7 @@ export function initConjunctions({
   $('conj-range').disabled = !$('toggle-conj').checked;
   $('toggle-conj').addEventListener('change', () => {
     $('conj-range').disabled = !$('toggle-conj').checked;
+    $('conj-note').hidden = !$('toggle-conj').checked;   // public elements are not collision-warning grade — say so where the list is
     if (!$('toggle-conj').checked) render([]);
     // turning it on: the next worker tick (≤ 600 ms) delivers pairs
   });

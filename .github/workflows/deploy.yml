@@ -36,6 +36,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      attention: ${{ steps.data.outputs.attention }}
     timeout-minutes: 40   # the three smoke suites take ~15 min, a slow data fetch up to ~8; anything past this is a hang
     steps:
       - uses: actions/checkout@v7
@@ -70,6 +72,11 @@ jobs:
             schedule)     node tools/fetch-data.mjs --scheduled ;;
             *)            node tools/fetch-data.mjs ;;
           esac
+        env:
+          # The Space-Track login (repository secrets; absent on forks and on
+          # Dependabot's pull requests, where the fetch simply does without).
+          SPACETRACK_USER: ${{ secrets.SPACETRACK_USER }}
+          SPACETRACK_PASSWORD: ${{ secrets.SPACETRACK_PASSWORD }}
       - name: Remember the CelesTrak hold for later runs
         if: always() && steps.data.outputs.hold == 'true'
         uses: actions/cache/save@v6
@@ -188,3 +195,18 @@ jobs:
           timeout: 600000
           error_count: 25
           reporting_interval: 10000
+
+  # The data fetch can ask for a person's attention without stopping the deploy:
+  # CelesTrak answered with an error (a 24-hour hold has started), or Space-Track
+  # has delivered nothing for two days.  The site has already been published with
+  # whatever fresh data there was; failing here makes GitHub email the owner.
+  # The reason is in the "Get the satellite data" step of the build job.
+  attention:
+    needs: [build, deploy]
+    if: needs.build.outputs.attention == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error title=Satellite data needs attention::See the 'Get the satellite data this build will publish' step of the build job for the reason. The site was still deployed."
+          exit 1
+

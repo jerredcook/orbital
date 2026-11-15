@@ -108,7 +108,8 @@ try {
   check('starterTouchTargets', (await Promise.all(['#starter-iss', '#starter-timeline', '#starter-tour', '#starter-close'].map(rect))).every((q) => fits(q) && Math.min(q.w, q.h) >= 34));
   // …and it says how many there are, from the catalog actually loaded.
   const head = await poll(() => O(() => document.getElementById('starter-head').textContent), (t) => /^\d/.test(t), 12);
-  const sats = await O(() => window.__orbital.catalog.filter((s) => s.kind !== 'DEB').length);
+  const sats = await O(() => window.__orbital.catalog.filter((s) => s.kind === 'SAT').length);
+  // (the headline counts ACTIVE satellites only — never the dead ones, rocket bodies or debris also on screen)
   check('starterShowsLiveCount', head.startsWith(`${sats.toLocaleString('en-US')} satellites`) && /^Tap/.test(await O(() => document.getElementById('starter-verb').textContent)));
 
   // ---------------------------------------------------------------- layout
@@ -397,7 +398,7 @@ try {
     // Honest label: the number is today's active satellites launched by that year.
     const lab = await s.evaluate(() => {
       const o = window.__orbital, yr = Number(document.getElementById('tl-hud-year').textContent), text = document.getElementById('tl-hud-count').textContent;
-      return { text, n: Number(text.split(' ')[0].replace(/\D/g, '')), want: o.catalog.filter((c) => c.kind !== 'DEB' && (c.launchYear ?? 9999) <= yr).length };
+      return { text, n: Number(text.split(' ')[0].replace(/\D/g, '')), want: o.catalog.filter((c) => c.kind === 'SAT' && (c.launchYear ?? 9999) <= yr).length };
     });
     check('timelineHudCountsActiveSatellites', /of today’s active satellites$/.test(lab.text) && lab.n === lab.want);
     await s.locator('#tl-hud-play').tap();           // pause…

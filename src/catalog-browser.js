@@ -1,9 +1,12 @@
 // catalog-browser.js — a browsable reference of every tracked object, searchable
-// by name or NORAD ID and filterable by orbit type.  The live catalog is ~17,000
+// by name or NORAD ID and filterable by orbit type.  The live catalog is ~33,000
 // objects, so the list is virtual-scrolled: only the ~two dozen rows in view
 // exist in the DOM at once, positioned absolutely inside a full-height sizer.
 // Click a row (or press Enter on an exact ID) to fly straight to it.
 
+import { categoryOf } from './catalog-parse.js';
+
+const BADGE = { DEAD: 'INACTIVE', RB: 'R/B' };   // short labels for the row badge
 const ROW_H = 46;   // px — MUST match .cat-row height in style.css
 
 const REGIMES = [
@@ -12,11 +15,13 @@ const REGIMES = [
   { id: 'MEO', label: 'MEO' },
   { id: 'GEO', label: 'GEO' },
   { id: 'HEO', label: 'HEO' },
+  { id: 'DEAD', label: 'Inactive' },
+  { id: 'RB', label: 'Rocket bodies' },
   { id: 'DEB', label: 'Debris' },
 ];
 
-// Same bucketing the legend uses: debris is its own class, everything else by regime.
-const catOf = (s) => (s.kind === 'DEB' ? 'DEB' : s.regime);
+// Same bucketing the legend uses: an active satellite by its regime, anything else by what it is.
+const catOf = categoryOf;
 
 // deps: { getCatalog(), decodeOwner(code), onPick(norad) }
 export function initCatalogBrowser({ getCatalog, decodeOwner, onPick }) {
@@ -71,7 +76,7 @@ export function initCatalogBrowser({ getCatalog, decodeOwner, onPick }) {
       const reg = catOf(s);
       const id = document.createElement('span'); id.className = 'cat-id'; id.textContent = s.norad;
       const name = document.createElement('span'); name.className = 'cat-name'; name.textContent = s.name;
-      const badge = document.createElement('span'); badge.className = `cat-badge ${reg.toLowerCase()}`; badge.textContent = reg;
+      const badge = document.createElement('span'); badge.className = `cat-badge ${reg.toLowerCase()}`; badge.textContent = BADGE[reg] ?? reg;
       // Owner comes from SATCAT metadata (present for live-catalog users); when
       // it's absent leave the cell blank rather than a wall of "Unknown".
       const owner = document.createElement('span'); owner.className = 'cat-owner';

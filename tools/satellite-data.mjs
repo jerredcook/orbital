@@ -23,7 +23,9 @@ import { createHash } from 'node:crypto';
 import { mergeGroups, parseSatcat } from '../src/catalog-parse.js';
 import { validateSnapshot, parseSnapshot, LINE1, LINE2 } from './tle-snapshot.mjs';
 
-export const FILES = { active: 'active.tle', debris: 'debris.tle', satcat: 'satcat.json', meta: 'meta.json' };
+export const FILES = { active: 'active.tle', inactive: 'inactive.tle', rocketbodies: 'rocketbodies.tle', debris: 'debris.tle', satcat: 'satcat.json', meta: 'meta.json' };
+/** The element files, in the order the app merges them (first occurrence of a number wins). */
+export const ELEMENT_FILES = ['active', 'inactive', 'rocketbodies', 'debris'];
 const HOUR = 3_600_000;
 
 /** Unix line endings and exactly one trailing newline ('' stays ''). */
@@ -33,8 +35,11 @@ export const tidy = (text) => {
 };
 
 /** A short hash of the three data files — what meta.json calls the stamp. */
-export function stampOf({ active, debris, satcat }) {
-  return createHash('sha256').update(active).update('\0').update(debris).update('\0').update(satcat).digest('hex').slice(0, 16);
+export function stampOf({ active, inactive = '', rocketbodies = '', debris, satcat }) {
+  const h = createHash('sha256').update(active).update('\0').update(debris).update('\0').update(satcat);
+  // (inactive.tle and rocketbodies.tle arrived in 0.5.0; a set without them hashes as it always did)
+  if (inactive || rocketbodies) h.update('\0').update(inactive).update('\0').update(rocketbodies);
+  return h.digest('hex').slice(0, 16);
 }
 
 /** The catalog CSV cut down to the objects in these lists: a JSON array of [norad, details]. */
@@ -52,19 +57,22 @@ function satcatRows(json) {
 }
 
 /** Put a set of files together.  Returns { active, debris, satcat, meta } as file contents. */
-export function assemble({ active, debris = '', satcat = '[]', fetchedAt, satcatFetchedAt = null, source }) {
-  const files = { active: tidy(active), debris: tidy(debris), satcat: String(satcat) };
+export function assemble({ active, inactive = '', rocketbodies = '', debris = '', satcat = '[]', fetchedAt, satcatFetchedAt = null, activeListAt = null, catalogueAt = null, source }) {
+  const files = { active: tidy(active), inactive: tidy(inactive), rocketbodies: tidy(rocketbodies), debris: tidy(debris), satcat: String(satcat) };
   const { medianEpochMs } = validateSnapshot(files.active, { fresh: false });
   const meta = {
     stamp: stampOf(files),
-    fetchedAt: Math.round(fetchedAt),   // when the element sets were fetched from CelesTrak (ms)
-    satcatFetchedAt,           // when the catalog details were (they change slowly, so less often)
-    source,                    // 'celestrak', or 'snapshot' (the copy committed with the code)
+    fetchedAt: Math.round(fetchedAt),   // when the element sets were fetched (ms)
+    satcatFetchedAt,           // when the catalog details were (from CelesTrak they change slowly, so less often)
+    activeListAt,              // when CelesTrak's active list — which decides what counts as active — was fetched
+    catalogueAt,               // when Space-Track's whole catalogue (dead satellites, rocket bodies, debris) was last fetched
+    source,                    // 'space-track' (everything in orbit), 'celestrak' (active + three debris clouds), or 'snapshot'
     epoch: Number.isFinite(medianEpochMs) ? Math.round(medianEpochMs) : null,   // the element sets' own median date
     counts: {
-      active: countSets(files.active), debris: countSets(files.debris), details: Math.max(0, satcatRows(files.satcat)),
+      active: countSets(files.active), inactive: countSets(files.inactive), rocketbodies: countSets(files.rocketbodies),
+      debris: countSets(files.debris), details: Math.max(0, satcatRows(files.satcat)),
       // objects catalogued since July 2026, numbered above 99,999 (written in Alpha-5)
-      sixDigit: parseSnapshot(files.active + files.debris).sets.filter((s) => /^1 [A-Z]/.test(s.l1)).length,
+      sixDigit: parseSnapshot(files.active + files.inactive + files.rocketbodies + files.debris).sets.filter((s) => /^1 [A-Z]/.test(s.l1)).length,
     },
   };
   return { ...files, meta: `${JSON.stringify(meta, null, 1)}\n` };
@@ -76,21 +84,24 @@ export function assemble({ active, debris = '', satcat = '[]', fetchedAt, satcat
  * current — true for something just fetched, false for something being
  * carried forward or built from the committed snapshot.
  */
-export function checkBundle({ active, debris, satcat, meta }, { now = Date.now(), fresh = false } = {}) {
+export function checkBundle({ active, inactive = '', rocketbodies = '', debris, satcat, meta }, { now = Date.now(), fresh = false } = {}) {
   const problems = [...validateSnapshot(active, { now, fresh }).problems];
-  // The debris lists may legitimately be empty (a source hiccup — the app just
-  // shows no debris), but what is there has to be element sets.
-  const d = parseSnapshot(debris);
-  if (d.leftover) problems.push('debris: line count is not a multiple of three');
-  if (d.sets.length > 30_000) problems.push(`debris: ${d.sets.length} objects is implausible`);
-  const badDeb = d.sets.filter((s) => !LINE1.test(s.l1) || !LINE2.test(s.l2)).length;
-  if (badDeb) problems.push(`debris: ${badDeb} element sets are malformed`);
+  // The other lists may legitimately be empty (a source hiccup, or a build
+  // from CelesTrak alone — the app just shows none), but what is there has to
+  // be element sets.
+  for (const [label, text] of [['inactive', inactive], ['rocket bodies', rocketbodies], ['debris', debris]]) {
+    const d = parseSnapshot(text);
+    if (d.leftover) problems.push(`${label}: line count is not a multiple of three`);
+    if (d.sets.length > 100_000) problems.push(`${label}: ${d.sets.length} objects is implausible`);
+    const bad = d.sets.filter((s) => !LINE1.test(s.l1) || !LINE2.test(s.l2) || s.l1.length < 60 || s.l2.length < 60).length;
+    if (bad) problems.push(`${label}: ${bad} element sets are malformed`);
+  }
   if (satcatRows(satcat) < 0) problems.push('catalog details are not a JSON list of [number, object] rows');
   let m = null;
   try { m = JSON.parse(meta); } catch { /* reported below */ }
   if (!m || typeof m !== 'object') problems.push('meta.json is not a JSON object');
   else {
-    if (m.stamp !== stampOf({ active, debris, satcat })) problems.push('meta.json stamp does not match the files beside it');
+    if (m.stamp !== stampOf({ active, inactive, rocketbodies, debris, satcat })) problems.push('meta.json stamp does not match the files beside it');
     if (!Number.isFinite(m.fetchedAt) || m.fetchedAt > now + HOUR) problems.push('meta.json fetchedAt is missing or in the future');
   }
   return problems;
@@ -104,12 +115,14 @@ export function checkBundle({ active, debris, satcat, meta }, { now = Date.now()
  *   'none'   nothing live and nothing may be fetched — the build falls back to the committed snapshot
  *
  * `holdUntil`: CelesTrak answered an earlier request with an error, so it is not
- * to be asked again before this time (see holdAfterFailure).
+ * to be asked again before this time (see holdAfterFailure).  `otherSource`:
+ * Space-Track is available, so a fetch is still worth making during a hold.
  */
-export function plan({ liveFetchedAt = null, now = Date.now(), maxAgeMs = 3.5 * HOUR, allowCelestrak = true, holdUntil = null }) {
+export function plan({ liveFetchedAt = null, now = Date.now(), maxAgeMs = 3.5 * HOUR, allowCelestrak = true, holdUntil = null, otherSource = false }) {
   const haveLive = Number.isFinite(liveFetchedAt);
   if (haveLive && now - liveFetchedAt < maxAgeMs) return 'reuse';
-  if (allowCelestrak && !onHold({ holdUntil, now })) return 'fetch';
+  // A hold stops CelesTrak being asked; with another source (Space-Track) there is still something to fetch.
+  if (allowCelestrak && (otherSource || !onHold({ holdUntil, now }))) return 'fetch';
   return haveLive ? 'carry' : 'none';
 }
 
@@ -122,6 +135,13 @@ export function plan({ liveFetchedAt = null, now = Date.now(), maxAgeMs = 3.5 * 
 export const HOLD_MS = 24 * HOUR;
 export const onHold = ({ holdUntil = null, now = Date.now() }) => Number.isFinite(holdUntil) && now < holdUntil;
 export const holdAfterFailure = ({ now = Date.now(), reason = '' }) => ({ until: now + HOLD_MS, at: now, reason: String(reason).slice(0, 200) });
+
+// CelesTrak's active list only decides WHICH satellites count as active (the
+// orbits come from Space-Track), and that changes slowly — so it is asked for
+// about once a day, not at every four-hourly refresh.  In between, the list the
+// site already has is used.
+export const activeListIsDue = ({ activeListAt = null, now = Date.now(), maxAgeMs = 20 * HOUR }) =>
+  !Number.isFinite(activeListAt) || now - activeListAt >= maxAgeMs;
 
 /** Catalog details are refetched about once a day; in between, yesterday's are carried forward. */
 export const satcatIsDue = ({ satcatFetchedAt = null, now = Date.now(), maxAgeMs = 20 * HOUR }) =>

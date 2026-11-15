@@ -2,7 +2,7 @@
 //
 // The satellite data comes from THIS SITE, not from CelesTrak: the deploy
 // fetches CelesTrak's lists every four hours and publishes them beside the app
-// as data/active.tle, data/debris.tle, data/satcat.json and data/meta.json
+// as data/active.tle, inactive.tle, rocketbodies.tle, debris.tle, satcat.json and meta.json
 // (tools/fetch-data.mjs, tools/satellite-data.mjs).  A browser never contacts
 // CelesTrak.  Until 0.4.0 every visitor downloaded ~9 MB straight from it —
 // impolite to a free service that firewalls heavy clients, and for one visitor
@@ -35,7 +35,9 @@ const MIN_OBJECTS = 500;   // fewer than this is not a catalog — a truncated o
 // are and when the site was last asked for newer.
 const DATA_CACHE = 'orbital-data-v2';
 const STATE_KEY = 'orbital.data';
-const BODIES = ['active', 'debris', 'satcat'];
+// (inactive.tle and rocketbodies.tle arrived in 0.5.0; a copy saved before then has neither, and reads as none)
+const ELEMENTS = [['active', 'SAT'], ['inactive', 'DEAD'], ['rocketbodies', 'RB'], ['debris', 'DEB']];   // file → kind, in merge order
+const BODIES = [...ELEMENTS.map(([k]) => k), 'satcat'];
 const bodyUrl = (key) => `/__data/${key}`;
 
 function readState() {
@@ -50,11 +52,12 @@ function writeState(state) {
 async function savedBodies() {
   try {
     const c = await caches.open(DATA_CACHE);
-    const [active, debris, satcat] = await Promise.all(BODIES.map(async (k) => {
+    const got = await Promise.all(BODIES.map(async (k) => {
       const hit = await c.match(bodyUrl(k));
       return hit ? hit.text() : null;
     }));
-    return active ? { active, debris: debris ?? '', satcat: satcat ?? '[]' } : null;
+    const saved = Object.fromEntries(BODIES.map((k, i) => [k, got[i] ?? (k === 'satcat' ? '[]' : '')]));
+    return saved.active ? saved : null;
   } catch { return null; }   // private mode / no Cache API
 }
 // What this PAGE downloaded, whether or not it could be saved: in a private
@@ -86,8 +89,9 @@ export function cacheExpiresInMs() {
 }
 
 // ---- turning the files into the catalog ----
-function build({ active, debris, satcat }) {
-  const { tles } = mergeGroups([{ text: active, kind: 'SAT' }, { text: debris, kind: 'DEB' }]);
+function build(bodies) {
+  const { satcat } = bodies;
+  const { tles } = mergeGroups(ELEMENTS.map(([file, kind]) => ({ text: bodies[file] ?? '', kind })));
   let details = new Map();
   try {
     const rows = JSON.parse(satcat || '[]');
@@ -178,12 +182,18 @@ export async function loadCatalog(onStatus, { patient = false, have = false } = 
       complete = false;
       return fallback;
     });
-    const [active, debris, satcat] = await Promise.all([
+    // Which files this data set has: one built from CelesTrak alone (a fork, a
+    // laptop) has no dead satellites or rocket bodies, and says so in its counts
+    // — so nothing asks for files that are not there.
+    const has = (k) => (meta.counts?.[k] ?? 0) > 0;
+    const [active, inactive, rocketbodies, debris, satcat] = await Promise.all([
       get(`${DATA_URL}active.tle${q}`, limit),
+      has('inactive') ? optional('inactive.tle', saved?.inactive ?? '') : '',
+      has('rocketbodies') ? optional('rocketbodies.tle', saved?.rocketbodies ?? '') : '',
       optional('debris.tle', saved?.debris ?? ''),
       optional('satcat.json', saved?.satcat ?? '[]'),
     ]);
-    const bodies = { active, debris, satcat };
+    const bodies = { active, inactive, rocketbodies, debris, satcat };
     onStatus?.('parsing the catalog…');
     const list = build(bodies);
     if (list.length < MIN_OBJECTS) throw new BadData('the active list is not a catalog');
@@ -207,7 +217,7 @@ export async function loadCatalog(onStatus, { patient = false, have = false } = 
     try {
       const fb = await fetch(FALLBACK_ACTIVE);
       if (fb.ok) {
-        const list = build({ active: await fb.text(), debris: '', satcat: '[]' });
+        const list = build({ active: await fb.text(), satcat: '[]' });
         if (list.length >= MIN_OBJECTS) {
           console.warn('satellite data unavailable — using the snapshot bundled with the app', err);
           track('degraded/catalog-bundled');

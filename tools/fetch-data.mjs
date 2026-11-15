@@ -1,8 +1,19 @@
 // fetch-data.mjs — get the satellite data a deploy will publish.
 //
 // Run by .github/workflows/deploy.yml before every build, and nowhere else: it
-// is the ONLY thing that contacts CelesTrak on the app's behalf.  Browsers load
-// the result from the site's own data/ folder (see tools/satellite-data.mjs).
+// is the ONLY thing that contacts CelesTrak or Space-Track on the app's
+// behalf.  Browsers load the result from the site's own data/ folder (see
+// tools/satellite-data.mjs).
+//
+// Two sources (tools/spacetrack.mjs has the why and the terms):
+//   Space-Track  everything in orbit — dead satellites, rocket bodies and
+//                debris as well as live ones — in one request.  Needs the
+//                SPACETRACK_USER / SPACETRACK_PASSWORD secrets.
+//   CelesTrak    its curated active list, which decides what counts as
+//                "active".  With Space-Track available that is the only thing
+//                asked of it: one request, about once a day.  Without Space-Track (no secrets, or
+//                it failed) CelesTrak alone supplies the active list, three
+//                debris clouds and the catalog file, as it did before 0.5.0.
 //
 // What it does, in order:
 //   1. Reads what the live site is serving now.  If that was fetched less than
@@ -29,10 +40,11 @@
 //      and the build falls back to the snapshot committed with the code.
 //
 //   node tools/fetch-data.mjs                 a push: steps 1–4
-//   node tools/fetch-data.mjs --scheduled     the 4-hourly refresh: exits 1 when CelesTrak
-//                                             fails it (once — not again during the hold),
-//                                             or when the data has gone 12 hours without a
-//                                             refresh, so a real problem is a visible failure
+//   node tools/fetch-data.mjs --scheduled     the 4-hourly refresh: exits 1 when the data has
+//                                             gone 12 hours without a refresh.  (A CelesTrak
+//                                             error, or two days without Space-Track, sets the
+//                                             `attention` output instead: the workflow deploys
+//                                             what was fetched and then fails the run.)
 //   node tools/fetch-data.mjs --no-celestrak  a pull-request build: never asks CelesTrak
 //
 // CelesTrak firewalls clients that re-download its big files.  Do not run this
@@ -42,7 +54,9 @@
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FILES, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, tidy } from './satellite-data.mjs';
+import { FILES, activeListIsDue, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, tidy } from './satellite-data.mjs';
+import { GP_QUERY, checkCatalogue, parseGpCsv, splitCatalogue } from './spacetrack.mjs';
+import { parseTLEs } from '../src/catalog-parse.js';
 import { validateSnapshot } from './tle-snapshot.mjs';
 import { ommCsvToTle } from './omm.mjs';
 
@@ -52,6 +66,7 @@ const ALLOW_CELESTRAK = !args.has('--no-celestrak');
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
 const CELESTRAK = (process.env.ORBITAL_CELESTRAK_BASE || 'https://celestrak.org').replace(/\/$/, '');
 const SITE = (process.env.ORBITAL_SITE_BASE || 'https://jerredcook.github.io/orbital').replace(/\/$/, '');
+const SPACETRACK = (process.env.ORBITAL_SPACETRACK_BASE || 'https://www.space-track.org').replace(/\/$/, '');
 const PAUSE_MS = Number(process.env.ORBITAL_FETCH_PAUSE_MS ?? 3000);   // between requests to CelesTrak
 const HOLD_FILE = process.env.ORBITAL_HOLD_FILE || join(dirname(fileURLToPath(import.meta.url)), '..', '.celestrak-hold.json');
 const MAX_AGE_MS = 3.5 * 3_600_000;
@@ -85,8 +100,11 @@ async function readLive() {
     const bust = `?t=${Date.now()}`;
     const meta = await get(`${SITE}/data/${FILES.meta}${bust}`, 30_000);
     const stamp = JSON.parse(meta).stamp;
-    const [active, debris, satcat] = await Promise.all(['active', 'debris', 'satcat'].map((k) => get(`${SITE}/data/${FILES[k]}?v=${stamp}`, 120_000)));
-    const bundle = { active, debris, satcat, meta };
+    const file = (k) => get(`${SITE}/data/${FILES[k]}?v=${stamp}`, 120_000);
+    // (inactive.tle and rocketbodies.tle arrived in 0.5.0 — a site from before then has neither)
+    const older = (k) => file(k).catch((err) => { if (/HTTP 404/.test(err.message)) return ''; throw err; });
+    const [active, inactive, rocketbodies, debris, satcat] = await Promise.all([file('active'), older('inactive'), older('rocketbodies'), file('debris'), file('satcat')]);
+    const bundle = { active, inactive, rocketbodies, debris, satcat, meta };
     const problems = checkBundle(bundle);
     if (problems.length) { say(`the live site's data is not usable (${problems[0]})`); return null; }
     return { ...bundle, info: JSON.parse(meta) };
@@ -123,14 +141,30 @@ function toElements(what, csv) {
   if (r.dropped) say(`${what}: left out ${r.dropped} unreadable object${r.dropped > 1 ? 's' : ''} — ${r.skipped.slice(0, 3).join('; ')}`);
   return r;
 }
-async function fromCelestrak(live) {
+// CelesTrak's active list: one request.  It is all that is asked of CelesTrak
+// when Space-Track supplied the catalogue.
+async function celestrakActive() {
   const act = toElements('active list', await ask('active list', gp('active'), 180_000));
   const active = tidy(act.text);
-  say(`active list: ${act.count.toLocaleString()} objects, ${act.sixDigit.toLocaleString()} of them with six-digit catalogue numbers`);
+  say(`CelesTrak active list: ${act.count.toLocaleString()} objects, ${act.sixDigit.toLocaleString()} of them with six-digit catalogue numbers`);
   const { problems } = validateSnapshot(active);   // must be the active list, well formed, and current
   if (problems.length) {
     refused = `active list: answered, but not with the list (${problems[0]})`;
     throw new Error(`the active list failed validation: ${problems.join('; ')}`);
+  }
+  return active;
+}
+// CelesTrak alone.  If the site already has Space-Track's catalogue (it just
+// could not be refreshed this time), only the active list is renewed and the
+// rest is kept as it is — a temporary failure must not shrink the debris back
+// to three clouds.  Otherwise (a fork with no login): the active list, three
+// debris clouds and the catalog file, as before 0.5.0.
+async function fromCelestrak(live) {
+  const active = await celestrakActive();
+  if (live?.info.catalogueAt) {
+    say(`keeping the rest of the catalogue the site has (from Space-Track, ${((Date.now() - live.info.catalogueAt) / 3_600_000).toFixed(1)} h ago)`);
+    return assemble({ active, inactive: live.inactive, rocketbodies: live.rocketbodies, debris: live.debris, satcat: live.satcat,
+      satcatFetchedAt: live.info.satcatFetchedAt ?? null, catalogueAt: live.info.catalogueAt, fetchedAt: Date.now(), activeListAt: Date.now(), source: 'celestrak' });
   }
   // Debris: three small lists.  If any is missing, keep the debris the site
   // already has rather than publish a partial set.
@@ -158,7 +192,75 @@ async function fromCelestrak(live) {
   }
   // The active list arrived, so there is fresh data to publish even if a later
   // request failed — but that failure still starts the hold (see main).
-  return assemble({ active, debris, satcat, satcatFetchedAt, fetchedAt: Date.now(), source: 'celestrak' });
+  // (dead satellites and rocket bodies come only from Space-Track — keep whatever the site has)
+  return assemble({ active, inactive: live?.inactive ?? '', rocketbodies: live?.rocketbodies ?? '', debris, satcat, satcatFetchedAt,
+    fetchedAt: Date.now(), activeListAt: Date.now(), source: 'celestrak' });
+}
+
+// ---- Space-Track ----
+// Three requests: log in, the catalogue, log out.  Resolves the parsed rows, or
+// null (having said why) when there is no login or it did not deliver — the
+// caller then falls back to CelesTrak alone.  The login is never printed.
+async function spaceTrackCatalogue() {
+  const user = process.env.SPACETRACK_USER, pass = process.env.SPACETRACK_PASSWORD;
+  if (!user || !pass) { say('no Space-Track login available to this build — using CelesTrak alone'); return null; }
+  let cookie = '';
+  try {
+    const login = await fetch(`${SPACETRACK}/ajaxauth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
+      body: new URLSearchParams({ identity: user, password: pass }), signal: AbortSignal.timeout(60_000),
+    });
+    const body = await login.text();
+    cookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ');
+    if (!login.ok || !cookie || /failed/i.test(body)) throw new Error(`login was not accepted (HTTP ${login.status})`);
+    const res = await fetch(`${SPACETRACK}${GP_QUERY}`, { headers: { Cookie: cookie, 'User-Agent': UA }, signal: AbortSignal.timeout(300_000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = parseGpCsv(await res.text());
+    const problems = checkCatalogue(rows);
+    if (problems.length) throw new Error(`answered, but not with the catalogue (${problems[0]})`);
+    return rows;
+  } catch (err) {
+    say(`Space-Track did not deliver (${err.cause?.code ?? err.message}) — using CelesTrak alone this time`);
+    if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Space-Track::The catalogue could not be fetched (${err.cause?.code ?? err.message}); dead satellites, rocket bodies and debris were not refreshed.`);
+    return null;
+  } finally {
+    if (cookie) await fetch(`${SPACETRACK}/ajaxauth/logout`, { headers: { Cookie: cookie, 'User-Agent': UA }, signal: AbortSignal.timeout(30_000) }).catch(() => {});
+  }
+}
+
+// Everything in orbit from Space-Track, with CelesTrak's active list deciding
+// which satellites are active.  If CelesTrak cannot be asked (a hold) or does
+// not answer, the list the site already has is used instead.
+async function fromSpaceTrack(rows, live, { askCelestrak }) {
+  let activeText = null, activeListAt = null;
+  const liveListAt = live ? (live.info.activeListAt ?? live.info.fetchedAt ?? null) : null;
+  // Once a day is enough: the list only says which satellites are active.
+  const due = activeListIsDue({ activeListAt: liveListAt });
+  if (askCelestrak && due) {
+    try { activeText = await celestrakActive(); activeListAt = Date.now(); }
+    catch (err) { say(`CelesTrak active list unavailable (${err.detail ?? err.message})`); }
+  }
+  if (!activeText && live) {
+    activeText = live.active;
+    activeListAt = liveListAt;
+    const age = liveListAt ? `${((Date.now() - liveListAt) / 3_600_000).toFixed(1)} h old` : 'of unknown age';
+    say(due ? `using the active list the site already has (${age}) to decide what is active`
+      : `CelesTrak not asked — the active list the site has is ${age}, and it is renewed once a day`);
+  }
+  const sets = parseTLEs(activeText ?? '');
+  const split = splitCatalogue(rows, {
+    activeIds: new Set(sets.map((s) => s.norad)),
+    activeNames: new Map(sets.map((s) => [s.norad, s.name])),
+    activeSets: new Map(sets.map((s) => [s.norad, [s.name, s.l1, s.l2]])),
+    activeListAt,
+  });
+  say(`Space-Track catalogue: ${rows.length.toLocaleString()} objects → ${split.counts.active.toLocaleString()} active, ${split.counts.inactive.toLocaleString()} inactive satellites, ${split.counts.rocketbodies.toLocaleString()} rocket bodies, ${split.counts.debris.toLocaleString()} debris`
+    + (split.fromCelestrak ? `; ${split.fromCelestrak} active object${split.fromCelestrak > 1 ? 's' : ''} only CelesTrak had` : '')
+    + (split.presumedActive ? `; ${split.presumedActive} recent launch${split.presumedActive > 1 ? 'es' : ''} presumed active (the active list is old)` : '')
+    + (split.duplicates ? `; ${split.duplicates} repeated numbers ignored` : '')
+    + (split.dropped ? `; ${split.dropped} unreadable (${split.skipped.slice(0, 3).join(', ')})` : ''));
+  return assemble({ active: split.active, inactive: split.inactive, rocketbodies: split.rocketbodies, debris: split.debris, satcat: split.details,
+    satcatFetchedAt: Date.now(), catalogueAt: Date.now(), fetchedAt: Date.now(), activeListAt, source: 'space-track' });
 }
 
 // ---- the hold ----
@@ -181,7 +283,7 @@ async function write(bundle) {
   for (const k of Object.keys(FILES)) await writeFile(join(OUT, FILES[k]), bundle[k]);
   const m = JSON.parse(bundle.meta);
   const ageH = (Date.now() - m.fetchedAt) / 3_600_000;
-  say(`wrote ${m.counts.active.toLocaleString()} active + ${m.counts.debris.toLocaleString()} debris objects, details for ${m.counts.details.toLocaleString()}; fetched ${ageH < 0.05 ? 'just now' : `${ageH.toFixed(1)} h ago`} (stamp ${m.stamp})`);
+  say(`wrote ${m.counts.active.toLocaleString()} active + ${(m.counts.inactive ?? 0).toLocaleString()} inactive + ${(m.counts.rocketbodies ?? 0).toLocaleString()} rocket bodies + ${m.counts.debris.toLocaleString()} debris, details for ${m.counts.details.toLocaleString()}; source ${m.source}; fetched ${ageH < 0.05 ? 'just now' : `${ageH.toFixed(1)} h ago`} (stamp ${m.stamp})`);
   return m;
 }
 
@@ -190,38 +292,49 @@ const live = await readLive();
 const hold = await readHold();
 const holding = onHold({ holdUntil: hold?.until });
 if (holding) say(`CelesTrak failed a request at ${new Date(hold.at).toISOString()} (${hold.reason}) — on hold, not asking it again until ${new Date(hold.until).toISOString()}`);
-const todo = plan({ liveFetchedAt: live?.info.fetchedAt ?? null, maxAgeMs: MAX_AGE_MS, allowCelestrak: ALLOW_CELESTRAK, holdUntil: hold?.until ?? null });
+// (--no-celestrak is a pull-request build: nothing outside is asked, Space-Track included.)
+const haveSpaceTrack = ALLOW_CELESTRAK && !!(process.env.SPACETRACK_USER && process.env.SPACETRACK_PASSWORD);
+const todo = plan({ liveFetchedAt: live?.info.fetchedAt ?? null, maxAgeMs: MAX_AGE_MS, allowCelestrak: ALLOW_CELESTRAK, holdUntil: hold?.until ?? null, otherSource: haveSpaceTrack });
 let published = null;
 
 if (todo === 'reuse') {
-  say('the live site was refreshed recently — publishing the same data again, CelesTrak not contacted');
+  say('the live site was refreshed recently — publishing the same data again, nothing fetched');
   published = await write(live);
 } else if (todo === 'fetch') {
   try {
-    published = await write(await fromCelestrak(live));
+    const rows = haveSpaceTrack ? await spaceTrackCatalogue() : null;
+    if (rows) published = await write(await fromSpaceTrack(rows, live, { askCelestrak: !holding }));
+    else if (!holding) published = await write(await fromCelestrak(live));
+    else throw new Error('Space-Track did not deliver and CelesTrak is on hold');
   } catch (err) {
-    say(`CelesTrak fetch failed: ${err.detail ?? err.message}`);
+    say(`fetch failed: ${err.detail ?? err.message}`);
     if (live) { say('carrying the live site’s data forward'); published = await write(live); }
   }
 } else if (todo === 'carry') {
-  say('not contacting CelesTrak for this build — carrying the live site’s data forward');
+  say('nothing may be fetched for this build — carrying the live site’s data forward');
   published = await write(live);
 }
 
 if (!published) say('nothing fetched and nothing live — the build will use the snapshot committed with the code');
+// Things a person should hear about.  Each sets an output; the workflow's last
+// job fails the run on it AFTER the deploy, so the site still gets whatever
+// fresh data this run did fetch and GitHub emails the owner.
+const tell = async (name) => { if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `${name}=true\n`); };
 if (refused) {
+  // CelesTrak answered with an error: stop asking for a day (its policy).  Runs
+  // during the hold pass quietly — they ask it nothing.
   await startHold(refused);
-  // The scheduled refresh fails here, once, so GitHub tells the owner.  During
-  // the hold later runs pass quietly (they ask nothing), republishing what the
-  // site has.  A push still deploys its code with the carried data.
-  if (SCHEDULED) {
-    console.error('satellite data: failing this scheduled refresh so it is noticed; the site keeps the data it has');
-    process.exit(1);
-  }
+  await tell('attention');
 }
 if (unreachable) say(`CelesTrak could not be reached from this runner (${unreachable}) — no hold; the next run tries from another address`);
-// However it got that way — unreachable runners, a hold — data this old means
-// the refresh is not working, and somebody should know.
+// Space-Track has a login that expires and terms that can change.  If it has
+// delivered nothing for two days, the dead satellites and debris are going stale.
+if (haveSpaceTrack && published && !(Date.now() - (published.catalogueAt ?? 0) < 48 * 3_600_000)) {
+  console.error('satellite data: Space-Track has not delivered the catalogue for two days — check the account (space-track.org) and the SPACETRACK_ secrets');
+  await tell('attention');
+}
+// However it got that way, data this old means the refresh is not working.
+// Nothing new to publish, so the scheduled run stops here.
 if (SCHEDULED && !(published && Date.now() - published.fetchedAt < STALE_MS)) {
   console.error(`satellite data: the site's data ${published ? `is ${((Date.now() - published.fetchedAt) / 3_600_000).toFixed(1)} hours old` : 'could not be refreshed and there is none to carry forward'} — failing this scheduled refresh so it is noticed`);
   process.exit(1);

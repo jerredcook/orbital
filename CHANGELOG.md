@@ -8,6 +8,22 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.5.0 — 15 November 2026
+
+- **Everything in orbit, not just the working satellites.** Orbital now also
+  shows inactive satellites (some up since the 1950s), spent rocket bodies and
+  all tracked debris — about 32,700 objects instead of 18,500.  Each kind has
+  its own colour and its own switch in the side panel, and its own filter in
+  the catalog.
+- **Counts still mean what they said.** The first-visit card, the launch
+  timeline and recording mode count active satellites only, as before.
+- **A note on close approaches.** The list now says plainly that it comes from
+  public orbit data and illustrates crowding; it is not a collision warning.
+- **Pass predictions skip debris**, so the scan covers satellites and rocket
+  bodies — the things you can actually see.
+- Orbit data now comes from Space-Track.org (U.S. Space Command), with
+  CelesTrak's list, checked once a day, deciding which satellites are active.
+
 ## 0.4.1 — 15 November 2026
 
 - **Satellites launched since July 2026 now appear.** Catalogue numbers passed

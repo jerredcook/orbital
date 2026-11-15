@@ -9,14 +9,14 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, medianEpochMs } from './data.js';
+import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, medianEpochMs, CATEGORIES, categoryOf, isActiveSat } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
 import { initSystemView } from './solarsystem.js';
 import { writeHash, readHash } from './deeplink.js';
 import { flySeconds } from './motion.js';
-import { CAT_COLORS, SELECT_COLOR } from './palette.js';
+import { CAT_COLORS, CAT_SIZE, SELECT_COLOR } from './palette.js';
 import { modelFor, orientationFor } from './models.js';
 import { initShowpieces } from './showpieces.js';
 import { initConjunctions } from './conjunctions.js';
@@ -105,17 +105,17 @@ const stationLabels = viewer.scene.primitives.add(new LabelCollection());
 
 // ---------------------------------------------------------------- state ----
 
-let catalog = [];          // [{ name, l1, l2, norad, kind, meta, regime }]
+let catalog = [];          // [{ name, l1, l2, norad, kind, meta, regime }] — kind: SAT (active), DEAD, RB or DEB
 let swarm = null;          // SatSwarm, one point per catalog index
 let selected = null;       // { index, satrec, highlight }
 let following = false;
 let autoFollowHoldUntil = 0;   // suppress auto-follow during camera flights
 let autoFollowDisabled = false; // set when the user manually stops following
 let lastBuf = null;        // most recent worker position buffer (meters, ECF)
-const catVisible = { LEO: true, MEO: true, GEO: true, HEO: true, DEB: true };
+const catVisible = Object.fromEntries(CATEGORIES.map((c) => [c, true]));
 let catalogEpochMs = null;   // median TLE epoch — how far the propagation is being extrapolated
 let feedSettled = false;      // this load's attempt at the live list has finished, one way or the other (see boot)
-const catOf = (sat) => (sat.kind === 'DEB' ? 'DEB' : sat.regime);
+const catOf = categoryOf;   // an active satellite by its orbit regime; anything else by what it is
 
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $('status').textContent = msg; };
@@ -264,11 +264,9 @@ function applyCatalog(list) {
   catalog = list;
   swarm = new SatSwarm(catalog.length);
   if (carried) { swarm.updatePositions(carried); lastBuf = carried; }   // (lastBuf is indexed like the catalog — keep them in step)
-  const counts = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
   for (let i = 0; i < catalog.length; i++) {
     const cat = catOf(catalog[i]);
-    counts[cat]++;
-    swarm.setStyle(i, CAT_COLORS[cat], cat === 'DEB' ? 1.7 : 2.2);
+    swarm.setStyle(i, CAT_COLORS[cat], CAT_SIZE[cat]);
   }
   groups.recount();               // group-chip counts + hide groups absent from today's catalog
   timeline.refreshVisibility();   // apply category toggles + timeline + group focus
@@ -682,9 +680,10 @@ handler.setInputAction((click) => {
 
 function fillInfoPanel(sat) {
   const m = sat.meta;
-  $('info-regime').textContent = sat.kind === 'DEB'
-    ? `DEBRIS · ${sat.regime}`
-    : `${sat.regime} · NORAD catalog`;
+  $('info-regime').textContent = isActiveSat(sat) ? `${sat.regime} · NORAD catalog`
+    : sat.kind === 'DEAD' ? `INACTIVE SATELLITE · ${sat.regime}`
+      : sat.kind === 'RB' ? `ROCKET BODY · ${sat.regime}`
+        : `${m?.type === 'UNK' ? 'UNIDENTIFIED OBJECT' : 'DEBRIS'} · ${sat.regime}`;
   $('info-name').textContent = sat.name;
   $('info-norad').textContent = sat.norad;
   $('info-intl').textContent = m?.intlDes || '—';
@@ -695,7 +694,7 @@ function fillInfoPanel(sat) {
   $('info-period').textContent = m?.period ? `${m.period.toFixed(1)} min` : '—';
   $('info-incl').textContent = m?.inclination != null ? `${m.inclination.toFixed(2)}°` : '—';
   $('info-apsis').textContent = (m?.apogee != null && m?.perigee != null)
-    ? `${m.apogee.toLocaleString()} × ${m.perigee.toLocaleString()} km` : '—';
+    ? `${Math.round(m.apogee).toLocaleString()} × ${Math.round(m.perigee).toLocaleString()} km` : '—';   // whole km — the figures are now derived from the elements
   $('info-alt').textContent = '—';
   $('info-speed').textContent = '—';
 }
@@ -880,7 +879,7 @@ guide.addEventListener('click', (e) => { if (e.target === guide) closeGuide(); }
 // rather than over it, with three ways in.  The full welcome card above stays
 // behind the "?" button.
 const starter = initStarter({
-  getCount: () => (catalog.length > 500 ? catalog.reduce((n, s) => n + (catOf(s) === 'DEB' ? 0 : 1), 0) : 0),
+  getCount: () => (catalog.length > 500 ? catalog.reduce((n, s) => n + (isActiveSat(s) ? 1 : 0), 0) : 0),
   actions: {
     'starter-iss': () => inspectByNorad('25544'),
     'starter-timeline': () => startTimelineShow(),
@@ -1103,7 +1102,7 @@ const tour = initTour({
   flyHome: () => { holdAutoFollow(2500); viewer.camera.flyHome(1.5); },
   // a famous geostationary bird if one is up today (GOES weather), else any GEO payload
   findGeo: () => (catalog.find((s) => s.name.startsWith('GOES') && s.regime === 'GEO')
-    || catalog.find((s) => s.regime === 'GEO' && s.kind !== 'DEB'))?.norad,
+    || catalog.find((s) => s.regime === 'GEO' && isActiveSat(s)))?.norad,
   gotoSat: (n) => navigateTo({ sat: String(n) }),
   playTimeline: () => { const tl = $('toggle-timeline'); if (!tl.checked) tl.click(); $('tl-play').click(); },
   showMoon: () => moonView.show(),

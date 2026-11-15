@@ -463,9 +463,9 @@ try {
       return {
         text, n: Number(text.split(' ')[0].replace(/\D/g, '')),
         // (a handful of new objects have no launch designator yet, so no year to appear in)
-        sats: o.catalog.filter((s) => s.kind !== 'DEB' && s.launchYear != null && s.launchYear <= new Date().getUTCFullYear()).length,
-        junkCounted: o.catalog.filter((s) => s.kind !== 'DEB' && junk.test(s.name)).length,
-        debOff: !document.querySelector('input[data-cat="DEB"]').checked,
+        sats: o.catalog.filter((s) => s.kind === 'SAT' && s.launchYear != null && s.launchYear <= new Date().getUTCFullYear()).length,
+        junkCounted: o.catalog.filter((s) => s.kind === 'SAT' && junk.test(s.name)).length,
+        debOff: ['DEB', 'DEAD', 'RB'].every((c) => !document.querySelector(`input[data-cat="${c}"]`).checked),
         stale: !!document.querySelector('#clip-hint .clip-warn'),
       };
     });
@@ -553,6 +553,38 @@ try {
     check('everyObjectHasARealNumber', six.noNaN);
     check('sixDigitObjectsWork', six.count === 0 || (six.placed > six.count * 0.9 && six.selected === six.norad && six.shown === String(six.norad)
       && six.hash === `#sat=${six.norad}`));
+  }
+
+  // Everything else in orbit — inactive satellites, rocket bodies, debris — has
+  // its own legend row, colour and label, and is never counted as a satellite.
+  // (Present when the data came from Space-Track; a build from the committed
+  // snapshot has active satellites only, and then only the invariants apply.)
+  {
+    const cats = await p.evaluate(async () => {
+      const o = window.__orbital, nap = (ms) => new Promise((r) => setTimeout(r, ms));
+      const num = (id) => Number(document.getElementById(id).textContent.replace(/\D/g, '')) || 0;
+      const by = {}; for (const s of o.catalog) by[s.kind] = (by[s.kind] || 0) + 1;
+      const legend = { active: num('count-LEO') + num('count-MEO') + num('count-GEO') + num('count-HEO'), DEAD: num('count-DEAD'), RB: num('count-RB'), DEB: num('count-DEB') };
+      const out = { by, legend, kindsOk: o.catalog.every((s) => ['SAT', 'DEAD', 'RB', 'DEB'].includes(s.kind)) };
+      const pick = (kind) => o.catalog.findIndex((s, i) => s.kind === kind && Number.isFinite(o.lastBuf[3 * i]) && s.norad < 900000000);
+      const label = async (kind) => { const i = pick(kind); if (i < 0) return null; o.selectByIndex(i); await nap(500); const t = document.getElementById('info-regime').textContent; document.getElementById('info-close').click(); await nap(200); return t; };
+      out.labels = { SAT: await label('SAT'), DEAD: await label('DEAD'), RB: await label('RB'), DEB: await label('DEB') };
+      // Switching a row off hides exactly that kind.
+      const shown = (kind) => { let n = 0; const v = o.swarm._visible; for (let i = 0; i < o.catalog.length; i++) if (o.catalog[i].kind === kind && v[i]) n++; return n; };
+      const box = document.querySelector('input[data-cat="DEAD"]');
+      const before = { DEAD: shown('DEAD'), SAT: shown('SAT') };
+      box.click(); await nap(300);
+      out.toggle = { before, offDead: shown('DEAD'), offSat: shown('SAT') };
+      box.click(); await nap(300);
+      out.toggle.backOn = shown('DEAD');
+      return out;
+    });
+    R._categories = { by: cats.by, legend: cats.legend, labels: cats.labels };
+    check('everyObjectHasAKind', cats.kindsOk);
+    check('legendCountsMatchTheCatalogue', cats.legend.active === (cats.by.SAT || 0) && cats.legend.DEAD === (cats.by.DEAD || 0) && cats.legend.RB === (cats.by.RB || 0) && cats.legend.DEB === (cats.by.DEB || 0));
+    check('labelsSayWhatAnObjectIs', /NORAD catalog$/.test(cats.labels.SAT || '') && (cats.labels.DEAD === null || /^INACTIVE SATELLITE · /.test(cats.labels.DEAD))
+      && (cats.labels.RB === null || /^ROCKET BODY · /.test(cats.labels.RB)) && (cats.labels.DEB === null || /^(DEBRIS|UNIDENTIFIED OBJECT) · /.test(cats.labels.DEB)));
+    check('legendRowHidesItsOwnKindOnly', cats.toggle.offDead === 0 && cats.toggle.offSat === cats.toggle.before.SAT && cats.toggle.backOn === cats.toggle.before.DEAD);
   }
 
   // Satellite data comes from the site itself (data/): in this whole run, no

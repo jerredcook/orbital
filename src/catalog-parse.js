@@ -148,7 +148,8 @@ export function classifyRegime(meta, meanMotion) {
 // Merge element-set texts into one list, first occurrence wins — the active
 // list comes first, so anything that somehow appears in both it and a debris
 // list keeps its operational classification.
-//   groups: [{ text, kind: 'SAT' | 'DEB' }]
+//   groups: [{ text, kind }] — kind is 'SAT' (active satellite), 'DEAD' (inactive
+//   satellite), 'RB' (rocket body) or 'DEB' (debris, and objects not yet identified)
 export function mergeGroups(groups) {
   const seen = new Set();
   const tles = [];
@@ -156,15 +157,58 @@ export function mergeGroups(groups) {
     for (const t of parseTLEs(g.text || '')) {
       if (seen.has(t.norad)) continue;
       seen.add(t.norad);
-      tles.push({ ...t, kind: isJunkName(t.name) ? 'DEB' : g.kind });
+      // (a fragment or spent stage that turns up on the ACTIVE list is still not a satellite)
+      tles.push({ ...t, kind: g.kind === 'SAT' && isJunkName(t.name) ? 'DEB' : g.kind });
     }
   }
   return { tles, seen };
 }
 
-/** Attach catalog details (a Map by NORAD id) and the orbit regime to each element set. */
+// Orbit size from the elements themselves: period (minutes) and apogee / perigee
+// heights (km above the equatorial radius) — what a catalogue lists, computed
+// the way catalogues compute it, from mean motion and eccentricity.
+const MU = 398600.4418, EARTH_RADIUS_KM = 6378.135;
+export function orbitFromElements(l1, l2) {
+  const n = tleMeanMotion(l2), e = tleEccentricity(l2), inc = tleInclination(l2);
+  if (!(n > 0) || !Number.isFinite(e)) return {};
+  const period = 1440 / n;
+  const a = Math.cbrt(MU * ((period * 60) / (2 * Math.PI)) ** 2);
+  const round = (v) => Math.round(v * 1000) / 1000;
+  const des = l1.slice(9, 17).trim(), yy = parseInt(des.slice(0, 2), 10);
+  return {
+    period: round(period), inclination: Number.isFinite(inc) ? inc : null,
+    apogee: round(a * (1 + e) - EARTH_RADIUS_KM), perigee: round(a * (1 - e) - EARTH_RADIUS_KM),
+    intlDes: /^\d{5}[A-Z]{1,3}$/.test(des) ? `${yy < 57 ? 20 : 19}${des.slice(0, 2)}-${des.slice(2, 5)}${des.slice(5)}` : '',
+  };
+}
+
+/**
+ * Attach catalog details (a Map by NORAD id) and the orbit regime to each
+ * element set.  The details file carries what the elements cannot say — owner,
+ * launch date and site, object type; the orbit figures and the designator are
+ * filled in from the elements when the details do not have them (they did,
+ * until 0.5.0, at four times the download).
+ */
 export const withMeta = (tles, satcat) => tles.map((t) => {
-  const meta = satcat.get(t.norad) || null;
+  const row = satcat.get(t.norad);
+  let meta = null;
+  if (row) {
+    const o = orbitFromElements(t.l1, t.l2);
+    meta = { ...row };
+    for (const k of ['period', 'inclination', 'apogee', 'perigee']) if (meta[k] == null) meta[k] = o[k] ?? null;
+    if (!meta.intlDes) meta.intlDes = o.intlDes ?? '';
+  }
   const meanMotion = tleMeanMotion(t.l2) || null;
   return { ...t, meta, regime: classifyRegime(meta, meanMotion) };
 });
+
+// ---- what an object is, for display ----
+// The legend, the catalog browser and the counts all sort objects the same
+// way: an ACTIVE satellite by its orbit regime (LEO / MEO / GEO / HEO), and
+// everything else by what it is.
+export const CATEGORIES = ['LEO', 'MEO', 'GEO', 'HEO', 'DEAD', 'RB', 'DEB'];
+export const categoryOf = (s) => (s.kind === 'SAT' || !s.kind ? s.regime : s.kind);
+/** An operating satellite — the only thing the headline counts ever count. */
+export const isActiveSat = (s) => s.kind === 'SAT';
+export const KIND_LABEL = { SAT: 'satellite', DEAD: 'inactive satellite', RB: 'rocket body', DEB: 'debris' };
+

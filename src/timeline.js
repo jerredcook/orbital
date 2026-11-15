@@ -15,6 +15,9 @@
 // system view's spacecraft timeline (sys-probes.js).
 
 import { createEraFlasher, createYearPlayer, yearAt, progressAt } from './scrubber.js';
+import { CATEGORIES } from './catalog-parse.js';
+
+const zeroCounts = () => Object.fromEntries(CATEGORIES.map((c) => [c, 0]));
 
 export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, passesGroup = () => true, onToggle }) {
   const $ = (id) => document.getElementById(id);
@@ -55,7 +58,7 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, passesGr
   // Group-filtered, so the numbers always describe the dots actually on screen.
   function updateTimelineReadout(year) {
     const catalog = getCatalog();
-    const c = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
+    const c = zeroCounts();
     let total = 0;
     for (const s of catalog) {
       if ((s.launchYear ?? 9999) <= year && passesGroup(s)) { c[catOf(s)]++; total++; }
@@ -67,7 +70,8 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, passesGr
     // TODAY'S active catalog revealed by launch year, so this is how many of
     // today's satellites had been launched by then — not that year's census.
     $('tl-hud-year').textContent = String(year);
-    $('tl-hud-count').textContent = `${(total - c.DEB).toLocaleString()} of today’s active satellites`;
+    // (active only — inactive satellites, rocket bodies and debris have rows of their own in the legend)
+    $('tl-hud-count').textContent = `${(c.LEO + c.MEO + c.GEO + c.HEO).toLocaleString()} of today’s active satellites`;
   }
 
   // The single owner of the legend's per-regime numbers: they always describe
@@ -76,7 +80,7 @@ export function initTimeline({ getCatalog, getSwarm, catVisible, catOf, passesGr
   function refreshCounts() {
     if (timelineYear !== null) { updateTimelineReadout(timelineYear); return; }
     const catalog = getCatalog();
-    const c = { LEO: 0, MEO: 0, GEO: 0, HEO: 0, DEB: 0 };
+    const c = zeroCounts();
     for (const s of catalog) if (passesGroup(s)) c[catOf(s)]++;
     for (const k of Object.keys(c)) $(`count-${k}`).textContent = c[k].toLocaleString();
   }

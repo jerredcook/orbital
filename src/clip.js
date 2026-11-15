@@ -73,8 +73,9 @@ export function initClip({ viewer, isReady, dataAgeDays }) {
     // and most debris are not in this catalog at all.  Debris is left out of the
     // clip entirely (see arm) so the count and the dots are the same set.
     const num = (id) => Number(String($(id).textContent).replace(/\D/g, '')) || 0;
-    const total = Number((/·(.*)/.exec($('tl-label').textContent)?.[1] ?? '').replace(/\D/g, '')) || 0;
-    const sats = Math.max(0, total - num('count-DEB'));
+    // The legend's regime rows are active satellites only (the timeline keeps them
+    // current for the scrubbed year), so their sum is exactly the set on screen.
+    const sats = num('count-LEO') + num('count-MEO') + num('count-GEO') + num('count-HEO');
     // "Today" only when the data is: on a saved snapshot, give its date instead.
     $('clip-count').textContent = dataAge() >= STALE_DAYS
       ? `${sats.toLocaleString()} active satellites as of ${dataDate()}`
@@ -84,10 +85,14 @@ export function initClip({ viewer, isReady, dataAgeDays }) {
   function arm() {
     const t = $('toggle-timeline');
     if (!t.checked) t.click();                // timeline on → the swarm empties back to 1957
-    // Debris off: the three breakup clouds would pop in at their PARENT'S launch
-    // year (Fengyun-1C's 2007 debris in 1999), which is not when they appeared.
-    const deb = document.querySelector('input[data-cat="DEB"]');
-    if (deb?.checked) deb.click();
+    // Active satellites only.  Debris would pop in at its PARENT'S launch year
+    // (Fengyun-1C's 2007 debris in 1999), which is not when it appeared; and with
+    // inactive satellites and rocket bodies on screen the dots would no longer be
+    // the set the count describes.
+    for (const cat of ['DEB', 'DEAD', 'RB']) {
+      const box = document.querySelector(`input[data-cat="${cat}"]`);
+      if (box?.checked) box.click();
+    }
     shownYear = null; setYear(1957);
     state = 'armed';
     const how = touch

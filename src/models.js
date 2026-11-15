@@ -45,7 +45,7 @@ export function modelFor(sat) {
   if (real) return { uri: `${MODELS}${real.file}.glb`, scale: real.scale };
   if (/^TDRS \d/.test(sat.name)) return { uri: `${MODELS}tdrs.glb`, scale: 19.6 };
   if (sat.kind === 'DEB' || /\bDEB\b/.test(sat.name)) return { uri: `${MODELS}debris.glb`, scale: 1 };
-  if (/\bR\/B\b/.test(sat.name)) return { uri: `${MODELS}rocketbody.glb`, scale: 1 };
+  if (sat.kind === 'RB' || /\bR\/B\b/.test(sat.name)) return { uri: `${MODELS}rocketbody.glb`, scale: 1 };
   if (sat.name.startsWith('STARLINK')) return { uri: `${MODELS}starlink.glb`, scale: 1 };
   // Nav constellations (Galileo keyed off the GALILEO token, not GSAT — that
   // also names ISRO's comms birds; GPS BIIx/BIII and NAVSTAR are the same GPS).

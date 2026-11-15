@@ -19,7 +19,10 @@ const OUT = join(ROOT, 'public', 'data');
 const SNAPSHOT = join(ROOT, 'public', 'fallback', 'active.tle');
 
 const read = (name) => readFile(join(OUT, name), 'utf8').catch(() => null);
-const have = { active: await read(FILES.active), debris: await read(FILES.debris), satcat: await read(FILES.satcat), meta: await read(FILES.meta) };
+const have = {};
+for (const k of Object.keys(FILES)) have[k] = await read(FILES[k]);
+// (inactive.tle and rocketbodies.tle may be absent in a set fetched from CelesTrak alone)
+have.inactive ??= ''; have.rocketbodies ??= '';
 
 if (have.active != null && have.debris != null && have.satcat != null && have.meta != null) {
   const problems = checkBundle(have);
@@ -27,7 +30,7 @@ if (have.active != null && have.debris != null && have.satcat != null && have.me
   try { source = JSON.parse(have.meta).source; } catch { /* a problem, reported above */ }
   if (!problems.length && source !== 'snapshot') {
     const m = JSON.parse(have.meta);
-    console.log(`satellite data: using the fetched files (${m.counts.active.toLocaleString()} active, ${m.counts.debris.toLocaleString()} debris, fetched ${new Date(m.fetchedAt).toISOString()})`);
+    console.log(`satellite data: using the fetched files (${m.counts.active.toLocaleString()} active, ${(m.counts.inactive ?? 0).toLocaleString()} inactive, ${(m.counts.rocketbodies ?? 0).toLocaleString()} rocket bodies, ${m.counts.debris.toLocaleString()} debris; source ${m.source}; fetched ${new Date(m.fetchedAt).toISOString()})`);
     process.exit(0);
   }
   if (problems.length) console.warn(`satellite data: the files in public/data/ are not usable (${problems[0]}) — rebuilding from the snapshot`);

@@ -12,7 +12,7 @@
 import { Cartesian3, Cartesian2, Color, Cartographic, JulianDate } from 'cesium';
 import * as satellite from 'satellite.js';
 import { DEG2RAD, RE_KM, SUN_DARK, NAKED_EYE, sunEcefDir, compass, isSunlit, stationFrameKm, lookElAz } from './astro.js';
-import { tleMeanMotion, tleInclination } from './data.js';
+import { tleMeanMotion, tleInclination, KIND_LABEL } from './data.js';
 import { CAT_CSS } from './palette.js';
 import { esc } from './esc.js';
 import { altBandOf } from './orbit.js';
@@ -282,6 +282,10 @@ export function initStation({
     const out = [];
     for (let i = 0; i < catalog.length; i++) {
       const sat = catalog[i];
+      // Not debris: ten thousand fragments would double the scan to list passes
+      // nobody can see or use.  Satellites (working or not) and rocket bodies —
+      // some of the brightest things in the sky — are all scanned.
+      if (sat.kind === 'DEB') continue;
       const revsPerDay = tleMeanMotion(sat.l2);
       if (revsPerDay && revsPerDay < 1.2) continue;   // near-geostationary: no discrete passes
       const incl = tleInclination(sat.l2) || 0;
@@ -369,7 +373,7 @@ export function initStation({
       row.innerHTML =
         `<div class="conj-main"><span class="cnames">${esc(sat.name)}</span>` +
         `<span class="ckm">${p.visible ? '👁 ' : ''}${Math.round(p.peakEl)}°</span></div>` +
-        `<div class="conj-sub">${when} · ${durMin} min${p.visible ? ' · visible to the eye' : ''}${sat.kind === 'DEB' ? ' · debris' : ''}</div>`;
+        `<div class="conj-sub">${when} · ${durMin} min${p.visible ? ' · visible to the eye' : ''}${sat.kind !== 'SAT' && KIND_LABEL[sat.kind] ? ` · ${KIND_LABEL[sat.kind]}` : ''}</div>`;
       row.addEventListener('click', () => jumpToPass(p));
       listEl.appendChild(row);
     }

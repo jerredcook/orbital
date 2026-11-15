@@ -49,7 +49,7 @@ const info = await p.evaluate(() => {
   layer.brightness = 0.55; layer.saturation = 0.8;
   viewer.camera.flyHome(0);
   // Median element-set epoch = the date this picture of the sky is from.
-  const epochs = catalog.filter((s) => s.kind !== 'DEB').map((s) => {
+  const epochs = catalog.filter((s) => s.kind === 'SAT').map((s) => {
     const yy = parseInt(s.l1.slice(18, 20), 10), day = parseFloat(s.l1.slice(20, 32));
     return Date.UTC(yy < 57 ? 2000 + yy : 1900 + yy, 0, 1) + (day - 1) * 86_400_000;
   }).filter(Number.isFinite).sort((a, c) => a - c);

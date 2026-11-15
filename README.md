@@ -43,6 +43,7 @@ connection (from the cached shell and the cached element sets).
 | Zoom | scroll / pinch |
 | Tilt | middle-drag or ctrl-drag |
 | Select satellite | click a point |
+| What the dots are | blue / violet / yellow / orange: **active satellites** by orbit (LEO / MEO / GEO / HEO); pink: **inactive satellites**; green: **rocket bodies**; grey: **debris** and objects not yet identified. Each has a legend row with a live count and a switch. Headline counts (the first-visit card, the timeline, capture mode) count active satellites only |
 | Search | `/` or click the search box (name or NORAD ID) |
 | Deselect / close | `Esc` or click empty space |
 | First visit | a small starter card beside the globe (never over it): the live satellite count, and three ways in — **Find the Space Station**, **Watch 1957 → today**, **Take the tour**. It goes away for good once you pick a satellite, press one of its buttons or use the top bar (`src/starter.js`) |
@@ -270,21 +271,37 @@ Design decisions worth knowing before you extend it:
 Data freshness and resilience:
 
 - **The site serves its own satellite data.**  Browsers never contact
-  CelesTrak.  Every four hours the deploy workflow runs
-  `tools/fetch-data.mjs`: four requests for the active list and the
-  three debris lists (in OMM CSV), plus the 6.6 MB catalog CSV about once a day, cut down
-  to the rows and fields the app uses.  The result is validated
-  (`tools/satellite-data.mjs`, `tools/tle-snapshot.mjs`), built into the
-  site as `data/active.tle`, `data/debris.tle`, `data/satcat.json` and
-  `data/meta.json`, put through all three browser suites, and published —
-  nothing is committed.  A push within 3½ hours of the last refresh reuses
-  the live site's copy and asks CelesTrak nothing; a pull-request build
-  never asks.  That is at most about seven fetches a day from one place,
-  however many people visit, and a new visitor downloads about 1.2 MB from
-  GitHub Pages instead of ~9 MB from CelesTrak.  (Until 0.4.0 every browser
-  fetched from CelesTrak directly.  It rate-limits and then firewalls heavy
-  clients — the test suites got the developer's home connection blocked —
-  and for one visitor in four the download never arrived.)
+  CelesTrak or Space-Track.  Every four hours the deploy workflow runs
+  `tools/fetch-data.mjs`, which asks two sources:
+  - **Space-Track** (U.S. Space Command) for everything in orbit — about
+    32,700 objects: working satellites, dead ones, spent rocket bodies and
+    debris — with owner, launch date and site, in one request.  It needs
+    an account; the login is in the `SPACETRACK_USER` /
+    `SPACETRACK_PASSWORD` repository secrets (`tools/spacetrack.mjs` has
+    the terms: redistribution is approved "conditioned on appropriate
+    citation", element data at most once an hour).
+  - **CelesTrak** for its curated active list, which decides which
+    satellites count as active — one request, about once a day (the list
+    changes slowly; in between, the one the site has is reused, and a
+    satellite launched since is presumed active).
+  The result is validated (`tools/satellite-data.mjs`,
+  `tools/tle-snapshot.mjs`), built into the site as `data/active.tle`,
+  `inactive.tle`, `rocketbodies.tle`, `debris.tle`, `satcat.json` (owner,
+  launch and type per object) and `meta.json`, put through all three
+  browser suites, and published — nothing is committed.  A push within 3½
+  hours of the last refresh reuses the live site's copy and asks nobody; a
+  pull-request build never asks.  A new visitor downloads about 1.7 MB
+  from GitHub Pages.  (Until 0.4.0 every browser fetched ~9 MB from
+  CelesTrak directly.  It rate-limits and then firewalls heavy clients —
+  the test suites got the developer's home connection blocked — and for
+  one visitor in four the download never arrived.)
+- **Without Space-Track** — a fork with no login, or a run where it does
+  not deliver — CelesTrak alone is used: fresh active satellites, and the
+  rest of the catalogue kept as the site last had it (or, with nothing to
+  keep, CelesTrak's three debris clouds and catalog file, as before 0.5.0).
+  A laptop build has active satellites only, from the committed snapshot.
+  If Space-Track delivers nothing for two days the run is marked failed
+  after deploying, so the owner hears about an expired account.
 - **When the refresh fails.**  CelesTrak's
   [usage policy](https://celestrak.org/usage-policy.php) asks automated
   clients to stop at the first answer that is not HTTP 200 and tell a human;
@@ -423,10 +440,17 @@ Design notes for the 3D close-up view:
 
 ## Data sources
 
-- Element sets and SATCAT: [CelesTrak](https://celestrak.org) (Dr. T.S.
-  Kelso), fetched by the deploy workflow and served from this site.  Please
-  respect their bandwidth — if you fork this, keep the refresh at four hours
-  or slower, and never fetch from a browser or a test.
+- Orbital elements and catalogue details for everything in orbit:
+  [Space-Track.org](https://www.space-track.org) (U.S. Space Command, 18th
+  Space Defense Squadron), redistributed under its blanket approval for
+  basic SSA data, with this citation.
+- Which satellites are active: [CelesTrak](https://celestrak.org) (Dr. T.S.
+  Kelso).  Both are fetched by the deploy workflow and served from this
+  site.  Please respect their bandwidth — if you fork this, keep the
+  refresh at four hours or slower, and never fetch from a browser or a test.
+- The close approaches shown are computed from these public elements, which
+  Space-Track warns "should not be used for conjunction assessment
+  prediction".  They illustrate how crowded orbit is; they are not warnings.
 - Spacecraft 3D models: courtesy NASA (solarsystem.nasa.gov 3D resources
   and github.com/nasa/NASA-3D-Resources).  Spacecraft without a published
   model get a generated class-generic, not a real design.
@@ -498,7 +522,7 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.4.1 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.5.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
@@ -550,6 +574,7 @@ What the app does about its own bad days (`src/recover.js`,
 | Failure | What the visitor gets |
 | --- | --- |
 | The site's satellite data is slow, unreachable, or not satellite data | A returning visitor sees nothing: the saved copy is drawn at once and kept. A first visit waits one short limit (8 s), then gets the snapshot committed with the code |
+| Space-Track does not deliver | Active satellites still refresh from CelesTrak; dead satellites, rocket bodies and debris stay as they were. After two days the run is marked failed so the owner hears |
 | CelesTrak is down or blocks the refresh | Visitors are unaffected: the scheduled run fails, the site keeps its data, and the app warns once the elements are three days old |
 | Newer data arrives mid-visit | Swapped in place: the dots do not jump and the selected satellite stays selected |
 | Every data source is gone | A "couldn't load" notice with **Retry**; system, Moon and guide views still open |

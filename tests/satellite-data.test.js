@@ -3,7 +3,7 @@
 // CelesTrak may be asked.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { HOLD_MS, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, stampOf, tidy } from '../tools/satellite-data.mjs';
+import { HOLD_MS, activeListIsDue, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, stampOf, tidy } from '../tools/satellite-data.mjs';
 import { mergeGroups, withMeta } from '../src/catalog-parse.js';
 import { validateSnapshot } from '../tools/tle-snapshot.mjs';
 
@@ -155,3 +155,17 @@ describe('after CelesTrak fails a request', () => {
     expect(holdAfterFailure({ now: NOW, reason: 'x'.repeat(5000) }).reason.length).toBe(200);
   });
 });
+
+describe('how often CelesTrak is asked for its active list', () => {
+  it('about once a day, not at every four-hourly refresh', () => {
+    expect(activeListIsDue({ activeListAt: null, now: NOW })).toBe(true);
+    for (const h of [0.1, 4, 8, 12, 16, 19.9]) expect(activeListIsDue({ activeListAt: NOW - h * HOUR, now: NOW })).toBe(false);
+    for (const h of [20, 24, 72]) expect(activeListIsDue({ activeListAt: NOW - h * HOUR, now: NOW })).toBe(true);
+  });
+  it('so six refreshes a day make one request', () => {
+    let listAt = null, asked = 0;
+    for (let t = NOW; t < NOW + 72 * HOUR; t += 4 * HOUR) if (activeListIsDue({ activeListAt: listAt, now: t })) { asked++; listAt = t; }
+    expect(asked).toBeLessThanOrEqual(4);   // three days: the first, then one a day
+  });
+});
+

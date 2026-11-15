@@ -119,6 +119,7 @@
 }
 .cat-badge.leo { color: #5EC8E5; } .cat-badge.meo { color: #C9A0FF; }
 .cat-badge.geo { color: #FFD166; } .cat-badge.heo { color: #FF8C66; } .cat-badge.deb { color: #8B93A1; }
+.cat-badge.dead { color: #D98BA5; } .cat-badge.rb { color: #9BB86F; }
 .cat-owner { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8595A8; font-size: 12px; }
 .cat-empty { padding: 34px 10px; color: #8595A8; text-align: center; }
 
@@ -638,6 +639,8 @@ body:not(.system-mode) #system-legend { display: none; }
   margin: 28px 0 0; padding-top: 17px; border-top: 1px solid #1C2636;
   font-size: 12.5px; line-height: 1.6; color: #8595A8;
 }
+.guide-foot a { color: #C9D4E3; }
+.guide-foot a:hover { color: #FFB454; }
 .guide-card .welcome-go { margin-top: 18px; }
 
 .brand { display: flex; align-items: baseline; gap: 10px; }
@@ -676,7 +679,7 @@ body:not(.system-mode) #system-legend { display: none; }
 /* ---------- legend ---------- */
 #legend {
   position: absolute; left: 16px; top: 64px; z-index: 10;
-  width: 200px; padding: 12px 14px;
+  width: 212px; padding: 12px 14px;
   background: rgba(13,19,29,0.9); border: 1px solid #1E2A3A; border-radius: 6px;
   backdrop-filter: blur(6px);
 }
@@ -690,11 +693,14 @@ body:not(.system-mode) #system-legend { display: none; }
   padding: 4px 0; cursor: pointer; font-size: 13px;
 }
 .legend-row input { accent-color: #FFB454; }
+.legend-title-sub { margin-top: 8px; }
 .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .swatch.leo { background: #5EC8E5; }
 .swatch.meo { background: #C9A0FF; }
 .swatch.geo { background: #FFD166; }
 .swatch.heo { background: #FF8C66; }
+.swatch.dead { background: #D98BA5; }
+.swatch.rb { background: #9BB86F; }
 .swatch.deb { background: #8B93A1; }
 .swatch.conj { background: #FF4D5E; }
 .swatch.station { background: #5BE0C8; }
@@ -806,6 +812,8 @@ body.tl-on:not(.system-mode):not(.moon-mode):not(.clip-mode) #tl-era { top: calc
 #tl-era[hidden] { display: none; }
 
 .conj-range-row { font-size: 12px; color: #8595A8; padding-left: 24px; }
+.conj-note { font-size: 10.5px; line-height: 1.35; color: #7E8DA3; padding: 4px 0 2px 24px; }
+.conj-note[hidden] { display: none; }
 #conj-range {
   background: #0D131D; color: #C9D4E3; border: 1px solid #1E2A3A; border-radius: 3px;
   font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 4px;
