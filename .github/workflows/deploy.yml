@@ -48,16 +48,34 @@ jobs:
       # committed).  The ONLY step anywhere that contacts CelesTrak — and it
       # doesn't if the live site's copy is under 3½ hours old, so a burst of
       # pushes costs CelesTrak nothing.  A pull request never asks CelesTrak; a
-      # scheduled refresh that ends up without current data fails here, before
-      # anything is built.  If nothing is fetched and nothing is live, the build
+      # scheduled refresh that CelesTrak fails stops here, before anything is built.  If nothing is fetched and nothing is live, the build
       # falls back to the snapshot committed with the code (tools/prepare-data.mjs).
+      # CelesTrak's rule for automated clients: stop at the first answer that is
+      # not the data, and tell a human.  When that happens the fetch writes
+      # .celestrak-hold.json (no requests for 24 h) and a scheduled run fails so
+      # GitHub emails the owner.  The file is carried between runs in the
+      # Actions cache: restored here (newest wins), saved below when written.
+      - name: Restore the CelesTrak hold, if one is in force
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@v6
+        with:
+          path: .celestrak-hold.json
+          key: celestrak-hold-none
+          restore-keys: celestrak-hold-
       - name: Get the satellite data this build will publish
+        id: data
         run: |
           case "${{ github.event_name }}" in
             pull_request) node tools/fetch-data.mjs --no-celestrak ;;
             schedule)     node tools/fetch-data.mjs --scheduled ;;
             *)            node tools/fetch-data.mjs ;;
           esac
+      - name: Remember the CelesTrak hold for later runs
+        if: always() && steps.data.outputs.hold == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .celestrak-hold.json
+          key: celestrak-hold-${{ github.run_id }}-${{ github.run_attempt }}
       - run: npm test
       - run: npm run build
       # Gate the deploy on the headless smoke suite, run against the PRODUCTION

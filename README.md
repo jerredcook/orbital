@@ -285,10 +285,22 @@ Data freshness and resilience:
   fetched from CelesTrak directly.  It rate-limits and then firewalls heavy
   clients — the test suites got the developer's home connection blocked —
   and for one visitor in four the download never arrived.)
-- **When the refresh fails.**  If CelesTrak does not deliver, the scheduled
-  run fails visibly and the site keeps the data it has; a code push still
-  deploys, carrying the live data forward.  After three days without new
-  elements the app's "positions extrapolated" badge appears.
+- **When the refresh fails.**  CelesTrak's
+  [usage policy](https://celestrak.org/usage-policy.php) asks automated
+  clients to stop at the first answer that is not HTTP 200 and tell a human;
+  ignoring that gets the address firewalled.  So the first failed answer —
+  an error status, a timeout, a page that is not the list — ends that run's
+  requests, fails a scheduled run (GitHub emails the owner), and starts a
+  24-hour hold during which nothing asks CelesTrak (`.celestrak-hold.json`,
+  carried between runs in the Actions cache).  The site keeps the data it
+  has; a code push still deploys, carrying the live data forward.  After
+  three days without new elements the app's "positions extrapolated" badge
+  appears.
+- **Known gap: objects catalogued since 11 July 2026 are missing.**  Catalog
+  numbers passed 99,999 that day, the TLE text format cannot carry six
+  digits, and CelesTrak leaves those objects out of TLE-format answers.  The
+  fix is to fetch the OMM (CSV/JSON) format instead and build the SGP4
+  records from it, which needs satellite.js 6 or later.
 - **What a browser does.**  It keeps the last data it downloaded (Cache
   Storage) with its stamp — a hash of the three files, from `meta.json`.
   Boot draws that saved copy at once (`loadCatalogLocal()`), then at most

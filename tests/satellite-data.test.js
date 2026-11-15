@@ -3,7 +3,7 @@
 // CelesTrak may be asked.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { assemble, checkBundle, plan, satcatIsDue, satcatJson, stampOf, tidy } from '../tools/satellite-data.mjs';
+import { HOLD_MS, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, stampOf, tidy } from '../tools/satellite-data.mjs';
 import { mergeGroups, withMeta } from '../src/catalog-parse.js';
 import { validateSnapshot } from '../tools/tle-snapshot.mjs';
 
@@ -127,5 +127,31 @@ describe('when CelesTrak may be asked', () => {
     expect(satcatIsDue({ satcatFetchedAt: null, now: NOW })).toBe(true);
     expect(satcatIsDue({ satcatFetchedAt: NOW - 4 * HOUR, now: NOW })).toBe(false);
     expect(satcatIsDue({ satcatFetchedAt: NOW - 21 * HOUR, now: NOW })).toBe(true);
+  });
+});
+
+// CelesTrak's usage policy: stop at the first non-200 answer and tell a human;
+// keep asking and the address is firewalled.
+describe('after CelesTrak fails a request', () => {
+  const hold = holdAfterFailure({ now: NOW, reason: 'active list: HTTP 403' });
+  it('nothing asks it again for 24 hours', () => {
+    expect(hold.until - NOW).toBe(HOLD_MS);
+    expect(HOLD_MS).toBe(24 * HOUR);
+    for (const h of [0.1, 4, 8, 12, 23.9]) {
+      expect(onHold({ holdUntil: hold.until, now: NOW + h * HOUR })).toBe(true);
+      expect(plan({ liveFetchedAt: NOW - 10 * HOUR, now: NOW + h * HOUR, holdUntil: hold.until })).toBe('carry');
+      expect(plan({ liveFetchedAt: null, now: NOW + h * HOUR, holdUntil: hold.until })).toBe('none');
+    }
+  });
+  it('then it may be asked again', () => {
+    expect(onHold({ holdUntil: hold.until, now: NOW + 24.1 * HOUR })).toBe(false);
+    expect(plan({ liveFetchedAt: NOW - 10 * HOUR, now: NOW + 24.1 * HOUR, holdUntil: hold.until })).toBe('fetch');
+  });
+  it('a missing or unreadable hold is no hold', () => {
+    for (const v of [null, undefined, NaN, 'soon']) expect(onHold({ holdUntil: v, now: NOW })).toBe(false);
+  });
+  it('records why, briefly, for the person who looks', () => {
+    expect(hold.reason).toBe('active list: HTTP 403');
+    expect(holdAfterFailure({ now: NOW, reason: 'x'.repeat(5000) }).reason.length).toBe(200);
   });
 });

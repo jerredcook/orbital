@@ -97,13 +97,26 @@ export function checkBundle({ active, debris, satcat, meta }, { now = Date.now()
  *   'fetch'  get new ones from CelesTrak
  *   'carry'  CelesTrak may not be asked (a pull-request build): publish the live files whatever their age
  *   'none'   nothing live and nothing may be fetched — the build falls back to the committed snapshot
+ *
+ * `holdUntil`: CelesTrak answered an earlier request with an error, so it is not
+ * to be asked again before this time (see holdAfterFailure).
  */
-export function plan({ liveFetchedAt = null, now = Date.now(), maxAgeMs = 3.5 * HOUR, allowCelestrak = true }) {
+export function plan({ liveFetchedAt = null, now = Date.now(), maxAgeMs = 3.5 * HOUR, allowCelestrak = true, holdUntil = null }) {
   const haveLive = Number.isFinite(liveFetchedAt);
   if (haveLive && now - liveFetchedAt < maxAgeMs) return 'reuse';
-  if (allowCelestrak) return 'fetch';
+  if (allowCelestrak && !onHold({ holdUntil, now })) return 'fetch';
   return haveLive ? 'carry' : 'none';
 }
+
+// CelesTrak's usage policy (celestrak.org/usage-policy.php): software "should
+// immediately stop querying when it receives any non-HTTP 200 responses and
+// report the results to a human for investigation.  Repeatedly ignoring them
+// will end up sending your IP address to the firewall."  So one failed answer
+// ends that run's requests, fails the run (GitHub emails the owner), and
+// nothing asks CelesTrak again for a day.
+export const HOLD_MS = 24 * HOUR;
+export const onHold = ({ holdUntil = null, now = Date.now() }) => Number.isFinite(holdUntil) && now < holdUntil;
+export const holdAfterFailure = ({ now = Date.now(), reason = '' }) => ({ until: now + HOLD_MS, at: now, reason: String(reason).slice(0, 200) });
 
 /** Catalog details are refetched about once a day; in between, yesterday's are carried forward. */
 export const satcatIsDue = ({ satcatFetchedAt = null, now = Date.now(), maxAgeMs = 20 * HOUR }) =>
