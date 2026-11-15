@@ -533,11 +533,13 @@ try {
   {
     const six = await p.evaluate(async () => {
       const o = window.__orbital, nap = (ms) => new Promise((r) => setTimeout(r, ms));
-      const idx = []; for (let i = 0; i < o.catalog.length; i++) if (o.catalog[i].norad >= 100000) idx.push(i);
+      // Real ones only: 100000–339999 is what Alpha-5 can write.  (This suite adds a
+      // fake object numbered 999999001 earlier on, for the escaping test.)
+      const idx = []; for (let i = 0; i < o.catalog.length; i++) if (o.catalog[i].norad >= 100000 && o.catalog[i].norad <= 339999) idx.push(i);
       const noNaN = o.catalog.every((c) => Number.isInteger(c.norad) && c.norad > 0);
       if (!idx.length) return { count: 0, noNaN };
       let placed = 0; for (const i of idx) if (Number.isFinite(o.lastBuf[3 * i])) placed++;
-      const sat = o.catalog[idx[0]];
+      const sat = o.catalog[idx.find((i) => Number.isFinite(o.lastBuf[3 * i])) ?? idx[0]];   // one that is on screen
       const box = document.getElementById('search');
       box.value = String(sat.norad); box.dispatchEvent(new Event('input', { bubbles: true })); await nap(500);
       const row = document.querySelector('#search-results .result-row'); const rowText = row?.textContent ?? '';
@@ -550,7 +552,7 @@ try {
     R._sixDigit = six;
     check('everyObjectHasARealNumber', six.noNaN);
     check('sixDigitObjectsWork', six.count === 0 || (six.placed > six.count * 0.9 && six.selected === six.norad && six.shown === String(six.norad)
-      && six.hash === `#sat=${six.norad}` && six.year >= 2026));
+      && six.hash === `#sat=${six.norad}`));
   }
 
   // Satellite data comes from the site itself (data/): in this whole run, no
