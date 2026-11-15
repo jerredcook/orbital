@@ -1,10 +1,13 @@
 {
   "name": "orbital-tracker",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "data": "node tools/prepare-data.mjs",
+    "predev": "node tools/prepare-data.mjs",
     "dev": "vite",
+    "prebuild": "node tools/prepare-data.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

@@ -7,14 +7,14 @@
 //   node tools/make-timeline-stills.mjs <output-folder> [years]
 //   e.g. node tools/make-timeline-stills.mjs ~/Desktop/orbital-stills 2000,2010,2018,2026
 //
-// It never contacts CelesTrak: the satellites come from the snapshot bundled
-// with the app (public/fallback/active.tle — refresh it with
-// tools/fetch-fallback-tle.mjs), and the image is dated with that snapshot's
-// own date, so it cannot claim to be fresher than it is.
+// It never contacts CelesTrak: the satellites are the ones the local build
+// serves from data/ — on a laptop, the snapshot committed with the code
+// (public/fallback/active.tle; tools/prepare-data.mjs) — and the image is dated
+// with that snapshot's own date, so it cannot claim to be fresher than it is.
 import { chromium } from 'playwright-core';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { stubCelestrak } from '../scripts/celestrak-stub.mjs';
+import { blockCelestrak } from '../scripts/celestrak-stub.mjs';
 import { readFileSync } from 'node:fs';
 import { validateSnapshot } from './tle-snapshot.mjs';
 
@@ -35,7 +35,7 @@ mkdirSync(OUT, { recursive: true });
 
 const b = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader', '--use-gl=angle', '--enable-gpu'] });
 const p = await b.newPage({ viewport: { width: PANEL, height: PANEL }, deviceScaleFactor: 2 });
-await stubCelestrak(p);
+await blockCelestrak(p);
 await p.goto(`${SITE}?clip`, { waitUntil: 'load', timeout: 60000 });
 await p.waitForFunction(() => window.__orbital?.clip?.state === 'armed', null, { timeout: 90000 });
 

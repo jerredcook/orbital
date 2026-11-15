@@ -16,7 +16,7 @@
 // Uses playwright-core with channel:'chrome', so it needs Google Chrome present
 // but downloads no browsers.  Default port 5173 (Vite's default).
 import { chromium } from 'playwright-core';
-import { stubCelestrak } from './celestrak-stub.mjs';
+import { blockCelestrak } from './celestrak-stub.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
@@ -29,14 +29,16 @@ const b = await chromium.launch({
   args: ['--enable-unsafe-swiftshader', '--no-sandbox', '--use-gl=angle', '--enable-gpu', '--disable-dev-shm-usage'],
 });
 const p = await b.newPage({ viewport: { width: 1280, height: 800 } });
-await stubCelestrak(p);   // never the real CelesTrak — see celestrak-stub.mjs
+const celestrakHits = [];
+await blockCelestrak(p, celestrakHits);   // the app must never contact CelesTrak — see celestrak-stub.mjs
 await p.addInitScript(() => {
   try {
     localStorage.setItem('orbital.station', JSON.stringify({ lat: 40.7128, lon: -74.006 }));
     localStorage.setItem('orbital.welcomed', '1');
   } catch { /* ignore */ }
 });
-const pageErrors = []; const consoleErrors = [];
+const pageErrors = []; const consoleErrors = []; const dataRequests = [];
+p.on('request', (r) => { if (r.url().includes('/data/')) dataRequests.push(r.url()); });
 p.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 160)));
 p.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 160)); });
 
@@ -422,7 +424,7 @@ try {
   // setting up a screen recording always involves — must NOT start it.
   {
     const c = await b.newPage({ viewport: { width: 1280, height: 720 } });
-    await stubCelestrak(c);
+    await blockCelestrak(c, celestrakHits);
     await c.goto(`${URL}?clip=10`, { waitUntil: 'load', timeout: 30000 });
     await c.waitForFunction(() => /press Space/.test(document.getElementById('clip-hint')?.textContent || ''), { timeout: 45000 });
     const clip = () => c.evaluate(() => ({ year: Number(document.getElementById('clip-year').textContent), hint: !document.getElementById('clip-hint').hidden, end: Number(document.getElementById('tl-year').max) }));
@@ -482,7 +484,7 @@ try {
   // the visitor reaches for the top bar themselves.
   {
     const cx = await b.newContext({ viewport: { width: 1280, height: 800 } });   // empty storage: a new visitor
-    await stubCelestrak(cx);
+    await blockCelestrak(cx, celestrakHits);
     const s = await cx.newPage();
     await s.goto(URL, { waitUntil: 'load', timeout: 30000 });
     await s.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
@@ -523,6 +525,11 @@ try {
     check('timelineReadoutMirrorsLegend', yr >= 1975 && both.hud === '⏸' && both.legend === '⏸' && both.label.startsWith(both.year));
     await cx.close();
   }
+  // Satellite data comes from the site itself (data/): in this whole run, no
+  // page may have asked CelesTrak for anything.
+  R._celestrakHits = celestrakHits.slice(0, 3);
+  check('neverContactsCelestrak', celestrakHits.length === 0);
+  check('dataComesFromTheSite', dataRequests.some((u) => /\/data\/meta\.json/.test(u)) && dataRequests.some((u) => /\/data\/active\.tle\?v=[0-9a-f]+/.test(u)));
 } catch (e) {
   R._fatal = String(e).slice(0, 240);
 } finally {

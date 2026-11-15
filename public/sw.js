@@ -9,7 +9,7 @@
 //   • leave models/ and textures/ to the plain HTTP cache — they're large
 //     (multi-MB), immutable-ish, and double-storing them bloated phones'
 //     Cache Storage without making anything faster;
-//   • leave cross-origin requests (map tiles, TLE feeds) untouched;
+//   • leave cross-origin requests (map tiles) and the satellite data untouched;
 //   • warm the cache on the FIRST visit.  A service worker only sees requests
 //     made after it takes control, and on a first visit that is after the page
 //     has already loaded its shell and bundles — so without help the cache is
@@ -32,7 +32,11 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-const HEAVY = (path) => path.includes('/models/') || path.includes('/textures/') || path.includes('/fallback/');
+const HEAVY = (path) => path.includes('/models/') || path.includes('/textures/') || path.includes('/fallback/')
+  // The satellite data (data/*.tle, satcat.json, meta.json): data.js keeps its
+  // own copy and decides when to ask for newer — a second copy here would be
+  // 4 MB of waste, and a cached meta.json would hide new data.
+  || path.includes('/data/');
 // version.json is how a running page learns a newer build is live (version.js);
 // a cached copy would defeat it, so it always goes to the network.
 const LIVE = (path) => path.endsWith('/version.json');
@@ -76,7 +80,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;   // tiles / TLE feeds: straight to network
+  if (url.origin !== self.location.origin) return;   // map tiles: straight to network
   if (url.pathname.startsWith('/__data/')) return;   // data.js's Cache API namespace, not ours
   if (HEAVY(url.pathname)) return;                   // big assets ride the HTTP cache
   if (LIVE(url.pathname)) return;                    // must never be answered from cache

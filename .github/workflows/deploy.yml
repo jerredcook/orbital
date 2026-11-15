@@ -7,6 +7,15 @@ on:
   # gate — unit tests, build, all three browser suites — but never deploy.
   pull_request:
     branches: [main]
+  # Every four hours: refresh the satellite data.  The site serves its own copy
+  # of CelesTrak's lists (data/ — tools/fetch-data.mjs), so visitors' browsers
+  # never contact CelesTrak; this run is what keeps that copy current.  It
+  # rebuilds and re-tests the site with the new data and publishes it — no
+  # commit is made.  If CelesTrak does not deliver, the run fails and the site
+  # keeps the data it has.  (GitHub pauses schedules in a repository with no
+  # commits for 60 days; the twice-weekly launch-data commits keep it awake.)
+  schedule:
+    - cron: '23 */4 * * *'
   workflow_dispatch:
 
 # Let the workflow publish Pages and mint the deployment's OIDC token.
@@ -27,7 +36,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30   # the three smoke suites take ~8-10 min; anything past this is a hang
+    timeout-minutes: 40   # the three smoke suites take ~15 min, a slow data fetch up to ~8; anything past this is a hang
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -35,6 +44,20 @@ jobs:
           node-version: 24   # match the npm major that writes package-lock.json (npm 11 optionals choke npm 10)
           cache: npm
       - run: npm ci
+      # The satellite data this build will publish, into public/data/ (never
+      # committed).  The ONLY step anywhere that contacts CelesTrak — and it
+      # doesn't if the live site's copy is under 3½ hours old, so a burst of
+      # pushes costs CelesTrak nothing.  A pull request never asks CelesTrak; a
+      # scheduled refresh that ends up without current data fails here, before
+      # anything is built.  If nothing is fetched and nothing is live, the build
+      # falls back to the snapshot committed with the code (tools/prepare-data.mjs).
+      - name: Get the satellite data this build will publish
+        run: |
+          case "${{ github.event_name }}" in
+            pull_request) node tools/fetch-data.mjs --no-celestrak ;;
+            schedule)     node tools/fetch-data.mjs --scheduled ;;
+            *)            node tools/fetch-data.mjs ;;
+          esac
       - run: npm test
       - run: npm run build
       # Gate the deploy on the headless smoke suite, run against the PRODUCTION
@@ -50,6 +73,7 @@ jobs:
         run: |
           google-chrome --version
           ls -la dist/missions/ && head -c 120 dist/missions/recent.json; echo
+          ls -la dist/data/ && cat dist/data/meta.json
           node scripts/serve-dist.mjs 4173 &
           JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
           for i in $(seq 1 15); do
@@ -77,7 +101,8 @@ jobs:
       # dependencies broken one at a time — the data feed refusing or hanging,
       # imagery blocked, workers failing to load / crashing / stalling, the
       # graphics context lost, no network on relaunch, corrupt saved state and
-      # hostile links.  CelesTrak is stubbed, so this step needs no outside host.
+      # hostile links.  Like the two passes above it runs on the very data this
+      # build will publish, and fails if any page asks CelesTrak for anything.
       - name: Smoke test the production build on a bad day
         run: |
           for attempt in 1 2; do

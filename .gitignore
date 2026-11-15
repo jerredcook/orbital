@@ -7,3 +7,7 @@ coverage/
 # Private local copy of the expert review (never publish)
 orbital-review.local.html
 public/review/
+
+# The satellite data the site serves — fetched or built at build time, never committed
+# (tools/fetch-data.mjs on the deploy runner, tools/prepare-data.mjs everywhere else)
+public/data/

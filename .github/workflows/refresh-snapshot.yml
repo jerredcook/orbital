@@ -1,13 +1,13 @@
 name: Refresh satellite snapshot
 
-# public/fallback/active.tle is CelesTrak's active-satellite list, saved: what
-# the app shows when the live feed is unreachable, and what the test suites use
-# instead of CelesTrak.  Left alone it goes stale (it had drifted five months by
-# November 2026), so refresh it once a week — ONE request to CelesTrak.  (Weekly,
-# not monthly: in the first days of real traffic one visit in five was served
-# from it, so its age is what those visitors see.)
-# The fetch validates what it got and writes nothing if it is not a current,
-# well-formed active list; then the job fails and the old snapshot stays.
+# public/fallback/active.tle is CelesTrak's active-satellite list, saved in the
+# repository: what laptop builds, forks and the test suites are built from, and
+# the app's last resort.  Left alone it goes stale (it had drifted five months
+# by November 2026), so once a week it is replaced with the copy the live site
+# is serving (data/active.tle, which the deploy refreshes from CelesTrak every
+# four hours).  This job makes no request to CelesTrak.
+# The copy is validated first; if it is not a current, well-formed active list
+# nothing is written, the job fails and the old snapshot stays.
 # A push made with GITHUB_TOKEN does not trigger the deploy workflow, so it is
 # dispatched explicitly — which still runs the full smoke gate.
 
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Fetch CelesTrak's active list (one request)
+      - name: Copy the active list the live site is serving
         run: node tools/fetch-fallback-tle.mjs
       - name: Commit and deploy if it changed
         env:

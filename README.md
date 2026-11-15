@@ -11,9 +11,10 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL.  First load fetches two datasets from
-CelesTrak (the active-satellite element sets and the SATCAT metadata
-catalog, ~4 MB total) and caches them in the Cache Storage API (2 h TTL).
+Open the printed localhost URL.  The satellites come from the site's own
+`data/` folder, never from CelesTrak directly; on a laptop that folder is
+built, with no network access, from the snapshot committed with the code
+(`npm run dev` and `npm run build` do it for you — `tools/prepare-data.mjs`).
 
 No API keys or accounts are required.  The globe streams Esri World
 Imagery — high-resolution satellite photography, street-level in
@@ -73,7 +74,8 @@ src/surface.js              landing-site markers pinned on the surface globes
 src/ephemeris.js            JPL Keplerian planet positions (pure, no Cesium globe)
 src/scale.js                readable ⟷ true-scale mapping for the system view
 src/belt.js                 belt + Trojans + Hildas + families: Kepler swarms
-src/data.js                 CelesTrak fetch + TLE/SATCAT parsing + caching
+src/data.js                 loads the satellite data from the site's data/ folder; saved copy + update checks
+src/catalog-parse.js        TLE / SATCAT parsing and orbit classification (pure; shared with the build tools)
 src/decode.js               SATCAT owner & launch-site code expansion
 src/propagator.worker.js    SGP4 for the full catalog, off the main thread
 src/tca.worker.js           closest-approach search for conjunction pairs
@@ -246,9 +248,9 @@ Design decisions worth knowing before you extend it:
    mapping in `modelFor` takes one line per spacecraft.  TESS and JWST
    models are already in `public/models/`, waiting for their element
    sets to appear in the catalog.
-3. **Smarter refresh cadence** — auto-refresh exists (see below); a
-   nicety would be scheduling fetches off CelesTrak's own update times
-   instead of a fixed TTL.
+3. **Smarter refresh cadence** — the site refreshes its data from CelesTrak
+   every four hours (see below); a nicety would be scheduling that off
+   CelesTrak's own update times instead of a fixed interval.
 4. **All-vs-all screening** — per-target screening exists; the full
    SOCRATES-style catalog × catalog sweep is ~18k targets × the same
    pipeline.  Needs smarter sieving (orbit-path/MOID filter after the
@@ -267,36 +269,43 @@ Design decisions worth knowing before you extend it:
 
 Data freshness and resilience:
 
-- **Auto-refresh.**  Every 5 minutes the app checks whether the 2 h
-  element-set cache has lapsed; if so it re-fetches, diffs the NORAD ID
-  set against a persisted snapshot, hot-swaps the catalog in place
-  (swarm rebuild + worker re-init), and toasts what changed — new IDs
-  are launches, dropped IDs are decays/delistings.  The snapshot
-  survives sessions, so tomorrow's first load reports what changed
-  overnight.  A >20% catalog size jump is treated as a partial load or
-  its recovery and rebaselined silently rather than toasted.
-- **CelesTrak rate-limits.**  Re-fetch the big files too often and you
-  get HTTP 403 — or a stalled connection — for a couple of hours (ask me
-  how I know).  Defenses, weakest to strongest: every fetch is bounded by
-  a timeout (so a hung CelesTrak can't wedge the load); expired cache
-  entries are kept and served when a fetch fails; a **bundled offline
-  snapshot** (`public/fallback/active.tle` — CelesTrak's active list, refreshed
-  every Monday by `.github/workflows/refresh-snapshot.yml` with one
-  validated request via `tools/fetch-fallback-tle.mjs`) backs the main group so the
-  sky is never empty even on a cold load with CelesTrak down; and a
-  localStorage **circuit breaker** skips live CelesTrak calls for 10 min
-  after a failure, so reloads during an outage drop straight to the
-  fallback in ~1 s instead of eating a timeout per request.  A group that
-  fails entirely is skipped rather than failing the boot, and refresh
-  attempts are spaced ≥ 20 minutes apart.
-- **Satellites first, live data behind them.**  Boot never waits on
-  CelesTrak: `loadCatalogLocal()` draws this device's saved copy (if under
-  three days old) or the bundled snapshot at once, then `loadCatalog()`
-  fetches the live list and `applyCatalog()` swaps it in, carrying each
-  dot's last position and the current selection across so the swap is not
-  visible.  The first real traffic showed why: for about one visitor in
-  four the live list never arrived inside the old 15 s limit, and they
-  waited on an empty globe for the bundled list they could have had at once.
+- **The site serves its own satellite data.**  Browsers never contact
+  CelesTrak.  Every four hours the deploy workflow runs
+  `tools/fetch-data.mjs`: four small requests for the active list and the
+  three debris lists, plus the 6.6 MB catalog CSV about once a day, cut down
+  to the rows and fields the app uses.  The result is validated
+  (`tools/satellite-data.mjs`, `tools/tle-snapshot.mjs`), built into the
+  site as `data/active.tle`, `data/debris.tle`, `data/satcat.json` and
+  `data/meta.json`, put through all three browser suites, and published —
+  nothing is committed.  A push within 3½ hours of the last refresh reuses
+  the live site's copy and asks CelesTrak nothing; a pull-request build
+  never asks.  That is at most about seven fetches a day from one place,
+  however many people visit, and a new visitor downloads about 1.2 MB from
+  GitHub Pages instead of ~9 MB from CelesTrak.  (Until 0.4.0 every browser
+  fetched from CelesTrak directly.  It rate-limits and then firewalls heavy
+  clients — the test suites got the developer's home connection blocked —
+  and for one visitor in four the download never arrived.)
+- **When the refresh fails.**  If CelesTrak does not deliver, the scheduled
+  run fails visibly and the site keeps the data it has; a code push still
+  deploys, carrying the live data forward.  After three days without new
+  elements the app's "positions extrapolated" badge appears.
+- **What a browser does.**  It keeps the last data it downloaded (Cache
+  Storage) with its stamp — a hash of the three files, from `meta.json`.
+  Boot draws that saved copy at once (`loadCatalogLocal()`), then at most
+  every 30 minutes asks for `meta.json` (a few hundred bytes) and downloads
+  the lists only if the stamp has changed.  When they have, it diffs the
+  NORAD ID set against a persisted snapshot, hot-swaps the catalog in place
+  — `applyCatalog()` carries each dot's last position and the current
+  selection across, so the swap is not visible — and toasts what changed:
+  new IDs are launches, dropped IDs are decays/delistings.  A >20% size
+  jump is treated as a partial load or its recovery and rebaselined
+  silently.
+- **When the site's data cannot be read.**  Every request is bounded by a
+  timeout.  A returning visitor keeps the saved copy; a first visit falls
+  back to the snapshot committed with the code
+  (`public/fallback/active.tle`, replaced every Monday with the live
+  site's copy by `.github/workflows/refresh-snapshot.yml`); if that is
+  gone too, a notice with Retry.  Attempts are spaced ≥ 20 minutes apart.
 
 Design notes for the 3D close-up view:
 
@@ -389,7 +398,9 @@ Design notes for the 3D close-up view:
 ## Data sources
 
 - Element sets and SATCAT: [CelesTrak](https://celestrak.org) (Dr. T.S.
-  Kelso).  Please respect their bandwidth — keep the cache TTL ≥ 2 h.
+  Kelso), fetched by the deploy workflow and served from this site.  Please
+  respect their bandwidth — if you fork this, keep the refresh at four hours
+  or slower, and never fetch from a browser or a test.
 - Spacecraft 3D models: courtesy NASA (solarsystem.nasa.gov 3D resources
   and github.com/nasa/NASA-3D-Resources).  Spacecraft without a published
   model get a generated class-generic, not a real design.
@@ -461,15 +472,16 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.3.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.4.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
 To cut a release: bump `version` in `package.json`, add an entry to
 [`CHANGELOG.md`](CHANGELOG.md), commit, then `git tag vX.Y.Z && git push --tags`
 once that commit has passed the deploy gate.  The automated data commits (launch
-data twice a week, the satellite snapshot once a week) change the build, not
-the version.
+data twice a week, the committed satellite snapshot once a week) change the
+build, not the version; the four-hourly satellite-data refresh changes neither —
+it republishes the same build with new data, so nobody is offered a refresh.
 
 ## Recording a clip
 
@@ -499,9 +511,9 @@ It also counts failures, as a bare category with no message, stack or detail:
 `orbital/error/…` (`script`, `promise`, `network`, `boot`, `render`,
 `webgl-lost`, `worker-propagator`, `worker-tca`, `worker-passes`,
 `worker-gave-up`) and `orbital/degraded/…` (`catalog-stale`, `catalog-bundled`
-— the live feed failed and older elements were shown instead — plus why it
-failed, as one of `feed-timeout`, `feed-http-4xx`, `feed-http-5xx`,
-`feed-http-other`, `feed-network`, `feed-cooldown`).  Each is sent at
+— new data could not be loaded and a saved copy or the committed snapshot was
+shown instead — plus why, as one of `feed-timeout`, `feed-http-4xx`,
+`feed-http-5xx`, `feed-http-other`, `feed-network`, `feed-bad-data`).  Each is sent at
 most once per page load, so a count reads as "visitors this happened to".
 
 ## When things break
@@ -511,7 +523,9 @@ What the app does about its own bad days (`src/recover.js`,
 
 | Failure | What the visitor gets |
 | --- | --- |
-| CelesTrak is slow, refuses or hangs | Nothing visible: satellites are drawn at once from this device's saved copy or the bundled snapshot, and the live list is fetched behind them (30 s limit) and swapped in if it arrives. After a failure, a 10 min cooldown skips further attempts |
+| The site's satellite data is slow, unreachable, or not satellite data | A returning visitor sees nothing: the saved copy is drawn at once and kept. A first visit waits one short limit (8 s), then gets the snapshot committed with the code |
+| CelesTrak is down or blocks the refresh | Visitors are unaffected: the scheduled run fails, the site keeps its data, and the app warns once the elements are three days old |
+| Newer data arrives mid-visit | Swapped in place: the dots do not jump and the selected satellite stays selected |
 | Every data source is gone | A "couldn't load" notice with **Retry**; system, Moon and guide views still open |
 | Map imagery blocked | Satellites, search and selection work over a blank globe |
 | A worker fails to load, crashes, or stalls (30 s watchdog) | It is replaced and re-sent its state; after 3 failures in a minute the app stops retrying and offers a reload |

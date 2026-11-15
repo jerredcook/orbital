@@ -23,11 +23,10 @@
   <meta name="twitter:description" content="Track 17,000+ satellites and debris in real time, replay every launch since 1957, then fly out through the whole solar system." />
   <meta name="twitter:image" content="https://jerredcook.github.io/orbital/og.jpg" />
 
-  <!-- Warm the connections on the critical path: the CelesTrak catalog and the
-       Esri Earth imagery both load during boot.  The NASA Trek / ArcGIS globe
-       imagery is only fetched when you open the Moon or a planet, so it gets the
-       lighter dns-prefetch. -->
-  <link rel="preconnect" href="https://celestrak.org" crossorigin />
+  <!-- Warm the connection on the critical path: the Esri Earth imagery loads
+       during boot.  (The satellite data comes from this site itself.)  The NASA
+       Trek / ArcGIS globe imagery is only fetched when you open the Moon or a
+       planet, so it gets the lighter dns-prefetch. -->
   <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin />
   <link rel="dns-prefetch" href="https://trek.nasa.gov" />
   <link rel="dns-prefetch" href="https://astro.arcgis.com" />

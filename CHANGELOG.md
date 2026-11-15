@@ -3,10 +3,22 @@
 What changed in each version of Orbital, newest first, written for the people
 who use it.  Versions follow `major.minor.patch`: a new feature bumps the
 middle number, a fix bumps the last.  The automated data refreshes (launch data
-twice a week, the bundled satellite list once a week) do not change the version.
+twice a week, the satellite lists every four hours) do not change the version.
 
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
+
+## 0.4.0 — 15 November 2026
+
+- **Orbital now serves its own satellite data.** Your browser used to download
+  the satellite lists directly from CelesTrak, the free service that publishes
+  them.  The site now fetches them itself every four hours and hands them to
+  you from its own address.  A first visit downloads about 1.2 MB instead of
+  about 9 MB, and no longer depends on CelesTrak answering at that moment.
+- **Lighter return visits.** The app checks for new data with one tiny request
+  and downloads the lists only when they have changed.
+- Positions are computed from elements at most about five hours old
+  (previously up to two); the difference is not visible.
 
 ## 0.3.0 — 15 November 2026
 

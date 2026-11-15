@@ -2,7 +2,8 @@
 // the app works when everything it depends on works; this breaks those things
 // one at a time, in a real browser, and checks the visitor still gets a working
 // app or an honest way forward:
-//   • the satellite data feed refuses, or hangs without answering;
+//   • the satellite data refuses, hangs, or is not satellite data at all;
+//   • newer data arrives while a returning visitor is looking at the old;
 //   • every data source is gone (then comes back, and Retry works);
 //   • the map imagery host is blocked;
 //   • the position worker fails to load, crashes mid-flight, or silently stalls;
@@ -11,16 +12,16 @@
 //   • the network is gone on a later launch (the service worker's job);
 //   • saved settings are corrupt, and shared links are malformed or hostile.
 //
-// Each scenario gets a fresh browser profile.  CelesTrak is never contacted:
-// unless a scenario says otherwise it is replaced by a stand-in that serves the
-// bundled snapshot, so the run is deterministic and polite.
+// Each scenario gets a fresh browser profile.  The satellite data is the
+// build's own data/ folder; "the feed" failing means that folder failing.
+// CelesTrak is never contacted — any request to it is refused and fails the run.
 //
 //   npm run dev                      # terminal 1
 //   PORT=5173 npm run smoke:failures # terminal 2      (SMOKE_URL=… for a build)
 //   ONLY=offline,gpu …               # run just the scenarios whose name matches
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
-import { CELESTRAK, celestrakOk } from './celestrak-stub.mjs';
+import { blockCelestrak } from './celestrak-stub.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
@@ -36,9 +37,13 @@ const R = {};
 const notes = {};
 const check = (name, cond) => { R[name] = cond ? 'PASS' : 'FAIL'; if (process.env.SMOKE_TRACE) process.stderr.write(`[${R[name]}] ${name}\n`); };
 
-const celestrakRefuses = (route) => route.abort('connectionrefused');
+// The satellite data is the site's own data/ folder.  These stand in for its bad days.
+const DATA = '**/data/**';
+const dataRefused = (route) => route.abort('connectionrefused');
+const dataHangs = () => { /* never answer */ };
+const celestrakHits = [];
 
-async function scenario(name, { celestrak = celestrakOk, storage = {}, viewport = { width: 1280, height: 800 } } = {}, fn) {
+async function scenario(name, { data = null, storage = {}, viewport = { width: 1280, height: 800 } } = {}, fn) {
   if (ONLY.length && !ONLY.some((o) => name.includes(o))) return;
   const ctx = await b.newContext({ viewport });
   await ctx.addInitScript((extra) => {
@@ -50,7 +55,8 @@ async function scenario(name, { celestrak = celestrakOk, storage = {}, viewport 
       }
     } catch { /* ignore */ }
   }, storage);
-  await ctx.route(CELESTRAK, celestrak);
+  await blockCelestrak(ctx, celestrakHits);   // no scenario, however broken, may fall back to asking CelesTrak
+  if (data) await ctx.route(DATA, data);
   const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e).slice(0, 200)));
@@ -103,7 +109,7 @@ const passesWorker = (p) => p.workers().find((w) => w.url().includes('passes.wor
 
 // =========================================================== the data feed ====
 
-await scenario('feedRefused', { celestrak: celestrakRefuses }, async ({ p, errs }) => {
+await scenario('feedRefused', { data: dataRefused }, async ({ p, errs }) => {
   await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
   const s = await booted(p);
   check('feedRefused:bundledSnapshotLoads', s.catalog > 5000 && s.drawn > 5000);
@@ -115,68 +121,121 @@ await scenario('feedRefused', { celestrak: celestrakRefuses }, async ({ p, errs 
   check('feedRefused:noPageErrors', errs.length === 0);
 });
 
-// CelesTrak's usual failure is not a refusal but a connection that never
-// answers.  The visitor must not wait on it: the satellites are drawn from the
-// bundled list straight away, and the hung requests are given up on together
-// (one 30 s limit, not one per request) behind the scenes.
-await scenario('feedHangs', { celestrak: () => { /* never answer */ } }, async ({ p }) => {
+// A connection that never answers.  On a first visit there is nothing saved to
+// draw, so the visitor does wait — but for one short limit, then the snapshot.
+await scenario('feedHangs', { data: dataHangs }, async ({ p }) => {
   const t0 = Date.now();
   await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
-  const first = await onScreen(p, 25000);
+  const s = await booted(p, 70000);
   notes.feedHangsSecondsToSatellites = Math.round((Date.now() - t0) / 1000);
-  // Drawn while the feed is still hanging — i.e. nobody waited for it.
-  check('feedHangs:satellitesShowWithoutWaiting', first.catalog > 5000 && first.drawn > 5000 && !first.settled && !first.bootError);
-  check('feedHangs:dotsMoveWhileWaiting', await ticking(p));
-  check('feedHangs:noStaleWarningWhileWaiting', await O(p, () => document.getElementById('drift-badge').hidden));
-  const s = await booted(p, 75000);
-  notes.feedHangsSecondsToGiveUp = Math.round((Date.now() - t0) / 1000);
-  check('feedHangs:givesUpOnce', s.settled && Date.now() - t0 < 70000 && s.catalog > 5000 && s.drawn > 5000 && !s.bootError && !s.card);
+  // One 8 s limit, then the snapshot (≈9 s on a laptop; the bound leaves room
+  // for a CI runner several times slower, and still catches "one limit per file").
+  check('feedHangs:fallsBackAfterOneShortWait', s.catalog > 5000 && s.drawn > 5000 && !s.bootError && !s.card && Date.now() - t0 < 60000);
   check('feedHangs:countedAsTimeout', s.events.includes('degraded/feed-timeout') && s.events.includes('degraded/catalog-bundled'));
   check('feedHangs:dotsKeepMoving', await ticking(p));
 });
 
-// A slow link: CelesTrak answers, but later than the old 15 s limit.  Nobody is
-// waiting on it now, so it gets the time and the live list still lands.
-await scenario('feedSlow', { celestrak: async (route) => { await sleep(18000); await celestrakOk(route).catch(() => {}); } }, async ({ p }) => {
+// What the site sends is not satellite data — a captive portal's sign-in page,
+// say, answering 200 to everything.
+await scenario('feedIsGarbage', { data: (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Sign in to the airport Wi-Fi</body></html>' }) }, async ({ p, errs }) => {
   await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
-  const first = await onScreen(p, 25000);
-  check('feedSlow:satellitesShowWithoutWaiting', first.catalog > 5000 && first.drawn > 5000 && !first.settled);
-  const s = await booted(p, 60000);
-  const live = await O(p, () => { try { return Date.now() - JSON.parse(localStorage.getItem('orbital.tle.active')).t < 60000; } catch { return false; } });
-  check('feedSlow:liveListStillArrives', s.settled && live && !s.events.some((e) => e.startsWith('degraded/')));
+  const s = await booted(p);
+  check('feedIsGarbage:bundledSnapshotLoads', s.catalog > 5000 && s.drawn > 5000 && !s.bootError && !s.card);
+  check('feedIsGarbage:countedAsBadData', s.events.includes('degraded/feed-bad-data') && s.events.includes('degraded/catalog-bundled'));
+  check('feedIsGarbage:noPageErrors', errs.length === 0);
 });
 
-// The ordinary first visit: the bundled list is drawn, then the live list — a
-// different list: launches since, objects gone, the debris clouds — replaces
-// it.  That swap happens in full view, so it must be invisible: the dots stay
-// put, a satellite the visitor has already picked stays picked, and a newcomer
-// is not told the catalog "updated".
-const LIVE = (() => {
-  const lines = readFileSync(new URL('../public/fallback/active.tle', import.meta.url), 'utf8').split('\n');
-  const extra = ['ORBITAL TEST DEB', '1 99001U 99025ZZZ 26310.50000000  .00000100  00000-0  10000-3 0  9990', '2 99001  98.6000 100.0000 0010000  90.0000 270.0000 14.30000000100000'];
-  return { active: lines.slice(0, 3).concat(lines.slice(3 + 3 * 40)).join('\n'), debris: extra.join('\n'), dropped: 40 };
-})();
-const celestrakDiffers = async (route) => {
-  await sleep(5000);
-  const u = route.request().url();
-  const cors = { 'access-control-allow-origin': '*' };
-  if (u.includes('GROUP=active')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: cors, body: LIVE.active }).catch(() => {});
-  if (u.includes('GROUP=fengyun')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: cors, body: LIVE.debris }).catch(() => {});
-  if (u.includes('GROUP=')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: cors, body: '' }).catch(() => {});
-  return route.fulfill({ status: 404, headers: cors, body: 'not found' }).catch(() => {});
-};
-await scenario('liveListReplacesBundled', { celestrak: celestrakDiffers }, async ({ p, errs }) => {
+// Make the app believe its last check for new data was long ago, so the next
+// load asks the site again.
+const ageSavedCopy = (p) => O(p, () => {
+  const s = JSON.parse(localStorage.getItem('orbital.data'));
+  s.t -= 6 * 3600 * 1000;
+  localStorage.setItem('orbital.data', JSON.stringify(s));
+  return s.stamp;
+});
+
+// The ordinary case: nothing has changed on the site.  One tiny request says
+// so; the lists are not downloaded again, on this load or the next.
+await scenario('nothingNewIsCheap', {}, async ({ p }) => {
+  const asked = [];
+  p.on('request', (r) => { if (r.url().includes('/data/')) asked.push(r.url().replace(/^.*\/data\//, '')); });
   await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  const first = await booted(p);
+  notes.firstVisitDataRequests = [...asked];
+  check('nothingNewIsCheap:firstVisitDownloadsOnce', first.catalog > 5000 && asked.filter((u) => u.startsWith('active.tle')).length === 1 && asked[0].startsWith('meta.json'));
+  asked.length = 0;
+  await p.reload({ waitUntil: 'load', timeout: 30000 });
+  const again = await booted(p);
+  check('nothingNewIsCheap:reloadAsksNothing', again.catalog === first.catalog && asked.length === 0);
+  await ageSavedCopy(p);
+  await p.reload({ waitUntil: 'load', timeout: 30000 });
+  const later = await booted(p);
+  notes.laterDataRequests = [...asked];
+  check('nothingNewIsCheap:laterAsksOnlyWhetherAnythingChanged', later.catalog === first.catalog && asked.length === 1 && asked[0].startsWith('meta.json'));
+  check('nothingNewIsCheap:thenAsksNothingAgain', await O(p, () => JSON.parse(localStorage.getItem('orbital.data')).t > Date.now() - 60000));
+  check('nothingNewIsCheap:notCountedAsDegraded', !later.events.some((e) => e.startsWith('degraded/') || e.startsWith('error/')));
+});
+
+// A returning visitor on a day the site's data cannot be reached: the saved
+// copy is on screen at once, and the hung request is invisible.
+await scenario('returningVisitorFeedHangs', {}, async ({ ctx, p }) => {
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  await booted(p);
+  await ageSavedCopy(p);
+  await ctx.route(DATA, dataHangs);
+  const t0 = Date.now();
+  await p.reload({ waitUntil: 'load', timeout: 30000 });
   const first = await onScreen(p, 25000);
-  check('liveListReplacesBundled:bundledDrawnFirst', first.catalog > 5000 && !first.settled);
-  // The visitor picks the Space Station before the live list has arrived.
+  notes.returningSecondsToSatellites = Math.round((Date.now() - t0) / 1000);
+  // Drawn while the request is still hanging — i.e. nobody waited for it.
+  check('returningVisitorFeedHangs:satellitesShowWithoutWaiting', first.catalog > 5000 && first.drawn > 5000 && !first.settled && !first.bootError);
+  check('returningVisitorFeedHangs:dotsMoveWhileWaiting', await ticking(p));
+  check('returningVisitorFeedHangs:noStaleWarningWhileWaiting', await O(p, () => document.getElementById('drift-badge').hidden));
+  const s = await booted(p, 45000);
+  check('returningVisitorFeedHangs:givesUpQuietly', s.settled && s.catalog === first.catalog && !s.bootError && !s.card);
+  check('returningVisitorFeedHangs:countedAsStale', s.events.includes('degraded/feed-timeout') && s.events.includes('degraded/catalog-stale') && !s.events.includes('degraded/catalog-bundled'));
+  check('returningVisitorFeedHangs:dotsKeepMoving', await ticking(p));
+});
+
+// The site has newer data — a different list: launches since, objects gone,
+// other debris.  A returning visitor is already looking at the saved copy when
+// it arrives, so the swap must not disturb them: the dots stay put and the
+// satellite they have picked stays picked.
+const NEWER = (() => {
+  const lines = readFileSync(new URL('../public/fallback/active.tle', import.meta.url), 'utf8').split('\n').filter(Boolean);
+  const active = `${lines.slice(0, 3).concat(lines.slice(3 + 3 * 40)).join('\n')}\n`;   // 40 objects gone (the first is kept)
+  const debris = ['ORBITAL TEST DEB', '1 99001U 99025ZZZ 26310.50000000  .00000100  00000-0  10000-3 0  9990', '2 99001  98.6000 100.0000 0010000  90.0000 270.0000 14.30000000100000'].join('\n') + '\n';
+  return { active, debris, count: lines.length / 3 - 40 + 1, stamp: 'feedfacefeedface' };
+})();
+const newerData = async (route) => {
+  const name = new URL(route.request().url()).pathname.split('/').pop();
+  const send = (body, contentType = 'text/plain') => route.fulfill({ status: 200, contentType, body }).catch(() => {});
+  // Held back 10 s (the app waits up to 15): long enough, even on a slow CI
+  // runner, for the saved copy to be drawn and a satellite picked first.
+  if (name === 'meta.json') { await sleep(10000); return send(JSON.stringify({ stamp: NEWER.stamp, fetchedAt: Date.now() }), 'application/json'); }
+  if (!route.request().url().includes(`v=${NEWER.stamp}`)) return route.abort('failed');   // must ask for exactly the data meta.json described
+  if (name === 'active.tle') return send(NEWER.active);
+  if (name === 'debris.tle') return send(NEWER.debris);
+  if (name === 'satcat.json') return send('[]', 'application/json');
+  return route.abort('failed');
+};
+await scenario('newDataReplacesSavedCopy', {}, async ({ ctx, p, errs }) => {
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  const visit1 = await booted(p);
+  await sleep(800);
+  // A first visit downloads once and shows it: there is no swap, so no "catalog updated" notice.
+  check('newDataReplacesSavedCopy:newcomerSeesNoUpdateNotice', await O(p, () => document.querySelectorAll('#toasts .toast').length === 0));
+  await ageSavedCopy(p);
+  await ctx.route(DATA, newerData);
+  await p.reload({ waitUntil: 'load', timeout: 30000 });
+  const first = await onScreen(p, 25000);
+  check('newDataReplacesSavedCopy:savedCopyDrawnFirst', first.catalog === visit1.catalog && !first.settled);
+  // The visitor picks the Space Station before the new data has arrived.
   await O(p, () => { const o = window.__orbital; o.selectByIndex(o.catalog.findIndex((s) => s.norad === 25544)); });
-  // Watch the swap: sample the drawn count often and keep the lowest seen.
+  // Watch the swap: sample often what the dot cloud is drawing, keep the lowest seen.
   await O(p, () => {
     window.__minDrawn = Infinity;
     window.__watch = setInterval(() => {
-      // What the dot cloud itself is drawing (its per-dot "has a position" flags),
-      // not just the buffer it was last handed.
       const alive = window.__orbital.swarm?._alive; let n = 0;
       if (alive) for (let i = 0; i < alive.length; i++) n += alive[i];
       window.__minDrawn = Math.min(window.__minDrawn, n);
@@ -190,21 +249,19 @@ await scenario('liveListReplacesBundled', { celestrak: celestrakDiffers }, async
     return {
       minDrawn: window.__minDrawn, catalog: o.catalog.length, hasNew: o.catalog.some((c) => c.norad === 99001 && c.kind === 'DEB'),
       selected: o.selected ? o.catalog[o.selected.index]?.norad : null, name: document.getElementById('info-name').textContent,
-      toasts: [...document.querySelectorAll('#toasts .toast')].map((t) => t.textContent.slice(0, 60)),
-      label: document.getElementById('count-LEO').textContent,
+      saved: JSON.parse(localStorage.getItem('orbital.data')).stamp,
     };
   });
-  notes.liveSwap = { before: first.catalog, after: after.catalog, minDrawn: after.minDrawn, toasts: after.toasts };
-  check('liveListReplacesBundled:liveListSwappedIn', s.settled && after.catalog === first.catalog - LIVE.dropped + 1 && after.hasNew);
-  check('liveListReplacesBundled:dotsNeverVanish', after.minDrawn > first.catalog * 0.95);
-  check('liveListReplacesBundled:selectionSurvives', after.selected === 25544 && /ISS|ZARYA/i.test(after.name));
-  check('liveListReplacesBundled:newcomerSeesNoUpdateNotice', after.toasts.length === 0);
-  check('liveListReplacesBundled:notCountedAsDegraded', !s.events.some((e) => e.startsWith('degraded/') || e.startsWith('error/')));
-  check('liveListReplacesBundled:dotsKeepMoving', await ticking(p));
-  check('liveListReplacesBundled:noPageErrors', errs.length === 0);
+  notes.dataSwap = { before: first.catalog, after: after.catalog, minDrawn: after.minDrawn };
+  check('newDataReplacesSavedCopy:newDataSwappedIn', s.settled && after.catalog === NEWER.count && after.hasNew && after.saved === NEWER.stamp);
+  check('newDataReplacesSavedCopy:dotsNeverVanish', after.minDrawn > Math.min(first.catalog, after.catalog) * 0.9);
+  check('newDataReplacesSavedCopy:selectionSurvives', after.selected === 25544 && /ISS|ZARYA/i.test(after.name));
+  check('newDataReplacesSavedCopy:notCountedAsDegraded', !s.events.some((e) => e.startsWith('degraded/') || e.startsWith('error/')));
+  check('newDataReplacesSavedCopy:dotsKeepMoving', await ticking(p));
+  check('newDataReplacesSavedCopy:noPageErrors', errs.length === 0);
 });
 
-await scenario('everythingDown', { celestrak: celestrakRefuses }, async ({ ctx, p }) => {
+await scenario('everythingDown', { data: dataRefused }, async ({ ctx, p }) => {
   const blockSnapshot = (route) => route.abort('failed');
   await ctx.route('**/fallback/**', blockSnapshot);
   await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
@@ -220,6 +277,7 @@ await scenario('everythingDown', { celestrak: celestrakRefuses }, async ({ ctx, 
   await poll(() => O(p, () => !document.body.classList.contains('system-mode')), (v) => v, 10000);
   // The connection comes back: Retry recovers without a reload.
   await ctx.unroute('**/fallback/**', blockSnapshot);
+  await ctx.unroute(DATA, dataRefused);
   await p.locator('.toast.boot-error .toast-retry').click();
   const s2 = await booted(p);
   check('everythingDown:retryRecovers', s2.catalog > 5000 && s2.drawn > 5000 && !s2.bootError);
@@ -422,7 +480,7 @@ await scenario('offlineRelaunch', {}, async ({ ctx, p }) => {
 
 const GARBAGE = {
   'orbital.visits': '{not json', 'orbital.known-ids': '[[[', 'orbital.station': '{"lat":"north","lon":null}',
-  'orbital.tle.active': 'yesterday', 'orbital.tle.cosmos2251': '{"t":"soon"}', 'orbital.celestrak.down': 'banana',
+  'orbital.tle.active': 'yesterday', 'orbital.tle.cosmos2251': '{"t":"soon"}', 'orbital.celestrak.down': 'banana', 'orbital.data': '{"stamp":5,"t":"never"}',
   'orbital.satcat': '<html>', 'orbital.welcomed': '{}',
 };
 await scenario('corruptStorage', { storage: GARBAGE }, async ({ p, errs }) => {
@@ -471,6 +529,11 @@ await scenario('newVersionDeployed', {}, async ({ ctx, p }) => {
 });
 
 await b.close();
+
+// Across every scenario above — data refused, hung, garbage, everything down —
+// the app must never have fallen back to asking CelesTrak.
+if (!ONLY.length) check('neverContactsCelestrak', celestrakHits.length === 0);
+if (celestrakHits.length) notes.celestrakHits = celestrakHits.slice(0, 5);
 
 const fails = Object.entries(R).filter(([, v]) => v === 'FAIL').map(([k]) => k);
 console.log(JSON.stringify({ result: fails.length ? 'RED' : 'GREEN', checks: Object.keys(R).length, fails, R, notes }, null, 1));

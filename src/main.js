@@ -308,13 +308,12 @@ function bootFailed() {
   $('toasts').appendChild(el);
 }
 
-// Boot draws satellites from what is already on hand — this device's saved
-// copy, else the list bundled with the app (loadCatalogLocal: no request to
-// CelesTrak, so about as fast as the page itself) — and then fetches the live
-// list behind it and swaps it in.  The visitor never waits on CelesTrak to see
-// the sky, and a slow, refusing or unreachable CelesTrak costs them nothing
-// they can see.  Only when there is nothing on hand does boot wait for the
-// live list, as it always used to.
+// Boot draws satellites from this device's saved copy when it has one
+// (loadCatalogLocal: no network, so about as fast as the page itself), then
+// asks the site whether there is newer data and swaps it in if so.  A
+// returning visitor never waits on the network to see the sky.  A first visit
+// has nothing saved and downloads the lists — from this site's own data/
+// folder, never from CelesTrak (see data.js).
 let bootSettled = false;   // a catalog is on screen, or the load failed — retry loops key off this, not a fixed try-count
 async function boot() {
   bootSettled = false;
@@ -335,7 +334,7 @@ async function boot() {
     prevNames = new Map(local.map((s) => [s.norad, s.name]));
     applyCatalog(local);
     settle();
-    // Saved less than two hours ago: it IS the live list.  Otherwise go and get it.
+    // Checked within the last half hour: it is current.  Otherwise ask the site.
     if (cacheExpiresInMs() === 0) await refreshCatalog({ patient: true });
     feedSettled = true;
     return;
@@ -356,7 +355,8 @@ async function boot() {
 boot();
 
 // ----------------------------------------------------------- auto-refresh ----
-// When the 2 h element-set cache lapses, re-fetch and hot-swap the catalog.
+// Every half hour, ask the site whether it has newer data (it is refreshed
+// every four hours); when it does, download it and hot-swap the catalog.
 // New NORAD IDs are launches (or newly cataloged objects), dropped IDs are
 // decays/delistings; both get a toast.  The ID snapshot persists across
 // sessions, so tomorrow's first load reports what changed overnight.
@@ -423,7 +423,10 @@ let lastRefreshAttempt = 0;
 async function refreshCatalog({ patient = false } = {}) {
   lastRefreshAttempt = Date.now();
   try {
-    const list = await loadCatalog(status, { patient });
+    // have: the saved copy is what is on screen, so "nothing newer" comes back
+    // as null and costs one tiny request — no download, no re-parse, no swap.
+    const list = await loadCatalog(status, { patient, have: true });
+    if (!list) { status(`${catalog.length.toLocaleString()} objects on orbit`); return; }
     const unchanged = list.length === catalog.length
       && list.every((s, i) => s.norad === catalog[i].norad);
     if (unchanged) {
@@ -457,8 +460,8 @@ async function refreshCatalog({ patient = false } = {}) {
   }
 }
 
-// Stale-cache fallback means a refresh attempt re-parses the whole catalog
-// even when the source is down, so space the attempts out.
+// When the site cannot be reached, cacheExpiresInMs() stays at 0 — so space
+// the attempts out rather than retry every five minutes.
 setInterval(() => {
   if (!catalog.length) return;
   if (cacheExpiresInMs() > 0) return;

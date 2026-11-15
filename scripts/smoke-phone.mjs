@@ -12,7 +12,7 @@
 //   npm run dev                  # terminal 1
 //   PORT=5173 npm run smoke:phone # terminal 2      (SMOKE_URL=… for a build)
 import { chromium } from 'playwright-core';
-import { stubCelestrak } from './celestrak-stub.mjs';
+import { blockCelestrak } from './celestrak-stub.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
@@ -29,10 +29,12 @@ const PHONE = {
   userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
 };
 const ctx = await b.newContext(PHONE);
-await stubCelestrak(ctx);   // never the real CelesTrak — see celestrak-stub.mjs
+const celestrakHits = [];
+await blockCelestrak(ctx, celestrakHits);   // the app must never contact CelesTrak — see celestrak-stub.mjs
 const p = await ctx.newPage();
 const cdp = await ctx.newCDPSession(p);
-const pageErrors = []; const consoleErrors = [];
+const pageErrors = []; const consoleErrors = []; const dataRequests = [];
+p.on('request', (r) => { if (r.url().includes('/data/')) dataRequests.push(r.url()); });
 p.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 160)));
 p.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 160)); });
 
@@ -358,7 +360,7 @@ try {
   // work on a phone WITHOUT opening the drawer its controls live in.
   {
     const cx = await b.newContext(PHONE);   // a new visitor again (empty storage)
-    await stubCelestrak(cx);
+    await blockCelestrak(cx, celestrakHits);
     const s = await cx.newPage();
     await s.goto(URL, { waitUntil: 'load', timeout: 30000 });
     await s.waitForFunction(() => window.__orbital?.feedSettled && window.__orbital.catalog.length > 500 && window.__orbital.lastBuf, null, { timeout: 60000 });
@@ -368,15 +370,26 @@ try {
       return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, shown: !el.hidden && cs.display !== 'none' && r.width > 0 && r.height > 0 };
     }, sel);
     const hudYear = () => s.evaluate(() => Number(document.getElementById('tl-hud-year').textContent));
+    // Record, inside the page, the first year the readout shows once it appears.
+    // (Reading it from here a moment after the tap is a race: on a slow CI
+    // runner the replay is already past 1957 by the time the question arrives.)
+    await s.evaluate(() => {
+      const hud = document.getElementById('tl-hud'), year = document.getElementById('tl-hud-year');
+      window.__firstYear = null;
+      const note = () => { if (window.__firstYear === null && !hud.hidden) window.__firstYear = Number(year.textContent); };
+      new MutationObserver(note).observe(hud, { attributes: true, attributeFilter: ['hidden'] });
+      new MutationObserver(note).observe(year, { childList: true, characterData: true, subtree: true });
+    });
     await s.locator('#starter-timeline').tap();
     await sleep(600);
     const hud = await box('#tl-hud');
     const on0 = await s.evaluate(() => ({
       starterGone: document.getElementById('starter').hidden, drawerShut: !document.body.classList.contains('legend-open'),
-      year: Number(document.getElementById('tl-hud-year').textContent), playing: window.__orbital.timelinePlaying, hash: location.hash,
+      firstYear: window.__firstYear, year: Number(document.getElementById('tl-hud-year').textContent),
+      playing: window.__orbital.timelinePlaying, hash: location.hash,
     }));
     R._timelineShow = on0;
-    check('timelineShowStartsFromTheCard', on0.starterGone && on0.drawerShut && on0.playing && on0.year === 1957 && on0.hash === '#timeline');
+    check('timelineShowStartsFromTheCard', on0.starterGone && on0.drawerShut && on0.playing && on0.firstYear === 1957 && on0.hash === '#timeline');
     check('timelineHudOnScreen', !!hud && hud.shown && hud.x >= -1 && hud.r <= W + 1 && !overlap(hud, await box('#topbar')) && !overlap(hud, await box('#timebar')));
     let y = 1957;
     for (let i = 0; i < 60 && y < 1962; i++) { await sleep(300); y = await hudYear(); }
@@ -404,7 +417,7 @@ try {
   // Station" must do what it says.
   {
     const cx = await b.newContext(PHONE);
-    await stubCelestrak(cx);
+    await blockCelestrak(cx, celestrakHits);
     const s = await cx.newPage();
     await s.goto(`${URL}#timeline`, { waitUntil: 'load', timeout: 30000 });
     await s.waitForFunction(() => window.__orbital?.timelinePlaying === true, null, { timeout: 60000 });
@@ -421,6 +434,11 @@ try {
     check('starterFindsTheSpaceStation', /ISS|ZARYA/i.test(iss) && await s.evaluate(() => document.getElementById('starter').hidden));
     await cx.close();
   }
+  // Satellite data comes from the site itself (data/): in this whole run, no
+  // page may have asked CelesTrak for anything.
+  R._celestrakHits = celestrakHits.slice(0, 3);
+  check('neverContactsCelestrak', celestrakHits.length === 0);
+  check('dataComesFromTheSite', dataRequests.some((u) => /\/data\/meta\.json/.test(u)) && dataRequests.some((u) => /\/data\/active\.tle\?v=[0-9a-f]+/.test(u)));
 } catch (e) {
   R._fatal = String(e).slice(0, 400);
 } finally {

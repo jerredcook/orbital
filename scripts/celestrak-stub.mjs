@@ -1,25 +1,27 @@
-// celestrak-stub.mjs — a stand-in for CelesTrak in the browser suites.
+// celestrak-stub.mjs — proof that the app never contacts CelesTrak.
 //
-// The suites must never contact the real CelesTrak: every run starts from an
-// empty browser profile, so every run would download the whole catalog again,
-// from the developer's own address or a CI runner's.  CelesTrak rate-limits and
-// then firewalls clients that do that — which would take the live data away
-// from the very machine the app is being developed on.  So the element sets are
-// answered from the snapshot bundled with the app, and the optional SATCAT
-// metadata (owner, launch site) with a 404, which the app treats as "none".
+// The app loads its satellite data from its own site (data/, built from the
+// snapshot committed with the code when there is no fetched copy — see
+// tools/prepare-data.mjs), so a browser has no reason to talk to celestrak.org
+// at all.  That matters: CelesTrak firewalls clients that download its big
+// files repeatedly, and an earlier version of these suites — every run a fresh
+// browser profile, every profile a full download — got the developer's home
+// connection blocked.
 //
-//   await stubCelestrak(pageOrContext);     // before the first navigation
-import { readFileSync } from 'node:fs';
+// So every suite puts this in front of the browser: any request to CelesTrak is
+// refused and recorded, and the suite fails if the list is not empty.
+//
+//   const hits = [];
+//   await blockCelestrak(pageOrContext, hits);     // before the first navigation
+//   …
+//   check('neverContactsCelestrak', hits.length === 0);
 
-const SNAPSHOT = readFileSync(new URL('../public/fallback/active.tle', import.meta.url), 'utf8');
-const CORS = { 'access-control-allow-origin': '*' };
-export const CELESTRAK = /^https:\/\/celestrak\.org\//;
+export const CELESTRAK = /^https?:\/\/([a-z0-9-]+\.)*celestrak\.(org|com)\//i;
 
-export const celestrakOk = (route) => {
-  const u = route.request().url();
-  if (u.includes('GROUP=active')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: CORS, body: SNAPSHOT });
-  if (u.includes('GROUP=')) return route.fulfill({ status: 200, contentType: 'text/plain', headers: CORS, body: '' });
-  return route.fulfill({ status: 404, headers: CORS, body: 'not found' });
-};
-
-export const stubCelestrak = (target, handler = celestrakOk) => target.route(CELESTRAK, handler);
+export async function blockCelestrak(target, hits = []) {
+  await target.route(CELESTRAK, (route) => {
+    hits.push(route.request().url().slice(0, 120));
+    return route.abort('blockedbyclient');
+  });
+  return hits;
+}

@@ -2,7 +2,7 @@
 // app-side rule that debris and rocket bodies are never filed as satellites.
 import { describe, it, expect } from 'vitest';
 import { validateSnapshot, JUNK_NAME, epochMs } from '../tools/tle-snapshot.mjs';
-import { isJunkName } from '../src/data.js';
+import { isJunkName } from '../src/catalog-parse.js';
 import { readFileSync } from 'node:fs';
 
 const NOW = Date.UTC(2026, 10, 13);
