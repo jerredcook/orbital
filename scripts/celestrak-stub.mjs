@@ -3,10 +3,12 @@
 // The app loads its satellite data from its own site (data/, built from the
 // snapshot committed with the code when there is no fetched copy — see
 // tools/prepare-data.mjs), so a browser has no reason to talk to celestrak.org
-// at all.  That matters: CelesTrak firewalls clients that download its big
-// files repeatedly, and an earlier version of these suites — every run a fresh
-// browser profile, every profile a full download — got the developer's home
-// connection blocked.
+// at all.  That matters: CelesTrak allows one download of a list per update
+// (every two hours), refuses repeats with an HTTP 403, and firewalls clients
+// that keep asking or use more than 100 MB a day.  This project found out on
+// its second day (12 June 2026), when a caching bug made every page reload
+// download the big files again; and until November 2026 every run of these
+// suites — a fresh browser profile each time — did the same from CI.
 //
 // So every suite puts this in front of the browser: any request to CelesTrak is
 // refused and recorded, and the suite fails if the list is not empty.

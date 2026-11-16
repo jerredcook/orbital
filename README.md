@@ -293,7 +293,10 @@ Data freshness and resilience:
   pull-request build never asks.  A new visitor downloads about 2.0 MB
   from GitHub Pages.  (Until 0.4.0 every browser fetched ~9 MB from
   CelesTrak directly.  It rate-limits and then firewalls heavy clients —
-  the test suites got the developer's home connection blocked — and for
+  on this project's second day, 12 June 2026, a caching bug made every
+  page reload during development download the 2.7 MB catalog file again
+  (41 times) and the active list (85 times, ignoring the refusals), and
+  the developer's home address has been firewalled since — and for
   one visitor in four the download never arrived.)
 - **"What is this?"** — `data/about.json` holds, for each object anything is
   known about, a one-line description, a photo and the English Wikipedia
