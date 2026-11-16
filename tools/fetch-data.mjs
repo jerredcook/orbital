@@ -76,18 +76,22 @@ const PAUSE_MS = Number(process.env.ORBITAL_FETCH_PAUSE_MS ?? 3000);   // betwee
 const STATE_FILE = process.env.ORBITAL_STATE_FILE || join(dirname(fileURLToPath(import.meta.url)), '..', '.fetch-state.json');
 const SPACETRACK_GAP_MS = 61 * 60_000;   // Space-Track: element data at most once an hour
 const MAX_AGE_MS = 3.5 * 3_600_000;
-const UA = 'orbital (github.com/jerredcook/orbital; hobby tracker; one fetch per 4 h, served to visitors from our own site)';
+const UA = 'orbital (github.com/jerredcook/orbital; hobby tracker; fetched server-side and served to visitors from our own site)';
+// What CelesTrak sees: who this is, and how often to expect it — so its operator
+// can check the claim against his logs.  (With Space-Track supplying the orbits
+// that is the active list, once a day; without it, see fromCelestrak.)
+const CELESTRAK_UA = 'orbital (github.com/jerredcook/orbital; hobby tracker; active list about once a day; served to visitors from our own site)';
 const gp = (group) => `${CELESTRAK}/NORAD/elements/gp.php?GROUP=${group}&FORMAT=csv`;
 const STALE_MS = 12 * 3_600_000;   // a scheduled run fails once the site's data is this old
 const DEBRIS_GROUPS = ['cosmos-2251-debris', 'iridium-33-debris', 'fengyun-1c-debris'];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function get(url, ms) {
+async function get(url, ms, ua = UA) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
     let res;
-    try { res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': UA } }); }
+    try { res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': ua } }); }
     catch (err) {
       // fetch() itself rejecting (other than our own time limit) means no HTTP
       // answer ever began: DNS, a refused or timed-out connection, TLS.
@@ -134,7 +138,7 @@ async function readLive() {
 let refused = null, unreachable = null;
 async function ask(what, url, ms) {
   if (refused || unreachable) throw new Error(`not asked — an earlier request in this run failed (${refused || unreachable})`);
-  try { return await get(url, ms); }
+  try { return await get(url, ms, CELESTRAK_UA); }
   catch (err) {
     if (err.noAnswer) unreachable = `${what}: could not connect (${err.detail})`;
     else refused = `${what}: ${err.name === 'AbortError' ? 'no answer in time' : err.message}`;
