@@ -851,6 +851,9 @@ body.tl-on:not(.system-mode):not(.moon-mode):not(.clip-mode) #tl-era { top: calc
   margin-top: 8px; font-family: ui-monospace, monospace;
   font-size: 11px; color: #8595A8;
 }
+.legend-credit { margin-top: 4px; font-family: Inter, system-ui, sans-serif; font-size: 11.5px; white-space: nowrap; }
+.legend-credit a { color: #AEB9C8; text-decoration: none; border-bottom: 1px solid #2A3648; }
+.legend-credit a:hover { color: #FFB454; border-bottom-color: #FFB454; }
 
 /* ---------- info panel ---------- */
 #infopanel {
@@ -986,6 +989,8 @@ body.tl-on:not(.system-mode):not(.moon-mode):not(.clip-mode) #tl-era { top: calc
   .conj-row { min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
   .result-row { min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
   .legend-row { min-height: 34px; align-items: center; }
+  .legend-credit a { display: inline-block; padding: 9px 4px; }   /* a finger-sized target */
+  .legend-credit { padding-bottom: 10px; }
   #legend-toggle { display: inline-flex; align-items: center; }
   .tb-label { display: none; }                 /* icon-only System / Moon buttons */
   #topbar { z-index: 31; }                      /* keep the bar (and ☰) above the drawer + scrim */

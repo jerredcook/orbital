@@ -465,7 +465,8 @@ Design notes for the 3D close-up view:
   basic SSA data, with this citation.
 - Which satellites are active: [CelesTrak](https://celestrak.org) (Dr. T.S.
   Kelso).  Both are fetched by the deploy workflow and served from this
-  site.  Please respect their bandwidth — if you fork this, keep the
+  site, and both are credited, with links, at the foot of the side panel
+  and of the in-app guide.  Please respect their bandwidth — if you fork this, keep the
   refresh at four hours or slower, and never fetch from a browser or a test.
 - Descriptions, photos and article links: [Wikidata](https://www.wikidata.org)
   (CC0) and [Wikimedia Commons](https://commons.wikimedia.org) — each photo
@@ -547,7 +548,7 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.6.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.6.1 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 

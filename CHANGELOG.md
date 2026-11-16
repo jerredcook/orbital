@@ -8,6 +8,12 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.6.1 — 16 November 2026
+
+- **Data sources are credited on screen.** The foot of the side panel now
+  names and links Space-Track and CelesTrak, instead of only the end of the
+  guide.
+
 ## 0.6.0 — 16 November 2026
 
 - **What is this satellite?** Selecting a satellite now shows, where known, a

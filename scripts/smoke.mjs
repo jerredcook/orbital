@@ -420,6 +420,13 @@ try {
   check('noFalseUpdatePrompt', await p.evaluate(() => !document.querySelector('.toast.update')));
   // The help card says when the data on screen was fetched — how anyone can tell
   // whether a device is up to date.
+  // …and where it comes from is on screen in the side panel, each source linked.
+  check('dataSourcesCredited', await p.evaluate(() => {
+    const el = document.getElementById('data-credit'); const r = el.getBoundingClientRect();
+    const links = [...el.querySelectorAll('a')].map((a) => a.href);
+    return r.width > 0 && r.height > 0 && /Space-Track/.test(el.textContent) && /CelesTrak/.test(el.textContent)
+      && links.includes('https://www.space-track.org/') && links.includes('https://celestrak.org/');
+  }));
   R._dataDate = await p.evaluate(() => document.getElementById('data-version').textContent);
   check('dataDateShown', /^satellite data: \d{1,2} \w{3} \d{4},? \d\d:\d\d UTC$/.test(R._dataDate));
   check('noPageErrors', pageErrors.length === 0);

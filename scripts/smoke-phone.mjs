@@ -220,6 +220,16 @@ try {
   const drawer = await rect('#legend');
   check('drawerOpensOnScreen', await O(() => document.body.classList.contains('legend-open')) && fits(drawer));
   check('drawerLeavesGlobeVisible', !!drawer && drawer.w <= W * 0.87);
+  // The data credit sits at the foot of the drawer: scrolling there must bring
+  // it fully on screen, with links a finger can hit.
+  await O(() => document.getElementById('data-credit').scrollIntoView({ block: 'end' }));
+  await sleep(300);
+  const creditBox = await rect('#data-credit');
+  const creditLinks = await O(() => [...document.querySelectorAll('#data-credit a')].map((a) => { const r = a.getBoundingClientRect(); return { h: r.height, w: r.width, href: a.href }; }));
+  check('dataCreditReachableInDrawer', fits(creditBox) && creditLinks.length === 2 && creditLinks.every((l) => l.h >= 30 && l.w >= 30)
+    && creditLinks.some((l) => l.href === 'https://celestrak.org/') && creditLinks.some((l) => l.href === 'https://www.space-track.org/'));
+  await O(() => { document.getElementById('legend').scrollTop = 0; });
+  await sleep(200);
   const chip = p.locator('.group-chip[data-id=starlink]');
   await chip.tap();
   await sleep(300);
