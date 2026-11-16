@@ -54,8 +54,10 @@
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FILES, activeListIsDue, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, tidy } from './satellite-data.mjs';
+import { ABOUT_FILE, ELEMENT_FILES, FILES, activeListIsDue, assemble, checkBundle, holdAfterFailure, onHold, plan, satcatIsDue, satcatJson, tidy } from './satellite-data.mjs';
 import { GP_QUERY, checkCatalogue, parseGpCsv, splitCatalogue } from './spacetrack.mjs';
+import { ABOUT_MAX_AGE_MS, gatherAbout } from './fetch-about.mjs';
+import { checkAbout } from './about-data.mjs';
 import { parseTLEs } from '../src/catalog-parse.js';
 import { validateSnapshot } from './tle-snapshot.mjs';
 import { ommCsvToTle } from './omm.mjs';
@@ -111,7 +113,14 @@ async function readLive() {
     const bundle = { active, inactive, rocketbodies, debris, satcat, meta };
     const problems = checkBundle(bundle);
     if (problems.length) { say(`the live site's data is not usable (${problems[0]})`); return null; }
-    return { ...bundle, info: JSON.parse(meta) };
+    const info = JSON.parse(meta);
+    // The photos-and-descriptions file, if the site has one (0.6.0 on).  Optional: without it the app just shows less.
+    let about = null;
+    if (info.about?.stamp) {
+      try { about = await get(`${SITE}/data/${ABOUT_FILE}?v=${info.about.stamp}`, 120_000); if (checkAbout(about).length) about = null; }
+      catch { about = null; }
+    }
+    return { ...bundle, info, about };
   } catch (err) {
     say(`no data on the live site yet (${err.message})`);
     return null;
@@ -304,10 +313,34 @@ async function startHold(reason) {
   console.error(`satellite data: per its usage policy nothing will ask it again until ${new Date(hold.until).toISOString()} — a person should look at why before then.`);
 }
 
-async function write(bundle) {
+// ---- photos and descriptions (about.json) ----
+// Gathered about once a day for exactly the objects being published; otherwise
+// the site's existing file is kept.  Its sources (Wikidata, GCAT, Commons) have
+// nothing to do with the element sources' limits, so it is due or not on its own
+// clock, whichever way the elements were obtained — only a pull-request build
+// never asks.  Returns { json, info } or null (none).
+async function aboutFor(bundle, live, { mayFetch }) {
+  const have = live?.about ? { json: live.about, info: live.info.about } : null;
+  const due = !have || !(Date.now() - (have.info.at ?? 0) < ABOUT_MAX_AGE_MS);
+  if (!mayFetch || !due) return have;
+  const norads = ELEMENT_FILES.flatMap((k) => parseTLEs(bundle[k] ?? '').map((s) => s.norad));
+  let fresh = null;
+  try { fresh = await gatherAbout({ norads, previous: have?.json ?? null, say }); }
+  catch (err) { say(`about: could not be gathered (${err.message})`); }
+  if (!fresh) { if (have) say('about: keeping the file the site already has'); return have; }
+  return { json: fresh.json, info: { stamp: fresh.stamp, at: Date.now(), count: fresh.count, photos: fresh.photos } };
+}
+
+async function write(bundle, about = null) {
   const problems = checkBundle(bundle);
   if (problems.length) throw new Error(`refusing to write: ${problems.join('; ')}`);
   await mkdir(OUT, { recursive: true });
+  // meta.json says whether there is an about.json and which (its own stamp — it
+  // changes daily, and must not make every browser download the elements again).
+  const metaObj = JSON.parse(bundle.meta);
+  delete metaObj.about;
+  if (about && !checkAbout(about.json).length) { metaObj.about = about.info; await writeFile(join(OUT, ABOUT_FILE), about.json); }
+  bundle = { ...bundle, meta: `${JSON.stringify(metaObj, null, 1)}\n` };
   for (const k of Object.keys(FILES)) await writeFile(join(OUT, FILES[k]), bundle[k]);
   const m = JSON.parse(bundle.meta);
   const ageH = (Date.now() - m.fetchedAt) / 3_600_000;
@@ -328,22 +361,23 @@ let published = null;
 
 if (todo === 'reuse') {
   say('the live site was refreshed recently — publishing the same data again, nothing fetched');
-  published = await write(live);
+  published = await write(live, await aboutFor(live, live, { mayFetch: ALLOW_CELESTRAK }));
 } else if (todo === 'fetch') {
   try {
     const rows = haveSpaceTrack ? await spaceTrackCatalogue() : null;
-    if (rows) published = await write(await fromSpaceTrack(rows, live, { askCelestrak: !holding }));
+    const publish = async (b) => write(b, await aboutFor(b, live, { mayFetch: ALLOW_CELESTRAK }));
+    if (rows) published = await publish(await fromSpaceTrack(rows, live, { askCelestrak: !holding }));
     // Too soon to ask Space-Track again: wait for the next run rather than fall back to CelesTrak for an hour's sake.
-    else if (spaceTrackTooSoon && live) { say('carrying the live site’s data forward until Space-Track can be asked again'); published = await write(live); }
-    else if (!holding) published = await write(await fromCelestrak(live));
+    else if (spaceTrackTooSoon && live) { say('carrying the live site’s data forward until Space-Track can be asked again'); published = await write(live, await aboutFor(live, live, { mayFetch: ALLOW_CELESTRAK })); }
+    else if (!holding) published = await publish(await fromCelestrak(live));
     else throw new Error('Space-Track did not deliver and CelesTrak is on hold');
   } catch (err) {
     say(`fetch failed: ${err.detail ?? err.message}`);
-    if (live) { say('carrying the live site’s data forward'); published = await write(live); }
+    if (live) { say('carrying the live site’s data forward'); published = await write(live, await aboutFor(live, live, { mayFetch: ALLOW_CELESTRAK })); }
   }
 } else if (todo === 'carry') {
   say('nothing may be fetched for this build — carrying the live site’s data forward');
-  published = await write(live);
+  published = await write(live, await aboutFor(live, live, { mayFetch: ALLOW_CELESTRAK }));
 }
 
 if (!published) say('nothing fetched and nothing live — the build will use the snapshot committed with the code');

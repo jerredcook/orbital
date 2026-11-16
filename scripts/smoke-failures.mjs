@@ -263,6 +263,56 @@ await scenario('newDataReplacesSavedCopy', {}, async ({ ctx, p, errs }) => {
   check('newDataReplacesSavedCopy:noPageErrors', errs.length === 0);
 });
 
+// The photos-and-descriptions file is an extra.  Without it the detail panel
+// must be exactly what it was before it existed — and pick it up when it returns.
+const ABOUT = '**/data/about.json*';
+const aboutState = (p) => O(p, () => ({ shown: !document.getElementById('info-about').hidden, name: document.getElementById('info-name').textContent, panel: !document.getElementById('infopanel').hidden,
+  alt: document.getElementById('info-alt').textContent }));
+const selectNorad = (p, n) => O(p, (norad) => { const o = window.__orbital; const i = o.catalog.findIndex((s) => s.norad === norad); if (i >= 0) o.selectByIndex(i); return i >= 0; }, n);
+const hasAbout = (p) => O(p, async () => !!(await window.__orbital.loadAbout()));
+await scenario('aboutUnavailable', {}, async ({ ctx, p, errs }) => {
+  const refuse = (route) => route.abort('failed');
+  await ctx.route(ABOUT, refuse);
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  await booted(p);
+  await selectNorad(p, 25544); await sleep(1800);
+  const s = await aboutState(p);
+  check('aboutUnavailable:panelWorksWithoutIt', s.panel && /ISS|ZARYA/i.test(s.name) && /\d/.test(s.alt) && !s.shown);
+  check('aboutUnavailable:noPageErrors', errs.length === 0);
+  await ctx.unroute(ABOUT, refuse);
+  if (await hasAbout(p)) {                       // (a build with no about.json at all has nothing to come back)
+    await selectNorad(p, 20580);
+    const back = await poll(() => aboutState(p), (v) => v.shown, 8000);
+    check('aboutUnavailable:returnsWhenItCan', back.shown && /HST|HUBBLE/i.test(back.name));
+  }
+});
+
+// about.json is built from Wikidata, which anyone can edit.  Whatever it says is
+// shown as text, and every link goes to Wikipedia or Wikimedia Commons only.
+await scenario('aboutIsHostile', {}, async ({ ctx, p, errs }) => {
+  const evil = { v: 1, objects: { 25544: ['<img src=x onerror="window.__xss=1">space station', 'COM', '<script>window.__xss=2</script>', '1 Jan 2020', 0,
+    'javascript:alert(1)//"><svg onload=window.__xss=3>', '"><img src=x onerror=window.__xss=4>.jpg', '<b onmouseover="window.__xss=5">Mallory</b> · CC0'] } };
+  await ctx.route(ABOUT, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(evil) }));
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  await booted(p);
+  if (!(await O(p, () => fetch('data/meta.json', { cache: 'no-store' }).then((r) => r.json()).then((m) => !!m.about, () => false)))) return;   // nothing to subvert in a build without it
+  await selectNorad(p, 25544);
+  await poll(() => aboutState(p), (v) => v.shown, 8000);
+  await sleep(800);
+  const r = await O(p, () => ({
+    xss: window.__xss ?? null, shown: !document.getElementById('info-about').hidden,
+    injected: document.querySelectorAll('#about-desc *, #about-facts *, #info-about script, #info-about svg, #info-about b, #about-credit img').length,
+    desc: document.getElementById('about-desc').textContent,
+    wiki: (() => { try { const u = new URL(document.getElementById('about-wiki').href); return `${u.protocol}//${u.hostname}${u.pathname.slice(0, 6)}`; } catch { return 'bad'; } })(),
+    photo: (() => { try { const u = new URL(document.getElementById('about-photo').src); return `${u.protocol}//${u.hostname}${u.pathname.slice(0, 6)}`; } catch { return 'none'; } })(),
+    page: (() => { try { const u = new URL(document.getElementById('about-photo-link').href); return `${u.protocol}//${u.hostname}${u.pathname.slice(0, 6)}`; } catch { return 'none'; } })(),
+  }));
+  notes.hostileAbout = r;
+  check('aboutIsHostile:shownAsText', r.shown && r.injected === 0 && r.desc.includes('<img src=x'));
+  check('aboutIsHostile:nothingRuns', r.xss === null && errs.length === 0);
+  check('aboutIsHostile:linksStayOnWikimedia', r.wiki === 'https://en.wikipedia.org/wiki/' && ['https://commons.wikimedia.org/wiki/', 'none'].includes(r.photo) && ['https://commons.wikimedia.org/wiki/', 'none'].includes(r.page));
+});
+
 await scenario('everythingDown', { data: dataRefused }, async ({ ctx, p }) => {
   const blockSnapshot = (route) => route.abort('failed');
   await ctx.route('**/fallback/**', blockSnapshot);

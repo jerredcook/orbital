@@ -166,6 +166,22 @@ try {
   if (spot) await p.touchscreen.tap(spot.x, spot.y);
   const tapped = await poll(() => O(() => !!window.__orbital.selected), (v) => v, 12);
   check('tapSelectsSatellite', !!spot && tapped);
+  // The About section on a phone: the photo is a thumbnail beside the text, and
+  // the panel — which the checks above measure — must still fit with it in.
+  {
+    const ok = await O(async () => {
+      const o = window.__orbital, nap = (ms) => new Promise((r) => setTimeout(r, ms));
+      const objects = await o.loadAbout(); const i = o.catalog.findIndex((s) => s.norad === 20580);
+      if (!objects || !objects[20580] || i < 0) return { available: false };
+      o.selectByIndex(i); for (let k = 0; k < 20; k++) { await nap(200); if (!document.getElementById('info-about').hidden) break; } await nap(500);
+      const r = (id) => document.getElementById(id).getBoundingClientRect();
+      const panel = r('infopanel'), photo = r('about-photo-link'), box = r('info-about');
+      return { available: true, shown: !document.getElementById('info-about').hidden, photoW: photo.width, photoH: photo.height,
+        inside: box.left >= panel.left - 1 && box.right <= panel.right + 1, panelH: panel.height, panelBottom: panel.bottom, vh: innerHeight, vw: innerWidth, panelRight: panel.right };
+    });
+    R._aboutPhone = ok;
+    check('aboutFitsThePhonePanel', !ok.available || (ok.shown && ok.photoW > 40 && ok.photoW <= 100 && ok.photoH <= 100 && ok.inside && ok.panelH <= ok.vh * 0.5 && ok.panelBottom <= ok.vh + 1 && ok.panelRight <= ok.vw + 1));
+  }
   // Picking a satellite is the starter card's job done: it leaves, for good.
   check('starterLeavesOnceASatelliteIsPicked', await O(() => document.getElementById('starter').hidden && localStorage.getItem('orbital.welcomed') === '1'));
   const info1 = await rect('#infopanel');

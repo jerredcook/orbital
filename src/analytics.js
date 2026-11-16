@@ -52,6 +52,7 @@ const CLICK_IDS = {
   'tl-play': 'timeline-play', 'tl-hud-play': 'timeline-play', 'ptl-play': 'probe-timeline-play',
   'starter-iss': 'starter-iss', 'starter-timeline': 'starter-timeline', 'starter-tour': 'starter-tour',
   'starter-close': 'starter-close',
+  'about-wiki': 'about-wikipedia', 'about-photo-link': 'about-photo',
   'pass-setloc': 'station-place', 'pass-geoloc': 'station-geolocate',
   'info-track': 'follow', 'info-screen': 'screening',
   'sys-enter-planet': 'planet-descend', 'sys-moon-orbits': 'moon-orbits',

@@ -295,6 +295,20 @@ Data freshness and resilience:
   CelesTrak directly.  It rate-limits and then firewalls heavy clients —
   the test suites got the developer's home connection blocked — and for
   one visitor in four the download never arrived.)
+- **"What is this?"** — `data/about.json` holds, for each object anything is
+  known about, a one-line description, a photo and the English Wikipedia
+  article (from Wikidata, where an entry exists: ~7,500 objects, ~1,900
+  photos), and what the satellite was for and when it is believed to have
+  stopped working (from GCAT: every payload ever launched).  It is gathered
+  about once a day by `tools/fetch-about.mjs` — one Wikidata query, one GCAT
+  file, and the Commons API for the author and licence of any photo not
+  already credited — merged by `tools/about-data.mjs`, and loaded by the app
+  the first time something is selected (`src/about.js`).  It has its own
+  stamp, so its daily change never makes a browser download the elements
+  again, and nothing about it can fail a deploy: if a source is missing the
+  site keeps the file it has.  A photo with no known credit is left out; the
+  text is shown as text (it comes from sources anyone can edit); an end date
+  is only stated for a satellite the active list no longer carries.
 - **Without Space-Track** — a fork with no login, or a run where it does
   not deliver — CelesTrak alone is used: fresh active satellites, and the
   rest of the catalogue kept as the site last had it (or, with nothing to
@@ -453,6 +467,12 @@ Design notes for the 3D close-up view:
   Kelso).  Both are fetched by the deploy workflow and served from this
   site.  Please respect their bandwidth — if you fork this, keep the
   refresh at four hours or slower, and never fetch from a browser or a test.
+- Descriptions, photos and article links: [Wikidata](https://www.wikidata.org)
+  (CC0) and [Wikimedia Commons](https://commons.wikimedia.org) — each photo
+  under its own licence, credited with its author where it is shown.
+- What each satellite was for and when it stopped working: data from GCAT
+  (J. McDowell, [planet4589.org/space/gcat](https://planet4589.org/space/gcat)),
+  CC-BY.
 - The close approaches shown are computed from these public elements, which
   Space-Track warns "should not be used for conjunction assessment
   prediction".  They illustrate how crowded orbit is; they are not warnings.
@@ -527,7 +547,7 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.5.1 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.6.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
@@ -556,11 +576,17 @@ and debris are left out.  See `src/clip.js`.
 The live site (not local dev, forks, or tests) sends anonymous usage counts to
 [GoatCounter](https://www.goatcounter.com/): a page view, which features were
 opened (`orbital/use/…`, including which button of the first-visit card was
-pressed: `starter-iss`, `starter-timeline`, `starter-tour`, `starter-close`), and a coarse "which visit is this" bucket
+pressed: `starter-iss`, `starter-timeline`, `starter-tour`, `starter-close`, and
+whether an About link was followed: `about-wikipedia`, `about-photo`), and a coarse "which visit is this" bucket
 (`orbital/visit/…`, `orbital/back-after/…`).  No cookies, no fingerprinting, nothing that identifies a
 person; the visit counter itself stays in the browser's localStorage.  See
 `src/analytics.js`.  To exclude your own device, open the site once with
 `#toggle-goatcounter` on the end of the URL.
+
+Selecting a satellite that has a photo loads that photo from Wikimedia Commons
+(`commons.wikimedia.org`), so Wikimedia sees that request — without a referrer —
+as it would if you opened the image yourself.  Nothing else is fetched from a
+third party when you select something.
 
 It also counts failures, as a bare category with no message, stack or detail:
 `orbital/error/…` (`script`, `promise`, `network`, `boot`, `render`,
@@ -581,6 +607,7 @@ What the app does about its own bad days (`src/recover.js`,
 | The site's satellite data is slow, unreachable, or not satellite data | A returning visitor sees nothing: the saved copy is drawn at once and kept. A first visit waits one short limit (8 s), then gets the snapshot committed with the code |
 | Space-Track does not deliver | Active satellites still refresh from CelesTrak; dead satellites, rocket bodies and debris stay as they were. After two days the run is marked failed so the owner hears |
 | CelesTrak is down or blocks the refresh | Visitors are unaffected: the scheduled run fails, the site keeps its data, and the app warns once the elements are three days old |
+| The photos-and-descriptions file is missing, or a photo will not load | The panel shows what it always did; no gap, no error |
 | Newer data arrives mid-visit | Swapped in place: the dots do not jump and the selected satellite stays selected |
 | Every data source is gone | A "couldn't load" notice with **Retry**; system, Moon and guide views still open |
 | Map imagery blocked | Satellites, search and selection work over a blank globe |

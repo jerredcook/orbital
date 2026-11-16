@@ -12,7 +12,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FILES, assemble, checkBundle } from './satellite-data.mjs';
+import { createHash } from 'node:crypto';
+import { ABOUT_FILE, FILES, assemble, checkBundle } from './satellite-data.mjs';
+import { checkAbout } from './about-data.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'public', 'data');
@@ -48,7 +50,18 @@ if (problems.length) {
   for (const p of problems) console.error(`  • ${p}`);
   process.exit(1);
 }
+// Photos and descriptions: a small committed sample (five real entries — the ISS
+// and Hubble among them) so the "about" panel has something to show, and its
+// tests something to check, without any network.
+const about = await readFile(join(ROOT, 'tools', 'data', 'about-sample.json'), 'utf8').catch(() => null);
+if (about && !checkAbout(about).length) {
+  const meta = JSON.parse(built.meta);
+  const entries = Object.values(JSON.parse(about).objects);
+  meta.about = { stamp: createHash('sha256').update(about).digest('hex').slice(0, 16), at: meta.fetchedAt, count: entries.length, photos: entries.filter((r) => r[6]).length, sample: true };
+  built.meta = `${JSON.stringify(meta, null, 1)}\n`;
+}
 await mkdir(OUT, { recursive: true });
 for (const k of Object.keys(FILES)) await writeFile(join(OUT, FILES[k]), built[k]);
+if (about && JSON.parse(built.meta).about) await writeFile(join(OUT, ABOUT_FILE), about);
 const m = JSON.parse(built.meta);
 console.log(`satellite data: built from the committed snapshot (${m.counts.active.toLocaleString()} active, dated ${new Date(m.fetchedAt).toISOString().slice(0, 10)})`);

@@ -110,6 +110,26 @@ function build(bodies) {
 // ---- the network ----
 class BadData extends Error { constructor(msg) { super(msg); this.name = 'BadData'; } }
 
+// What meta.json last said — among other things, whether there is an about.json.
+let lastMeta = null;
+
+// Photos, descriptions and end-of-life dates (tools/about-data.mjs), fetched the
+// first time something is selected and kept for the rest of the visit.
+// Resolves the { number: record } object, or null when there is none to be had
+// (an older site, a laptop build without it, no connection) — the panel then
+// simply shows what it always did.
+let aboutPromise = null, aboutStamp = null;
+export function loadAbout() {
+  const stamp = lastMeta?.about?.stamp;
+  if (typeof stamp !== 'string' || !/^[0-9a-f]{8,64}$/.test(stamp)) return Promise.resolve(null);
+  if (aboutPromise && aboutStamp === stamp) return aboutPromise;
+  aboutStamp = stamp;
+  aboutPromise = get(`${DATA_URL}about.json?v=${stamp}`, 20000)
+    .then((text) => { const d = JSON.parse(text); return d?.v === 1 && d.objects && typeof d.objects === 'object' ? d.objects : null; })
+    .catch(() => { aboutPromise = null; return null; });   // try again on the next selection
+  return aboutPromise;
+}
+
 // Why new data did not arrive, as a bare category for the anonymous counts
 // (analytics.js) — no address, status text or message leaves the browser.
 //   timeout   it did not finish inside the time allowed (a hung or slow link)
@@ -169,6 +189,7 @@ export async function loadCatalog(onStatus, { patient = false, have = false } = 
     onStatus?.('checking for new satellite data…');
     const meta = JSON.parse(await get(`${DATA_URL}meta.json`, patient ? 15000 : 8000, { cache: 'no-store' }));
     if (!meta || typeof meta.stamp !== 'string' || !/^[0-9a-f]{8,64}$/.test(meta.stamp)) throw new BadData('meta.json has no stamp');
+    lastMeta = meta;
     if (have && shown?.stamp === meta.stamp) { shown.t = Date.now(); return null; }   // this page already has it (unsaved: private mode)
     if (saved && state?.stamp === meta.stamp) {
       // Nothing newer.  Note that we asked, so the next 30 minutes ask nothing.

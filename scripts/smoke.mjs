@@ -591,6 +591,40 @@ try {
     check('legendRowHidesItsOwnKindOnly', cats.toggle.offDead === 0 && cats.toggle.offSat === cats.toggle.before.SAT && cats.toggle.backOn === cats.toggle.before.DEAD);
   }
 
+  // "What is this?" — the About section of the detail panel (src/about.js):
+  // a photo with its credit, a description, the purpose and a link to read
+  // more, for objects the site's about.json describes; nothing at all for the
+  // rest.  (Present when the build has an about.json — it always should.)
+  {
+    const ab = await p.evaluate(async () => {
+      const o = window.__orbital, nap = (ms) => new Promise((r) => setTimeout(r, ms));
+      const objects = await o.loadAbout();
+      if (!objects) return { available: false };
+      const read = () => ({
+        shown: !document.getElementById('info-about').hidden, desc: document.getElementById('about-desc').textContent, facts: document.getElementById('about-facts').textContent,
+        wiki: document.getElementById('about-wiki').hidden ? null : document.getElementById('about-wiki').href,
+        photo: document.getElementById('about-photo-link').hidden ? null : document.getElementById('about-photo').src, loaded: document.getElementById('about-photo').naturalWidth,
+        photoPage: document.getElementById('about-photo-link').href, credit: document.getElementById('about-credit').textContent, creditLink: document.querySelector('#about-credit a')?.href ?? null,
+        name: document.getElementById('info-name').textContent,
+      });
+      const select = async (i) => { o.selectByIndex(i); for (let k = 0; k < 20; k++) { await nap(200); if (!document.getElementById('info-about').hidden) break; } await nap(400); return read(); };
+      const hubble = o.catalog.findIndex((s) => s.norad === 20580);
+      const withEntry = hubble >= 0 && objects[20580] ? await select(hubble) : null;
+      const bare = o.catalog.findIndex((s) => !objects[s.norad] && s.norad < 900000000);
+      o.selectByIndex(bare); await nap(1200);
+      const without = read();
+      document.getElementById('info-close').click(); await nap(200);
+      return { available: true, entries: Object.keys(objects).length, withEntry, without };
+    });
+    R._about = ab.available ? { entries: ab.entries, hubble: ab.withEntry && { desc: ab.withEntry.desc, facts: ab.withEntry.facts, credit: ab.withEntry.credit } } : { available: false };
+    const w = ab.withEntry;
+    check('aboutShowsWhatASatelliteIs', !ab.available || (!!w && w.shown && w.desc.length > 8 && /^Purpose: /.test(w.facts)
+      && /^https:\/\/en\.wikipedia\.org\/wiki\/\S+$/.test(w.wiki || '')));
+    check('aboutPhotoIsCredited', !ab.available || (!!w && /^https:\/\/commons\.wikimedia\.org\/wiki\/Special:FilePath\/\S+\?width=\d+$/.test(w.photo || '') && w.loaded > 0
+      && /^Photo: .+ · Wikimedia Commons$/.test(w.credit) && /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(w.creditLink || '') && w.photoPage === w.creditLink));
+    check('aboutAbsentWhenNothingIsKnown', !ab.available || (!ab.without.shown && ab.without.photo === null && ab.without.name.length > 0));
+  }
+
   // Satellite data comes from the site itself (data/): in this whole run, no
   // page may have asked CelesTrak for anything.
   R._celestrakHits = celestrakHits.slice(0, 3);

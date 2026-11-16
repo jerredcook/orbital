@@ -24,6 +24,8 @@ import { mergeGroups, parseSatcat } from '../src/catalog-parse.js';
 import { validateSnapshot, parseSnapshot, LINE1, LINE2 } from './tle-snapshot.mjs';
 
 export const FILES = { active: 'active.tle', inactive: 'inactive.tle', rocketbodies: 'rocketbodies.tle', debris: 'debris.tle', satcat: 'satcat.json', meta: 'meta.json' };
+/** Optional extra, published beside them but not part of the stamp: photos and descriptions (tools/about-data.mjs). */
+export const ABOUT_FILE = 'about.json';
 /** The element files, in the order the app merges them (first occurrence of a number wins). */
 export const ELEMENT_FILES = ['active', 'inactive', 'rocketbodies', 'debris'];
 const HOUR = 3_600_000;

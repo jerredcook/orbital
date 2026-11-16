@@ -135,7 +135,7 @@
         <h3>🛰 The live satellite tracker</h3>
         <p>The opening view is every <b>active</b> satellite in the public catalog plus the three biggest debris clouds — about 18,000 objects — each flown live from real tracking data, moving in real time.</p>
         <ul>
-          <li><b>Tap any dot</b> to lock on and follow it. The panel shows its name, catalog number, altitude, speed and orbit; the big, well-known craft (ISS, Hubble, Tiangong…) load a real 3D model as you zoom in.</li>
+          <li><b>Tap any dot</b> to lock on and follow it. The panel shows its name, catalog number, altitude, speed and orbit — and, for the ones somebody has written about, a real photo, what it is for, when it stopped working and a link to read more; the big, well-known craft (ISS, Hubble, Tiangong…) load a real 3D model as you zoom in.</li>
           <li><b>Colour says what it is</b> — working satellites by orbit type (low-Earth, medium, geostationary, highly-elliptical), then everything else up there: inactive satellites, spent rocket bodies and debris. The legend (top-left — behind ☰ on a phone) explains it and lets you switch any of them off to declutter.</li>
           <li><b>Search</b> up top by name or catalog number to jump straight to a craft.</li>
         </ul>
@@ -202,7 +202,7 @@
         </ul>
       </section>
 
-      <p class="guide-foot">Orbit data: <a href="https://www.space-track.org" target="_blank" rel="noopener">Space-Track.org</a> (U.S. Space Command, 18th Space Defense Squadron) for everything in orbit, and <a href="https://celestrak.org" target="_blank" rel="noopener">CelesTrak</a> (Dr. T.S. Kelso) for which satellites are active. A note on the realism: the planets ride JPL's Keplerian elements; the moons and probes carry real osculating elements from JPL Horizons (epoch 2026 — most accurate in the current era), with the major moons landing within about a degree of the truth. Two honest cheats: probe orbits keep their real tilt but have their shape gently eased so they stay in frame, and the system view is lit by a viewing light rather than the real Sun, so day/night lines out there aren't physical. It's a labour of love — a free page for family and friends. Clear skies! 🌌</p>
+      <p class="guide-foot">Orbit data: <a href="https://www.space-track.org" target="_blank" rel="noopener">Space-Track.org</a> (U.S. Space Command, 18th Space Defense Squadron) for everything in orbit, and <a href="https://celestrak.org" target="_blank" rel="noopener">CelesTrak</a> (Dr. T.S. Kelso) for which satellites are active. Satellite descriptions and photos: <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and Wikimedia Commons (each photo credited where shown); purposes and end-of-life dates: data from GCAT (J. McDowell, <a href="https://planet4589.org/space/gcat" target="_blank" rel="noopener">planet4589.org/space/gcat</a>). A note on the realism: the planets ride JPL's Keplerian elements; the moons and probes carry real osculating elements from JPL Horizons (epoch 2026 — most accurate in the current era), with the major moons landing within about a degree of the truth. Two honest cheats: probe orbits keep their real tilt but have their shape gently eased so they stay in frame, and the system view is lit by a viewing light rather than the real Sun, so day/night lines out there aren't physical. It's a labour of love — a free page for family and friends. Clear skies! 🌌</p>
       <button id="guide-done" class="welcome-go" type="button">Back to exploring →</button>
     </div>
   </div>
@@ -374,6 +374,14 @@
     <button id="info-close" aria-label="Close panel">×</button>
     <div class="eyebrow" id="info-regime">—</div>
     <h2 id="info-name">—</h2>
+    <!-- What this object is: photo, description, purpose (src/about.js; data/about.json). -->
+    <div id="info-about" hidden>
+      <a id="about-photo-link" target="_blank" rel="noopener" hidden><img id="about-photo" alt="" referrerpolicy="no-referrer" /></a>
+      <p id="about-desc"></p>
+      <p id="about-facts"></p>
+      <a id="about-wiki" target="_blank" rel="noopener" hidden>Read more on Wikipedia →</a>
+      <p id="about-credit"></p>
+    </div>
     <dl class="readout">
       <div class="live"><dt>Altitude now</dt><dd id="info-alt">—</dd></div>
       <div class="live"><dt>Speed now</dt><dd id="info-speed">—</dd></div>

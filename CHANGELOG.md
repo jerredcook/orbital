@@ -8,6 +8,17 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.6.0 — 16 November 2026
+
+- **What is this satellite?** Selecting a satellite now shows, where known, a
+  real photo of it, a one-line description, what it is or was for, and a link
+  to its Wikipedia article.  For inactive satellites it also says when they
+  are believed to have stopped working.
+- About 1,900 well-known satellites have photos; most of the rest have at
+  least a purpose.  Debris and rocket bodies have none of this.
+- Photos come from Wikimedia Commons with their author and licence; details
+  from Wikidata and from Jonathan McDowell's GCAT.
+
 ## 0.5.1 — 16 November 2026
 
 - **Reloading always gets the latest satellite data.** The app used to skip

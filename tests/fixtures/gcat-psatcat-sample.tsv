@@ -1,0 +1,8 @@
+#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	Result	Control	Discipline	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	DispEpoch	DispPeri	DispApo	DispInc	Comment
+# Updated 2026 Nov 15 1018:40
+S00005    	1958 BET 2	[Vanguard I]	1958 Mar 17 	1964 Mar	1964 Mar	1964 Mar	-	Vanguard Test	-	-	-	C	TECH	S	NRL	GEOD	US	A/AC.105/INF.001	  133.8 	     649	    3938	 34.3 	1958 Jun  7 	     653	    3960	 34.25 	First geodetic satellite
+S20580    	1990-037B	[HST]	1990 Apr 24 	2023 Feb  1	*	*	-	Great Obs	-	-	-	C	AST	S	-	OA/UVA*	US	ST/SG/SER.E/250	   96.8 	     610	     624	 28.4 	2009 May 23 	     562	     566	 28.47 	Large space telescope
+S25544    	1998-067A	Zarya Cargo Block	1998 Nov 20 	2023 Feb	*	*	-	TsM	-	-	M	C	SS	S	-	-	US	ST/SG/SER.E/614	   89.5 	     184	     349	 51.6 	2026 Aug  7 	     413	     423	 51.63 	-
+S27386    	2002-009A	[Envisat]	2002 Mar  1 	2012 Apr	2012 Apr  8	2012 Apr  8	-	ESA ERS	-	-	M	C	IMG-R	S	ESOC, Kiruna	ATM/ALT*	I-ESA	ST/SG/SER.E/432	  102.0 	     800	     800	 98.5 	2012 Apr 10 	     766	     767	 98.48 	SAR, Altimeter, radiometer
+S44713    	2019-074A	Starlink-1007	2019 Nov 11 	2023 Mar  1	2024 Jun 28	2024 Jul 24?	-	Starlink 1.0	1 1	-	M	B	COM	S	-	-	US	ST/SG/SER.E/928	   91.5 	     348	     351	 53.0 	2024 Jul 26 	     358	     359	 53.05 	-
+S00013    	1959 BET	[Discoverer I]	1959 Feb 28 	1959 Feb 28	1959 Feb 28	1959 Feb 28	-	CORONA Early	-	-	-	D	TECH	F	AFSCF	-	[US]	-	-	-	-	-	-	       0	       0	  0.00 	-

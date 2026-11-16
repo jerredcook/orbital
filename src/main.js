@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, dataFetchedAt, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
+import { loadCatalog, loadCatalogLocal, loadAbout, cacheExpiresInMs, dataFetchedAt, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
@@ -26,6 +26,7 @@ import { initGroups } from './groups.js';
 import { initCoverage } from './coverage.js';
 import { initTour } from './tour.js';
 import { initStarter } from './starter.js';
+import { initAbout } from './about.js';
 import { initMissions } from './missions.js';
 import { initCatalogBrowser } from './catalog-browser.js';
 import { esc } from './esc.js';
@@ -691,8 +692,10 @@ handler.setInputAction((click) => {
 
 // ------------------------------------------------------------- info panel ----
 
+const about = initAbout({ $ });
 function fillInfoPanel(sat) {
   const m = sat.meta;
+  about.show(sat);   // photo, description, purpose — when about.json has this object
   $('info-regime').textContent = isActiveSat(sat) ? `${sat.regime} · NORAD catalog`
     : sat.kind === 'DEAD' ? `INACTIVE SATELLITE · ${sat.regime}`
       : sat.kind === 'RB' ? `ROCKET BODY · ${sat.regime}`
@@ -1387,6 +1390,7 @@ window.__orbital = {
   get posTicks() { return posTicks; },                     // debug: applied full-catalog updates
   get lastBuf() { return lastBuf; },                       // debug: latest positions (ECF metres, xyz per satellite)
   get feedSettled() { return feedSettled; },               // debug: this load's attempt at the live list has finished
+  loadAbout,                                               // debug: the photos-and-descriptions data (null when the site has none)
   get events() { return trackedEvents(); },                // debug: usage/error events recorded this load (sent or not)
   version: { version: VERSION, build: BUILD },             // debug: which build is running
   clip,                                                     // capture mode's still-frame hook (undefined outside ?clip)
