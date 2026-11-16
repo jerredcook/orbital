@@ -124,9 +124,21 @@ describe('the real CelesTrak sample', () => {
   });
 });
 
-// Every real element set CelesTrak has given us, taken apart by column and put
-// back together through the converter, must come back byte for byte — checksum
-// included.  This is what proves the column layout and number formats.
+// Every real element set in the committed snapshot, taken apart by column and
+// put back together through the converter, must come back the same — which is
+// what proves the column layout and number formats.
+//
+// "The same" allows for the two things sources legitimately write differently
+// (the snapshot is replaced every week from the live site, whose lines are
+// mostly Space-Track's own; before that they were CelesTrak's):
+//   • a zero drag or second-derivative term: " 00000+0" (CelesTrak, and this
+//     converter) or " 00000-0" (Space-Track);
+//   • a catalogue number under 10000: zero-padded or space-padded.
+// Neither changes the orbit.  Both change line 1's checksum digit, so that
+// digit is compared by rule (it must be right for the line it is on) rather
+// than by equality.  When the first weekly refresh brought Space-Track's
+// spelling in, a byte-for-byte version of this test failed and blocked every
+// deploy for half a day.
 describe('round trip of the committed snapshot', () => {
   const expo = (f) => Number(`${f[0] === '-' ? '-' : ''}0.${f.slice(1, 6)}e${f.slice(6, 8)}`);
   const toRow = (name, l1, l2) => {
@@ -143,17 +155,38 @@ describe('round trip of the committed snapshot', () => {
       BSTAR: String(expo(l1.slice(53, 61))), MEAN_MOTION_DOT: l1.slice(33, 43).replace(' ', ''), MEAN_MOTION_DDOT: String(expo(l1.slice(44, 52))),
     };
   };
-  it('reproduces every line exactly', () => {
+  // One spelling for the two equivalent ones, and no checksum digit.
+  const zero = (f) => (/^[ +-]00000[+-]0$/.test(f) ? ' 00000+0' : f);
+  const norm1 = (l) => `1 ${numberToAlpha5(alpha5ToNumber(l.slice(2, 7)))}${l.slice(7, 44)}${zero(l.slice(44, 52))} ${zero(l.slice(53, 61))}${l.slice(61, 68)}`;
+  const norm2 = (l) => `2 ${numberToAlpha5(alpha5ToNumber(l.slice(2, 7)))}${l.slice(7, 68)}`;
+
+  it('reproduces every line, column for column', () => {
     const lines = SNAPSHOT.split('\n').filter(Boolean);
-    let same = 0; const firstDiff = [];
+    let same = 0, exact = 0, badChecksum = 0; const firstDiff = [];
     for (let i = 0; i + 2 < lines.length; i += 3) {
-      const r = ommToTle(toRow(lines[i], lines[i + 1], lines[i + 2]));
-      if (r.lines && r.lines[1] === lines[i + 1] && r.lines[2] === lines[i + 2]) same++;
-      else if (firstDiff.length < 3) firstDiff.push({ want: [lines[i + 1], lines[i + 2]], have: r.lines?.slice(1) ?? r.why });
+      const [l1, l2] = [lines[i + 1], lines[i + 2]];
+      const r = ommToTle(toRow(lines[i], l1, l2));
+      if (r.lines && norm1(r.lines[1]) === norm1(l1) && norm2(r.lines[2]) === norm2(l2)) same++;
+      else if (firstDiff.length < 3) firstDiff.push({ want: [l1, l2], have: r.lines?.slice(1) ?? r.why });
+      if (r.lines && r.lines[1] === l1 && r.lines[2] === l2) exact++;
+      if (r.lines && !(checksumOk(r.lines[1]) && checksumOk(r.lines[2]))) badChecksum++;
+      // …and the source's own checksums are right too, so the comparison above is against sound lines.
+      if (!(checksumOk(l1) && checksumOk(l2))) badChecksum++;
     }
     expect(firstDiff).toEqual([]);
     expect(same).toBeGreaterThan(8000);
     expect(same).toBe(lines.length / 3);
+    expect(badChecksum).toBe(0);
+    expect(exact).toBeGreaterThan(0);   // lines with no zero term come back byte for byte, checksum included
+  });
+  it('treats the two spellings of zero as the same, and nothing else', () => {
+    const a = '1 00900U 64063C   26319.86678133  .00000625  00000-0  62499-3 0  9997';
+    const b = '1 00900U 64063C   26319.86678133  .00000625  00000+0  62499-3 0  9996';
+    expect(norm1(a)).toBe(norm1(b));
+    expect(norm1(a)).not.toBe(norm1(a.replace('62499-3', '62499-4')));        // a different drag term is a different line
+    expect(norm1(a)).not.toBe(norm1(a.replace('.00000625', '.00000626')));
+    expect(norm1('1     5U 58002B   26319.39760256  .00000394  00000-0  52060-3 0  9991')).toBe(norm1('1 00005U 58002B   26319.39760256  .00000394  00000+0  52060-3 0  9990'));
+    expect(norm2('2     5  34.2424 207.5955 1839390 100.3592 280.8433 10.86101342459723')).toBe(norm2('2 00005  34.2424 207.5955 1839390 100.3592 280.8433 10.86101342459723'));
   });
 });
 
