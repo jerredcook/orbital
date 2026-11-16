@@ -624,3 +624,11 @@ What the app does about its own bad days (`src/recover.js`,
 All of it is exercised in a real browser by `npm run smoke:failures`
 (`scripts/smoke-failures.mjs`), which the deploy is gated on alongside the
 desktop and phone passes.
+
+**The gate.**  A deploy is four jobs (`.github/workflows/deploy.yml`): *build*
+(fetch the data, unit tests, build the site), *test* (the browser suites, each
+on its own runner against that exact build — desktop, phone, and the bad-day
+suite split in two with `SHARD=n/2`), *deploy* (only if every test job
+passed), and *attention* (fails the run after deploying when a data source
+needs a person).  Running the suites side by side takes a deploy from about 22
+minutes to about 10.

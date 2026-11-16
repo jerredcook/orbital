@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       attention: ${{ steps.data.outputs.attention }}
-    timeout-minutes: 40   # the three smoke suites take ~15 min, a slow data fetch up to ~8; anything past this is a hang
+    timeout-minutes: 20   # install, data fetch (up to ~8 min if a source is slow), unit tests, build; anything past this is a hang
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -89,56 +89,20 @@ jobs:
           key: fetch-state-${{ github.run_id }}-${{ github.run_attempt }}
       - run: npm test
       - run: npm run build
-      # Gate the deploy on the headless smoke suite, run against the PRODUCTION
-      # build (scripts/smoke.mjs: ~35 behaviour checks — selection + live readout,
-      # groups/coverage, station + passes + sky chart, system/Moon views, XSS
-      # escaping, dialog focus, idle-pause) using the runner's preinstalled
-      # Chrome with software WebGL.  dist/ is served by scripts/serve-dist.mjs
-      # (a deliberately dumb static server — `vite preview` was observed 404-ing
-      # real assets under browser Accept-Encoding headers).  One retry absorbs a
-      # transient flake; two straight failures mean the build is genuinely broken
-      # and the previous deploy stays live.
-      - name: Smoke test the production build
+      - name: What was built
         run: |
-          google-chrome --version
           ls -la dist/missions/ && head -c 120 dist/missions/recent.json; echo
           ls -la dist/data/ && cat dist/data/meta.json
-          node scripts/serve-dist.mjs 4173 &
-          JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
-          for i in $(seq 1 15); do
-            curl -sf "http://localhost:4173/orbital/$JS" -o /dev/null && break
-            sleep 1
-          done
-          for attempt in 1 2; do
-            if SMOKE_URL=http://localhost:4173/orbital/ node scripts/smoke.mjs; then exit 0; fi
-            echo "smoke attempt $attempt failed"
-          done
-          exit 1
-      # The phone pass (scripts/smoke-phone.mjs): the same build on an emulated
-      # Android phone, driven by real taps, drags and pinches — layout fits the
-      # screen, touch targets are finger-sized, and every phone-only path (the
-      # drawers, tap-to-place station, the compact follow strip) works.  The
-      # static server from the step above is still running.
-      - name: Smoke test the production build as a phone
-        run: |
-          for attempt in 1 2; do
-            if SMOKE_URL=http://localhost:4173/orbital/ node scripts/smoke-phone.mjs; then exit 0; fi
-            echo "phone smoke attempt $attempt failed"
-          done
-          exit 1
-      # The bad-day pass (scripts/smoke-failures.mjs): the same build with its
-      # dependencies broken one at a time — the data feed refusing or hanging,
-      # imagery blocked, workers failing to load / crashing / stalling, the
-      # graphics context lost, no network on relaunch, corrupt saved state and
-      # hostile links.  Like the two passes above it runs on the very data this
-      # build will publish, and fails if any page asks CelesTrak for anything.
-      - name: Smoke test the production build on a bad day
-        run: |
-          for attempt in 1 2; do
-            if SMOKE_URL=http://localhost:4173/orbital/ node scripts/smoke-failures.mjs; then exit 0; fi
-            echo "failure-path smoke attempt $attempt failed"
-          done
-          exit 1
+      # Hand the built site to the test jobs (one file: thousands of small files
+      # make a slow artifact), and — on anything but a pull request — stage it
+      # for Pages.  Staging is not publishing: the deploy job below needs every
+      # test job to pass first.
+      - run: tar -cf site.tar dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: site.tar
+          retention-days: 1
       # enablement: true turns Pages on for the repo on the first run, so no
       # manual Settings → Pages toggle is needed.
       - uses: actions/configure-pages@v6
@@ -150,8 +114,68 @@ jobs:
         with:
           path: dist
 
-  deploy:
+  # The gate: the headless browser suites, run against the PRODUCTION build that
+  # the build job just made — the very files, and the very satellite data, that
+  # will be published — using the runner's preinstalled Chrome with software
+  # WebGL.  They used to run one after another in the build job (about 17 of a
+  # deploy's 22 minutes); here each has its own runner, so a deploy takes as long
+  # as the slowest of them.
+  #   desktop   scripts/smoke.mjs          the features, with a mouse
+  #   phone     scripts/smoke-phone.mjs    an emulated Android phone, real taps, drags and pinches
+  #   bad day   scripts/smoke-failures.mjs dependencies broken one at a time — data refusing or
+  #             hanging, imagery blocked, workers crashing, the graphics context lost, no network,
+  #             corrupt saved state, hostile links and data.  The longest suite, so it is split
+  #             in two (SHARD=n/2 runs every second scenario).
+  # Every suite fails if any page asks CelesTrak for anything.  dist/ is served by
+  # scripts/serve-dist.mjs (a deliberately dumb static server — `vite preview` was
+  # observed 404-ing real assets under browser Accept-Encoding headers).  One
+  # retry absorbs a transient flake; two straight failures mean the build is
+  # genuinely broken and the previous deploy stays live.
+  test:
     needs: build
+    name: test · ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false   # let every suite report: one red run should say everything that is wrong
+      matrix:
+        include:
+          - name: desktop
+            run: node scripts/smoke.mjs
+          - name: phone
+            run: node scripts/smoke-phone.mjs
+          - name: bad day (1 of 2)
+            run: SHARD=1/2 node scripts/smoke-failures.mjs
+          - name: bad day (2 of 2)
+            run: SHARD=2/2 node scripts/smoke-failures.mjs
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: site
+      - run: tar -xf site.tar
+      - name: Run the suite against the built site
+        run: |
+          google-chrome --version
+          node scripts/serve-dist.mjs 4173 &
+          JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
+          for i in $(seq 1 15); do
+            curl -sf "http://localhost:4173/orbital/$JS" -o /dev/null && break
+            sleep 1
+          done
+          for attempt in 1 2; do
+            if SMOKE_URL=http://localhost:4173/orbital/ ${{ matrix.run }}; then exit 0; fi
+            echo "attempt $attempt failed"
+          done
+          exit 1
+
+  deploy:
+    needs: [build, test]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:

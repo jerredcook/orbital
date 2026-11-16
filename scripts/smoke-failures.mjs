@@ -19,6 +19,7 @@
 //   npm run dev                      # terminal 1
 //   PORT=5173 npm run smoke:failures # terminal 2      (SMOKE_URL=… for a build)
 //   ONLY=offline,gpu …               # run just the scenarios whose name matches
+//   SHARD=1/2 …                      # every second scenario (CI runs 1/2 and 2/2 side by side)
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 import { blockCelestrak } from './celestrak-stub.mjs';
@@ -27,6 +28,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PORT = process.env.PORT || '5173';
 const SITE = process.env.SMOKE_URL || `http://localhost:${PORT}/`;
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+// SHARD=1/2 runs the 1st, 3rd, 5th… scenario and SHARD=2/2 the rest — how CI
+// splits this, the longest suite, across two runners.  By position, so a new
+// scenario lands in one half or the other without anyone having to list it.
+const SHARD = (() => { const m = /^(\d+)\/(\d+)$/.exec(process.env.SHARD || ''); return m && +m[1] >= 1 && +m[1] <= +m[2] ? { n: +m[1], of: +m[2] } : null; })();
+let scenarioNo = 0;
 
 const b = await chromium.launch({
   channel: 'chrome', headless: true,
@@ -35,6 +41,7 @@ const b = await chromium.launch({
 
 const R = {};
 const notes = {};
+const ran = [];   // scenarios this process actually ran
 const check = (name, cond) => { R[name] = cond ? 'PASS' : 'FAIL'; if (process.env.SMOKE_TRACE) process.stderr.write(`[${R[name]}] ${name}\n`); };
 
 // The satellite data is the site's own data/ folder.  These stand in for its bad days.
@@ -45,6 +52,8 @@ const celestrakHits = [];
 
 async function scenario(name, { data = null, storage = {}, viewport = { width: 1280, height: 800 } } = {}, fn) {
   if (ONLY.length && !ONLY.some((o) => name.includes(o))) return;
+  if (SHARD && scenarioNo++ % SHARD.of !== SHARD.n - 1) return;
+  ran.push(name);
   const ctx = await b.newContext({ viewport });
   await ctx.addInitScript((extra) => {
     try {
@@ -588,5 +597,5 @@ if (!ONLY.length) check('neverContactsCelestrak', celestrakHits.length === 0);
 if (celestrakHits.length) notes.celestrakHits = celestrakHits.slice(0, 5);
 
 const fails = Object.entries(R).filter(([, v]) => v === 'FAIL').map(([k]) => k);
-console.log(JSON.stringify({ result: fails.length ? 'RED' : 'GREEN', checks: Object.keys(R).length, fails, R, notes }, null, 1));
+console.log(JSON.stringify({ result: fails.length ? 'RED' : 'GREEN', checks: Object.keys(R).length, scenarios: ran, fails, R, notes }, null, 1));
 process.exit(fails.length ? 1 : 0);
