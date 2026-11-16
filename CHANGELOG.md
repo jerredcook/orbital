@@ -1,12 +1,20 @@
 # Changelog
 
 What changed in each version of Orbital, newest first, written for the people
-who use it.  Versions follow `major.minor.patch`: a new feature bumps the
-middle number, a fix bumps the last.  The automated data refreshes (launch data
+who use it.  Versions follow `major.minor.patch`.  Every release — a fix or a new
+feature — bumps the last number only; the first two change when the owner
+decides they should.  (0.2.0 to 0.6.0 each bumped the middle number for a
+feature, before that was settled.)  The automated data refreshes (launch data
 twice a week, the satellite lists every four hours) do not change the version.
 
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
+
+## 0.6.2 — 16 November 2026
+
+- **Under the hood:** the library that does the orbit maths was updated from
+  version 5 to version 7.  Every position comes out the same — checked for
+  all 32,672 objects — so nothing should look different.
 
 ## 0.6.1 — 16 November 2026
 
@@ -20,8 +28,9 @@ card (the **?** button reopens it).
   real photo of it, a one-line description, what it is or was for, and a link
   to its Wikipedia article.  For inactive satellites it also says when they
   are believed to have stopped working.
-- About 1,900 well-known satellites have photos; most of the rest have at
-  least a purpose.  Debris and rocket bodies have none of this.
+- About 630 of the satellites now in orbit have photos — the well-known
+  ones; nearly all the rest have at least a purpose.  Debris and rocket
+  bodies have none of this.
 - Photos come from Wikimedia Commons with their author and licence; details
   from Wikidata and from Jonathan McDowell's GCAT.
 

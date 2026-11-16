@@ -13,6 +13,27 @@ function buildId() {
   catch { return 'dev'; }
 }
 
+// satellite.js 7 re-exports a WebAssembly bulk-propagation API from its index
+// (`export * from './wasm/index.js'`).  This app uses only the plain-JS SGP4
+// functions, but that one line drags two Emscripten runtimes — about 250 kB, with
+// top-level await and Node-only imports — into the main bundle and all three
+// workers, and the build fails on the top-level await.  So that module is
+// replaced with an empty one.  If a future version moves it, this stops
+// matching and the build fails again, loudly, rather than shipping the lot.
+const SATELLITE_INDEX = /node_modules\/satellite\.js\/dist\/index\.js$/;
+const WASM_STUB = '\0orbital:no-satellite-wasm';
+function noSatelliteWasm() {
+  return {
+    name: 'orbital-no-satellite-wasm',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source === './wasm/index.js' && importer && SATELLITE_INDEX.test(importer.replace(/\\/g, '/'))) return WASM_STUB;
+      return null;
+    },
+    load(id) { return id === WASM_STUB ? 'export {};' : null; },
+  };
+}
+
 const cesiumSource = 'node_modules/cesium/Build/Cesium';
 const cesiumBaseUrl = 'cesiumStatic';
 
@@ -31,6 +52,7 @@ export default defineConfig(({ command }) => {
       __APP_BUILD__: JSON.stringify(build),
     },
     plugins: [
+      noSatelliteWasm(),
       {
         name: 'orbital-version-file',
         generateBundle() {
@@ -49,6 +71,8 @@ export default defineConfig(({ command }) => {
     build: {
       chunkSizeWarningLimit: 6000,
     },
+    // (plugins do not reach worker bundles unless listed here too)
+    worker: { plugins: () => [noSatelliteWasm()] },
     // `npm run coverage`: which lines of src/ the unit tests execute.  It only
     // sees vitest — the two browser smoke suites exercise the UI modules
     // (main.js, solarsystem.js, …) that show as 0 % here.

@@ -347,8 +347,8 @@ Data freshness and resilience:
   display, search and links.  The conversion is tested against a real
   CelesTrak sample, against the SGP4 library's reading of each line, and by
   reproducing all ~16,000 lines of the committed snapshot byte for byte.
-  The longer-term route is to feed OMM straight to SGP4, which needs
-  satellite.js 6 or later.
+  The longer-term route is to feed OMM straight to SGP4
+  (`json2satrec`, available now that the app is on satellite.js 7).
 - **What a browser does.**  It keeps the last data it downloaded (Cache
   Storage) with its stamp — a hash of the three files, from `meta.json`.
   Boot draws that saved copy at once (`loadCatalogLocal()`), then asks for
@@ -548,11 +548,13 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.6.1 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.6.2 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
-To cut a release: bump `version` in `package.json`, add an entry to
+To cut a release: bump the LAST number of `version` in `package.json` (0.6.1 →
+0.6.2, for a fix or a feature alike — the first two numbers change only when
+the owner says so), add an entry to
 [`CHANGELOG.md`](CHANGELOG.md), commit, then `git tag vX.Y.Z && git push --tags`
 once that commit has passed the deploy gate.  The automated data commits (launch
 data twice a week, the committed satellite snapshot once a week) change the
