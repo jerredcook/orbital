@@ -27,8 +27,8 @@
 //      Everything is validated before it is accepted.
 //   3. If CelesTrak answers ANY request with something other than the data —
 //      an error status, a timeout, a page that is not the list — it asks nothing
-//      more, in this run or for the next 24 hours (a "hold", kept in the file
-//      named by ORBITAL_HOLD_FILE and carried between runs by the workflow's
+//      more, in this run or for the next 24 hours (a "hold", kept in the state
+//      file named by ORBITAL_STATE_FILE and carried between runs by the workflow's
 //      cache).  That is CelesTrak's rule for automated clients: stop at the
 //      first non-200 and tell a human.  The live site's files are carried
 //      forward, so a code deploy still goes out with the data it had.
@@ -68,7 +68,11 @@ const CELESTRAK = (process.env.ORBITAL_CELESTRAK_BASE || 'https://celestrak.org'
 const SITE = (process.env.ORBITAL_SITE_BASE || 'https://jerredcook.github.io/orbital').replace(/\/$/, '');
 const SPACETRACK = (process.env.ORBITAL_SPACETRACK_BASE || 'https://www.space-track.org').replace(/\/$/, '');
 const PAUSE_MS = Number(process.env.ORBITAL_FETCH_PAUSE_MS ?? 3000);   // between requests to CelesTrak
-const HOLD_FILE = process.env.ORBITAL_HOLD_FILE || join(dirname(fileURLToPath(import.meta.url)), '..', '.celestrak-hold.json');
+// What must be remembered from one run to the next, whether or not that run
+// deployed anything: a CelesTrak hold, and when Space-Track was last asked.
+// One small file, carried in the workflow's Actions cache (newest wins).
+const STATE_FILE = process.env.ORBITAL_STATE_FILE || join(dirname(fileURLToPath(import.meta.url)), '..', '.fetch-state.json');
+const SPACETRACK_GAP_MS = 61 * 60_000;   // Space-Track: element data at most once an hour
 const MAX_AGE_MS = 3.5 * 3_600_000;
 const UA = 'orbital (github.com/jerredcook/orbital; hobby tracker; one fetch per 4 h, served to visitors from our own site)';
 const gp = (group) => `${CELESTRAK}/NORAD/elements/gp.php?GROUP=${group}&FORMAT=csv`;
@@ -201,9 +205,21 @@ async function fromCelestrak(live) {
 // Three requests: log in, the catalogue, log out.  Resolves the parsed rows, or
 // null (having said why) when there is no login or it did not deliver — the
 // caller then falls back to CelesTrak alone.  The login is never printed.
+let spaceTrackFailed = false;   // asked in this run, and it did not deliver
+let spaceTrackTooSoon = false;  // not asked: it was asked less than an hour ago
 async function spaceTrackCatalogue() {
   const user = process.env.SPACETRACK_USER, pass = process.env.SPACETRACK_PASSWORD;
   if (!user || !pass) { say('no Space-Track login available to this build — using CelesTrak alone'); return null; }
+  // Its limit is one catalogue request an hour — and a run that fetched but then
+  // failed its tests leaves the site's data old, so the next run would ask again.
+  const since = state.spaceTrackAt ? Date.now() - state.spaceTrackAt : Infinity;
+  if (since < SPACETRACK_GAP_MS) {
+    say(`Space-Track was asked ${Math.round(since / 60_000)} min ago — its limit is once an hour, so not asking again in this run`);
+    spaceTrackTooSoon = true;
+    return null;
+  }
+  state.spaceTrackAt = Date.now();
+  await saveState();
   let cookie = '';
   try {
     const login = await fetch(`${SPACETRACK}/ajaxauth/login`, {
@@ -220,6 +236,7 @@ async function spaceTrackCatalogue() {
     if (problems.length) throw new Error(`answered, but not with the catalogue (${problems[0]})`);
     return rows;
   } catch (err) {
+    spaceTrackFailed = true;
     say(`Space-Track did not deliver (${err.cause?.code ?? err.message}) — using CelesTrak alone this time`);
     if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Space-Track::The catalogue could not be fetched (${err.cause?.code ?? err.message}); dead satellites, rocket bodies and debris were not refreshed.`);
     return null;
@@ -233,7 +250,10 @@ async function spaceTrackCatalogue() {
 // not answer, the list the site already has is used instead.
 async function fromSpaceTrack(rows, live, { askCelestrak }) {
   let activeText = null, activeListAt = null;
-  const liveListAt = live ? (live.info.activeListAt ?? live.info.fetchedAt ?? null) : null;
+  // (A site from before 0.5.0 has an active list too, but one fetched in the
+  // old text format, without the objects numbered above 99,999 — it records no
+  // activeListAt, so it counts as due and is replaced at once.)
+  const liveListAt = live?.info.activeListAt ?? null;
   // Once a day is enough: the list only says which satellites are active.
   const due = activeListIsDue({ activeListAt: liveListAt });
   if (askCelestrak && due) {
@@ -263,15 +283,23 @@ async function fromSpaceTrack(rows, live, { askCelestrak }) {
     satcatFetchedAt: Date.now(), catalogueAt: Date.now(), fetchedAt: Date.now(), activeListAt, source: 'space-track' });
 }
 
-// ---- the hold ----
-async function readHold() {
-  try { const h = JSON.parse(await readFile(HOLD_FILE, 'utf8')); return Number.isFinite(h?.until) ? h : null; }
-  catch { return null; }
+// ---- state carried between runs ----
+const state = { hold: null, spaceTrackAt: null };
+async function readState() {
+  try {
+    const s = JSON.parse(await readFile(STATE_FILE, 'utf8'));
+    if (Number.isFinite(s?.hold?.until)) state.hold = s.hold;
+    if (Number.isFinite(s?.spaceTrackAt)) state.spaceTrackAt = s.spaceTrackAt;
+  } catch { /* none yet */ }
+}
+async function saveState() {
+  await writeFile(STATE_FILE, `${JSON.stringify(state)}\n`);
+  if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, 'state=true\n');   // the workflow saves the file for later runs
 }
 async function startHold(reason) {
   const hold = holdAfterFailure({ reason });
-  await writeFile(HOLD_FILE, `${JSON.stringify(hold)}\n`);
-  if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, 'hold=true\n');   // the workflow saves the file for later runs
+  state.hold = hold;
+  await saveState();
   console.error(`satellite data: CelesTrak failed a request (${reason}).`);
   console.error(`satellite data: per its usage policy nothing will ask it again until ${new Date(hold.until).toISOString()} — a person should look at why before then.`);
 }
@@ -289,7 +317,8 @@ async function write(bundle) {
 
 // ---- main ----
 const live = await readLive();
-const hold = await readHold();
+await readState();
+const hold = state.hold;
 const holding = onHold({ holdUntil: hold?.until });
 if (holding) say(`CelesTrak failed a request at ${new Date(hold.at).toISOString()} (${hold.reason}) — on hold, not asking it again until ${new Date(hold.until).toISOString()}`);
 // (--no-celestrak is a pull-request build: nothing outside is asked, Space-Track included.)
@@ -304,6 +333,8 @@ if (todo === 'reuse') {
   try {
     const rows = haveSpaceTrack ? await spaceTrackCatalogue() : null;
     if (rows) published = await write(await fromSpaceTrack(rows, live, { askCelestrak: !holding }));
+    // Too soon to ask Space-Track again: wait for the next run rather than fall back to CelesTrak for an hour's sake.
+    else if (spaceTrackTooSoon && live) { say('carrying the live site’s data forward until Space-Track can be asked again'); published = await write(live); }
     else if (!holding) published = await write(await fromCelestrak(live));
     else throw new Error('Space-Track did not deliver and CelesTrak is on hold');
   } catch (err) {
@@ -327,10 +358,15 @@ if (refused) {
   await tell('attention');
 }
 if (unreachable) say(`CelesTrak could not be reached from this runner (${unreachable}) — no hold; the next run tries from another address`);
-// Space-Track has a login that expires and terms that can change.  If it has
-// delivered nothing for two days, the dead satellites and debris are going stale.
-if (haveSpaceTrack && published && !(Date.now() - (published.catalogueAt ?? 0) < 48 * 3_600_000)) {
-  console.error('satellite data: Space-Track has not delivered the catalogue for two days — check the account (space-track.org) and the SPACETRACK_ secrets');
+// Space-Track has a login that expires and terms that can change.  Say so when
+// it has stopped delivering: its catalogue on the site is two days old, or it
+// has never delivered and just failed again.  (Data that simply predates
+// Space-Track — no catalogueAt, nothing asked in this run — is not a failure.)
+const catalogueAge = published?.catalogueAt ? Date.now() - published.catalogueAt : null;
+if (haveSpaceTrack && published && (catalogueAge !== null ? catalogueAge > 48 * 3_600_000 : spaceTrackFailed)) {
+  console.error(catalogueAge !== null
+    ? 'satellite data: Space-Track has not delivered the catalogue for two days — check the account (space-track.org) and the SPACETRACK_ secrets'
+    : 'satellite data: Space-Track has never delivered the catalogue and failed again — check the account (space-track.org) and the SPACETRACK_ secrets');
   await tell('attention');
 }
 // However it got that way, data this old means the refresh is not working.

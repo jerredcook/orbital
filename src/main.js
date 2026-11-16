@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, medianEpochMs, CATEGORIES, categoryOf, isActiveSat } from './data.js';
+import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
@@ -1285,9 +1285,12 @@ searchBox.addEventListener('input', () => {
     else if (nameU.startsWith(q)) rank = 2;
     else if (nameU.includes(q)) rank = 3;
     else if (numeric && id.includes(q)) rank = 4;
-    if (rank >= 0) scored.push({ i, rank, norad: catalog[i].norad });
+    if (rank >= 0) scored.push({ i, rank, norad: catalog[i].norad, other: isActiveSat(catalog[i]) ? 0 : 1 });
   }
-  scored.sort((a, b) => a.rank - b.rank || a.norad - b.norad);
+  // Among equally good matches, working satellites come before the dead ones,
+  // rocket bodies and debris — with everything in orbit catalogued, "255" would
+  // otherwise list a dozen fragments ahead of the ISS (25544).
+  scored.sort((a, b) => a.rank - b.rank || a.other - b.other || a.norad - b.norad);
   const hits = scored.slice(0, 12).map((x) => x.i);
   // Showpieces (JWST, Voyager, SOHO…) aren't in the catalog — they don't orbit
   // Earth — so surface any that match and fly out to them, searchable like a sat.
@@ -1305,7 +1308,9 @@ searchBox.addEventListener('input', () => {
     addOption(`<span>${b.name}</span><span class="rid">${b.kind}</span>`, () => navigateTo({ body: b.name }));
   }
   for (const i of hits) {
-    addOption(`<span>${esc(catalog[i].name)}</span><span class="rid">${catalog[i].norad}</span>`, () => selectByIndex(i));
+    // (the number stays alone in .rid; what a non-satellite is goes beside the name)
+    const what = isActiveSat(catalog[i]) ? '' : ` <span class="rkind">${KIND_LABEL[catalog[i].kind] ?? ''}</span>`;
+    addOption(`<span>${esc(catalog[i].name)}${what}</span><span class="rid">${catalog[i].norad}</span>`, () => selectByIndex(i));
   }
   const has = options.length > 0;
   resultsEl.hidden = !has;

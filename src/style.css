@@ -699,6 +699,7 @@ body:not(.system-mode) #system-legend { display: none; }
 .swatch.meo { background: #C9A0FF; }
 .swatch.geo { background: #FFD166; }
 .swatch.heo { background: #FF8C66; }
+.rkind { color: #7E8DA3; font-size: 10.5px; letter-spacing: 0.04em; }
 .swatch.dead { background: #D98BA5; }
 .swatch.rb { background: #9BB86F; }
 .swatch.deb { background: #8B93A1; }

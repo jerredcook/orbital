@@ -302,13 +302,16 @@ Data freshness and resilience:
   A laptop build has active satellites only, from the committed snapshot.
   If Space-Track delivers nothing for two days the run is marked failed
   after deploying, so the owner hears about an expired account.
+  Space-Track allows one catalogue request an hour; the time of the last one
+  is remembered between runs (the same `.fetch-state.json`), so a run that
+  fetched and then failed its tests is not followed by another fetch.
 - **When the refresh fails.**  CelesTrak's
   [usage policy](https://celestrak.org/usage-policy.php) asks automated
   clients to stop at the first answer that is not HTTP 200 and tell a human;
   ignoring that gets the address firewalled.  So the first failed answer —
   an error status, a timeout, a page that is not the list — ends that run's
   requests, fails a scheduled run (GitHub emails the owner), and starts a
-  24-hour hold during which nothing asks CelesTrak (`.celestrak-hold.json`,
+  24-hour hold during which nothing asks CelesTrak (`.fetch-state.json`,
   carried between runs in the Actions cache).  The site keeps the data it
   has; a code push still deploys, carrying the live data forward.  After
   three days without new elements the app's "positions extrapolated" badge

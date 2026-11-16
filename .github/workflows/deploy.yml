@@ -52,18 +52,22 @@ jobs:
       # pushes costs CelesTrak nothing.  A pull request never asks CelesTrak; a
       # scheduled refresh that CelesTrak fails stops here, before anything is built.  If nothing is fetched and nothing is live, the build
       # falls back to the snapshot committed with the code (tools/prepare-data.mjs).
-      # CelesTrak's rule for automated clients: stop at the first answer that is
-      # not the data, and tell a human.  When that happens the fetch writes
-      # .celestrak-hold.json (no requests for 24 h) and a scheduled run fails so
-      # GitHub emails the owner.  The file is carried between runs in the
-      # Actions cache: restored here (newest wins), saved below when written.
-      - name: Restore the CelesTrak hold, if one is in force
+      # What the fetch must remember between runs, whether or not a run deployed:
+      #   • a CelesTrak hold — its rule for automated clients is to stop at the
+      #     first answer that is not the data and tell a human, so one error
+      #     answer means no requests for 24 hours;
+      #   • when Space-Track was last asked — its limit is once an hour, and a
+      #     run that fetched and then failed its tests would otherwise be
+      #     followed by another fetch.
+      # Both live in .fetch-state.json, carried in the Actions cache: restored
+      # here (newest wins), saved below whenever the fetch writes it.
+      - name: Restore what the last fetch left for this one
         if: github.event_name != 'pull_request'
         uses: actions/cache/restore@v6
         with:
-          path: .celestrak-hold.json
-          key: celestrak-hold-none
-          restore-keys: celestrak-hold-
+          path: .fetch-state.json
+          key: fetch-state-none
+          restore-keys: fetch-state-
       - name: Get the satellite data this build will publish
         id: data
         run: |
@@ -77,12 +81,12 @@ jobs:
           # Dependabot's pull requests, where the fetch simply does without).
           SPACETRACK_USER: ${{ secrets.SPACETRACK_USER }}
           SPACETRACK_PASSWORD: ${{ secrets.SPACETRACK_PASSWORD }}
-      - name: Remember the CelesTrak hold for later runs
-        if: always() && steps.data.outputs.hold == 'true'
+      - name: Remember it for later runs
+        if: always() && steps.data.outputs.state == 'true'
         uses: actions/cache/save@v6
         with:
-          path: .celestrak-hold.json
-          key: celestrak-hold-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .fetch-state.json
+          key: fetch-state-${{ github.run_id }}-${{ github.run_attempt }}
       - run: npm test
       - run: npm run build
       # Gate the deploy on the headless smoke suite, run against the PRODUCTION
