@@ -75,6 +75,13 @@ const PAUSE_MS = Number(process.env.ORBITAL_FETCH_PAUSE_MS ?? 3000);   // betwee
 // One small file, carried in the workflow's Actions cache (newest wins).
 const STATE_FILE = process.env.ORBITAL_STATE_FILE || join(dirname(fileURLToPath(import.meta.url)), '..', '.fetch-state.json');
 const SPACETRACK_GAP_MS = 61 * 60_000;   // Space-Track: element data at most once an hour
+// CelesTrak: one download of a list per update (every two hours) at the very
+// most — and, when Space-Track is supplying the orbits and the active list only
+// says which satellites are active, about once a day.  Both are counted from the
+// last time it was ASKED, deployed or not: a run that fetches and then fails its
+// tests must not be followed by another request.
+const CELESTRAK_MIN_GAP_MS = 125 * 60_000;
+const CELESTRAK_DAILY_GAP_MS = 20 * 3_600_000;
 const MAX_AGE_MS = 3.5 * 3_600_000;
 const UA = 'orbital (github.com/jerredcook/orbital; hobby tracker; fetched server-side and served to visitors from our own site)';
 // What CelesTrak sees: who this is, and how often to expect it — so its operator
@@ -160,7 +167,10 @@ function toElements(what, csv) {
 }
 // CelesTrak's active list: one request.  It is all that is asked of CelesTrak
 // when Space-Track supplied the catalogue.
+const sinceCelestrak = () => (state.celestrakAt ? Date.now() - state.celestrakAt : Infinity);
 async function celestrakActive() {
+  state.celestrakAt = Date.now();   // remembered whether or not this run goes on to deploy
+  await saveState();
   const act = toElements('active list', await ask('active list', gp('active'), 180_000));
   const active = tidy(act.text);
   say(`CelesTrak active list: ${act.count.toLocaleString()} objects, ${act.sixDigit.toLocaleString()} of them with six-digit catalogue numbers`);
@@ -268,7 +278,9 @@ async function fromSpaceTrack(rows, live, { askCelestrak }) {
   // activeListAt, so it counts as due and is replaced at once.)
   const liveListAt = live?.info.activeListAt ?? null;
   // Once a day is enough: the list only says which satellites are active.
-  const due = activeListIsDue({ activeListAt: liveListAt });
+  const listDue = activeListIsDue({ activeListAt: liveListAt });
+  const due = listDue && sinceCelestrak() >= CELESTRAK_DAILY_GAP_MS;
+  if (listDue && !due) say(`CelesTrak was asked ${(sinceCelestrak() / 3_600_000).toFixed(1)} h ago (by a run whose result may not have been published) — not asking again today`);
   if (askCelestrak && due) {
     try { activeText = await celestrakActive(); activeListAt = Date.now(); }
     catch (err) { say(`CelesTrak active list unavailable (${err.detail ?? err.message})`); }
@@ -277,7 +289,7 @@ async function fromSpaceTrack(rows, live, { askCelestrak }) {
     activeText = live.active;
     activeListAt = liveListAt;
     const age = liveListAt ? `${((Date.now() - liveListAt) / 3_600_000).toFixed(1)} h old` : 'of unknown age';
-    say(due ? `using the active list the site already has (${age}) to decide what is active`
+    say(listDue ? `using the active list the site already has (${age}) to decide what is active`
       : `CelesTrak not asked — the active list the site has is ${age}, and it is renewed once a day`);
   }
   const sets = parseTLEs(activeText ?? '');
@@ -297,12 +309,16 @@ async function fromSpaceTrack(rows, live, { askCelestrak }) {
 }
 
 // ---- state carried between runs ----
-const state = { hold: null, spaceTrackAt: null };
+const state = { hold: null, spaceTrackAt: null, celestrakAt: null };
 async function readState() {
   try {
     const s = JSON.parse(await readFile(STATE_FILE, 'utf8'));
     if (Number.isFinite(s?.hold?.until)) state.hold = s.hold;
     if (Number.isFinite(s?.spaceTrackAt)) state.spaceTrackAt = s.spaceTrackAt;
+    if (Number.isFinite(s?.celestrakAt)) state.celestrakAt = s.celestrakAt;
+    // A state file from before celestrakAt was recorded: assume CelesTrak was
+    // asked whenever Space-Track last was (the cautious reading — they were asked together).
+    else if (Number.isFinite(s?.spaceTrackAt)) state.celestrakAt = s.spaceTrackAt;
   } catch { /* none yet */ }
 }
 async function saveState() {
@@ -373,6 +389,8 @@ if (todo === 'reuse') {
     if (rows) published = await publish(await fromSpaceTrack(rows, live, { askCelestrak: !holding }));
     // Too soon to ask Space-Track again: wait for the next run rather than fall back to CelesTrak for an hour's sake.
     else if (spaceTrackTooSoon && live) { say('carrying the live site’s data forward until Space-Track can be asked again'); published = await write(live, await aboutFor(live, live, { mayFetch: ALLOW_CELESTRAK })); }
+    // CelesTrak alone — but never inside its two-hour update window.
+    else if (!holding && sinceCelestrak() < CELESTRAK_MIN_GAP_MS && live) { say(`CelesTrak was asked ${Math.round(sinceCelestrak() / 60_000)} min ago — its lists update every two hours, so not asking again in this run`); published = await write(live, await aboutFor(live, live, { mayFetch: ALLOW_CELESTRAK })); }
     else if (!holding) published = await publish(await fromCelestrak(live));
     else throw new Error('Space-Track did not deliver and CelesTrak is on hold');
   } catch (err) {
