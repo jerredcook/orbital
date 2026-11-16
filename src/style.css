@@ -694,6 +694,8 @@ body:not(.system-mode) #system-legend { display: none; }
 }
 .legend-row input { accent-color: #FFB454; }
 .legend-title-sub { margin-top: 8px; }
+.welcome-data { margin-top: 2px; }
+.welcome-data:empty { display: none; }
 .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .swatch.leo { background: #5EC8E5; }
 .swatch.meo { background: #C9A0FF; }

@@ -154,8 +154,8 @@ const ageSavedCopy = (p) => O(p, () => {
   return s.stamp;
 });
 
-// The ordinary case: nothing has changed on the site.  One tiny request says
-// so; the lists are not downloaded again, on this load or the next.
+// The ordinary case: nothing has changed on the site.  Every load asks — one
+// tiny request — and the lists are not downloaded again.
 await scenario('nothingNewIsCheap', {}, async ({ p }) => {
   const asked = [];
   p.on('request', (r) => { if (r.url().includes('/data/')) asked.push(r.url().replace(/^.*\/data\//, '')); });
@@ -166,7 +166,9 @@ await scenario('nothingNewIsCheap', {}, async ({ p }) => {
   asked.length = 0;
   await p.reload({ waitUntil: 'load', timeout: 30000 });
   const again = await booted(p);
-  check('nothingNewIsCheap:reloadAsksNothing', again.catalog === first.catalog && asked.length === 0);
+  notes.reloadDataRequests = [...asked];
+  check('nothingNewIsCheap:reloadAsksOnlyWhetherAnythingChanged', again.catalog === first.catalog && asked.length === 1 && asked[0].startsWith('meta.json'));
+  asked.length = 0;
   await ageSavedCopy(p);
   await p.reload({ waitUntil: 'load', timeout: 30000 });
   const later = await booted(p);

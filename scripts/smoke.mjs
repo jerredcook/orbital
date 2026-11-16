@@ -418,6 +418,10 @@ try {
   check('noRecoveryCard', await p.evaluate(() => !document.getElementById('recover-card') && !window.__orbital.events.some((e) => e.startsWith('error/'))));
   // …and must not claim a newer version exists when the server has this very build.
   check('noFalseUpdatePrompt', await p.evaluate(() => !document.querySelector('.toast.update')));
+  // The help card says when the data on screen was fetched — how anyone can tell
+  // whether a device is up to date.
+  R._dataDate = await p.evaluate(() => document.getElementById('data-version').textContent);
+  check('dataDateShown', /^satellite data: \d{1,2} \w{3} \d{4},? \d\d:\d\d UTC$/.test(R._dataDate));
   check('noPageErrors', pageErrors.length === 0);
 
   // ---- capture mode (?clip): it must wait for Space.  A mouse click — which

@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
+import { loadCatalog, loadCatalogLocal, cacheExpiresInMs, dataFetchedAt, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
@@ -332,9 +332,13 @@ async function boot() {
     prevNames = new Map(local.map((s) => [s.norad, s.name]));
     applyCatalog(local);
     settle();
-    // Checked within the last half hour: it is current.  Otherwise ask the site.
-    if (cacheExpiresInMs() === 0) await refreshCatalog({ patient: true });
+    // Every load asks the site whether it has newer data (one tiny request), so
+    // "reload" always means "latest" — it used to be skipped if the last check
+    // was under half an hour ago, which left one device showing yesterday's
+    // catalogue beside another showing today's.
+    await refreshCatalog({ patient: true });
     feedSettled = true;
+    showDataDate();
     return;
   }
   try {
@@ -347,8 +351,15 @@ async function boot() {
     bootFailed();
   } finally {
     feedSettled = true;
+    showDataDate();
     settle();
   }
+}
+// When the satellite data on screen was fetched (foot of the welcome card,
+// under the version) — the answer to "is this device up to date?".
+function showDataDate() {
+  const at = dataFetchedAt();
+  $('data-version').textContent = at === null ? '' : `satellite data: ${new Date(at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`;
 }
 boot();
 
@@ -449,10 +460,12 @@ async function refreshCatalog({ patient = false } = {}) {
       // the one object rendered at per-frame precision isn't left drifting.
       if (selected) { const wasF = following; selectByIndex(selected.index); if (wasF) engageFollow(); }
       status(`${catalog.length.toLocaleString()} objects on orbit`);
+      showDataDate();
       return;
     }
     diffAndToast(list);
     applyCatalog(list);
+    showDataDate();
   } catch (err) {
     console.warn('catalog refresh failed — keeping current data', err);
   }

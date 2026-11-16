@@ -8,6 +8,16 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.5.1 — 16 November 2026
+
+- **Reloading always gets the latest satellite data.** The app used to skip
+  the check if it had looked in the last half hour, so two devices could show
+  different catalogues.  It now asks on every load.
+- **The data's date is shown** under the version number on the welcome card
+  (the **?** button).
+- **Search puts working satellites first**, and labels anything that is not
+  one.
+
 ## 0.5.0 — 15 November 2026
 
 - **Everything in orbit, not just the working satellites.** Orbital now also

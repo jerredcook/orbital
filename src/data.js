@@ -10,8 +10,9 @@
 //
 // What a browser does:
 //   • keeps the last data it downloaded (Cache Storage) with its stamp;
-//   • at most every 30 minutes asks for meta.json — a few hundred bytes — and
-//     downloads the lists again only when the stamp has changed;
+//   • on every page load, and every 30 minutes after that, asks for meta.json
+//     — a few hundred bytes — and downloads the lists again only when the
+//     stamp has changed.  So a reload always shows the latest data;
 //   • draws its saved copy first (loadCatalogLocal) so a returning visitor
 //     never waits on the network at all.
 
@@ -63,9 +64,9 @@ async function savedBodies() {
 // What this PAGE downloaded, whether or not it could be saved: in a private
 // window (no Cache Storage) nothing persists, and without this the app would
 // download the lists again on every half-hourly check.
-let shown = null;   // { stamp, t }
+let shown = null;   // { stamp, t, fetchedAt }
 async function saveBodies(bodies, state) {
-  shown = { stamp: state.stamp, t: state.t };
+  shown = { stamp: state.stamp, t: state.t, fetchedAt: state.fetchedAt ?? null };
   try {
     const c = await caches.open(DATA_CACHE);
     await Promise.all(BODIES.map((k) => c.put(bodyUrl(k), new Response(bodies[k]))));
@@ -80,6 +81,12 @@ try {
     'orbital.satcat.parsed', 'orbital.satcat.csv', 'orbital.celestrak.down']) localStorage.removeItem(k);
   globalThis.caches?.delete('orbital-data-v1').catch(() => {});
 } catch { /* storage blocked */ }
+
+/** When the data on screen was fetched from its sources (ms), or null if that is not known (the bundled snapshot). */
+export function dataFetchedAt() {
+  const at = (readState() ?? shown)?.fetchedAt;
+  return Number.isFinite(at) ? at : null;
+}
 
 /** Milliseconds until the site should next be asked for newer data (0 = now). */
 export function cacheExpiresInMs() {

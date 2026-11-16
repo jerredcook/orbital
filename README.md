@@ -290,7 +290,7 @@ Data freshness and resilience:
   launch and type per object) and `meta.json`, put through all three
   browser suites, and published — nothing is committed.  A push within 3½
   hours of the last refresh reuses the live site's copy and asks nobody; a
-  pull-request build never asks.  A new visitor downloads about 1.7 MB
+  pull-request build never asks.  A new visitor downloads about 2.0 MB
   from GitHub Pages.  (Until 0.4.0 every browser fetched ~9 MB from
   CelesTrak directly.  It rate-limits and then firewalls heavy clients —
   the test suites got the developer's home connection blocked — and for
@@ -337,9 +337,11 @@ Data freshness and resilience:
   satellite.js 6 or later.
 - **What a browser does.**  It keeps the last data it downloaded (Cache
   Storage) with its stamp — a hash of the three files, from `meta.json`.
-  Boot draws that saved copy at once (`loadCatalogLocal()`), then at most
-  every 30 minutes asks for `meta.json` (a few hundred bytes) and downloads
-  the lists only if the stamp has changed.  When they have, it diffs the
+  Boot draws that saved copy at once (`loadCatalogLocal()`), then asks for
+  `meta.json` (a few hundred bytes) — on every page load, and every 30
+  minutes after — and downloads the lists only if the stamp has changed.
+  So a reload always shows the latest data; its date is at the foot of the
+  welcome card, under the version.  When they have, it diffs the
   NORAD ID set against a persisted snapshot, hot-swaps the catalog in place
   — `applyCatalog()` carries each dot's last position and the current
   selection across, so the swap is not visible — and toasts what changed:
@@ -525,7 +527,7 @@ Design notes for the 3D close-up view:
 The version lives in `package.json`; the build is the commit it was built from.
 Both are baked into the bundle and written to `version.json` beside it
 (`vite.config.js`, `src/version.js`), and shown at the foot of the welcome card
-(the **?** button) as `v0.5.0 · 5151e47`.  A running copy re-reads `version.json` when it returns
+(the **?** button) as `v0.5.1 · 5151e47`.  A running copy re-reads `version.json` when it returns
 to the foreground or comes back online, and offers a refresh if the build has
 changed — it never reloads by itself.
 
