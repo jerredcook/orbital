@@ -10,6 +10,12 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.6.3 — 19 November 2026
+
+- **The source code is linked.** The end of the guide (the **?** button) now
+  links to where Orbital's code lives, for anyone who wants to see how it
+  works.
+
 ## 0.6.2 — 16 November 2026
 
 - **Under the hood:** the library that does the orbit maths was updated from
