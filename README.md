@@ -296,7 +296,8 @@ Data freshness and resilience:
   on this project's second day, 12 June 2026, a caching bug made every
   page reload during development download the 2.7 MB catalog file again
   (41 times) and the active list (85 times, ignoring the refusals), and
-  the developer's home address has been firewalled since — and for
+  the developer's home address stayed firewalled until CelesTrak lifted
+  the block on 20 November, once the fixes were confirmed — and for
   one visitor in four the download never arrived.)
 - **"What is this?"** — `data/about.json` holds, for each object anything is
   known about, a one-line description, a photo and the English Wikipedia
