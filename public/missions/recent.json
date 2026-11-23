@@ -1,6 +1,33 @@
 {
- "updated": "2026-11-19",
+ "updated": "2026-11-23",
  "previous": [
+  {
+   "name": "Falcon 9 Block 5 | NROL-136",
+   "date": "2026-11-22T12:23:56Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "Fifteenth batch of satellites for a reconnaissance satellite constellation built by SpaceX and Northrop Grumman for the National Reconnaissance Office to provide imaging and other reconnaissance capabilities.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_on_slc_image_20241024165956.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | USSF-317",
+   "date": "2026-11-21T04:20:35Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20261122120902.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Long March 8A | SatNet LEO Group 30",
+   "date": "2026-11-20T11:59:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
+   "pad": "Wenchang Space Launch Site, People's Republic of China"
+  },
   {
    "name": "Long March 2D | Shijian 24",
    "date": "2026-11-18T22:51:00Z",
@@ -45,84 +72,21 @@
    "desc": "15th test flight of the two-stage Starship launch vehicle and 4th flight of Starship V3. Second Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-2) into stable Low Earth Orbit and first ever to attempt returning t",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_42_dur_image_20261118092530.jpeg",
    "pad": "SpaceX Starbase, TX, USA"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-627",
-   "date": "2026-11-12T04:36:30Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 2D | CAS Pathfinder-1",
-   "date": "2026-11-11T11:41:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "The Chinese Academy of Science (CAS)' Pathfinder-1 satellites is built for in-orbit validation of critical technologies for the upcoming main missions of CAS' \"Origins” Space Science Program, which consists of 4 upcoming astronomical observatory missions to be",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 12 | SatNet LEO Group 29",
-   "date": "2026-11-08T20:24:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_20241128132937.jpg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
   }
  ],
  "upcoming": [
   {
-   "name": "Long March 2D | Shijian 24",
-   "date": "2026-11-18T22:51:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "Experimental Chinese satellite of unknown purposes.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-317",
-   "date": "2026-11-20T04:32:55Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 8A | SatNet LEO Group TBD?",
-   "date": "2026-11-20T11:59:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
-   "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Long March 6C | Unknown Payload",
-   "date": "2026-11-21T03:50:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-6c_on_the_la_image_20240507065151.jpg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Falcon 9 Block 5 | NROL-136",
-   "date": "2026-11-21T12:30:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "Fifteenth batch of satellites for a reconnaissance satellite constellation built by SpaceX and Northrop Grumman for the National Reconnaissance Office to provide imaging and other reconnaissance capabilities.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_on_slc_image_20241024165956.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
+   "name": "Soyuz 2.1b | Progress MS-36 (97P)",
+   "date": "2026-11-24T10:13:00Z",
+   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
+   "status": "TBC",
+   "desc": "Progress resupply mission to the International Space Station.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
+   "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
   },
   {
    "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
-   "date": "2026-11-23T11:09:00Z",
+   "date": "2026-11-24T10:45:00Z",
    "agency": "Arianespace",
    "status": "Go",
    "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
@@ -131,7 +95,7 @@
   },
   {
    "name": "Falcon 9 Block 5 | USSF-266",
-   "date": "2026-11-23T16:04:00Z",
+   "date": "2026-11-24T15:55:00Z",
    "agency": "SpaceX",
    "status": "Go",
    "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
@@ -139,13 +103,49 @@
    "pad": "Vandenberg SFB, CA, USA"
   },
   {
-   "name": "Soyuz 2.1b | Progress MS-36 (97P)",
-   "date": "2026-11-24T05:03:00Z",
-   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
-   "status": "TBC",
-   "desc": "Progress resupply mission to the International Space Station.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
-   "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
+   "name": "Long March 2F/G | Shenzhou 24",
+   "date": "2026-11-25T00:18:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Shenzhou 24 will be the 24th flight of the Shenzhou program. The first astronaut from Pakistan is expected to fly on this on a short duration mission, with another Chinese astronaut to undergo a year long expedition.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/shenzhou_22_lau_image_20251129175823.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Long March 2D | Unknown Payload",
+   "date": "2026-11-26T09:35:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
+   "pad": "Xichang Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Electron | Night Owls Never Sleep (StriX Launch 14)",
+   "date": "2026-11-27T00:05:00Z",
+   "agency": "Rocket Lab",
+   "status": "Go",
+   "desc": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
+  },
+  {
+   "name": "Long March 6A | Unknown Payload",
+   "date": "2026-11-27T13:00:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_20251209050223.jpeg",
+   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Long March 6C | Unknown Payload",
+   "date": "2026-11-29T03:50:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-6c_on_the_la_image_20240507065151.jpg",
+   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
   }
  ]
 }
