@@ -133,8 +133,10 @@ describe('the real CelesTrak sample', () => {
 // mostly Space-Track's own; before that they were CelesTrak's):
 //   • a zero drag or second-derivative term: " 00000+0" (CelesTrak, and this
 //     converter) or " 00000-0" (Space-Track);
+//   • a zero rate of change of mean motion: " .00000000" (this converter) or
+//     "-.00000000" (Space-Track's negative zero, first seen 23 November);
 //   • a catalogue number under 10000: zero-padded or space-padded.
-// Neither changes the orbit.  Both change line 1's checksum digit, so that
+// None of these changes the orbit.  Each changes line 1's checksum digit, so that
 // digit is compared by rule (it must be right for the line it is on) rather
 // than by equality.  When the first weekly refresh brought Space-Track's
 // spelling in, a byte-for-byte version of this test failed and blocked every
@@ -157,7 +159,8 @@ describe('round trip of the committed snapshot', () => {
   };
   // One spelling for the two equivalent ones, and no checksum digit.
   const zero = (f) => (/^[ +-]00000[+-]0$/.test(f) ? ' 00000+0' : f);
-  const norm1 = (l) => `1 ${numberToAlpha5(alpha5ToNumber(l.slice(2, 7)))}${l.slice(7, 44)}${zero(l.slice(44, 52))} ${zero(l.slice(53, 61))}${l.slice(61, 68)}`;
+  const zeroDot = (f) => (/^[ +-]\.0{8}$/.test(f) ? ' .00000000' : f);
+  const norm1 = (l) => `1 ${numberToAlpha5(alpha5ToNumber(l.slice(2, 7)))}${l.slice(7, 33)}${zeroDot(l.slice(33, 43))}${l.slice(43, 44)}${zero(l.slice(44, 52))} ${zero(l.slice(53, 61))}${l.slice(61, 68)}`;
   const norm2 = (l) => `2 ${numberToAlpha5(alpha5ToNumber(l.slice(2, 7)))}${l.slice(7, 68)}`;
 
   it('reproduces every line, column for column', () => {
@@ -185,6 +188,10 @@ describe('round trip of the committed snapshot', () => {
     expect(norm1(a)).toBe(norm1(b));
     expect(norm1(a)).not.toBe(norm1(a.replace('62499-3', '62499-4')));        // a different drag term is a different line
     expect(norm1(a)).not.toBe(norm1(a.replace('.00000625', '.00000626')));
+    // Space-Track's negative zero rate of change (23 November's refresh) is the same line…
+    const c = '1 49077U 21075C   26326.26576701 -.00000000  00000-0 -34242-4 0  9996';
+    expect(norm1(c)).toBe(norm1('1 49077U 21075C   26326.26576701  .00000000  00000+0 -34242-4 0  9994'));
+    expect(norm1(a)).not.toBe(norm1(a.replace(' .00000625', '-.00000625')));  // …but a real negative rate is not
     expect(norm1('1     5U 58002B   26319.39760256  .00000394  00000-0  52060-3 0  9991')).toBe(norm1('1 00005U 58002B   26319.39760256  .00000394  00000+0  52060-3 0  9990'));
     expect(norm2('2     5  34.2424 207.5955 1839390 100.3592 280.8433 10.86101342459723')).toBe(norm2('2 00005  34.2424 207.5955 1839390 100.3592 280.8433 10.86101342459723'));
   });
