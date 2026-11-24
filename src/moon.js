@@ -56,7 +56,7 @@ function createMoonViewer() {
     timeline: false, fullscreenButton: false, infoBox: false,
     selectionIndicator: false,
   });
-  watchViewer(v);
+  watchViewer(v, 'moon');
 
   // The WAC mosaic is already a uniformly-lit albedo map, so leave globe
   // lighting off (enabling it would re-impose a day/night terminator and

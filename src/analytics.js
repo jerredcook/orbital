@@ -4,7 +4,7 @@
 //   • do people come back?                         → `visit/<nth>` + `back-after/<span>`
 // …and one about the app itself:
 //   • did it break for them?                       → `error/<kind>` + `degraded/<what>`
-//     (recover.js, data.js — a bare category, never a message or a stack)
+//     (recover.js, data.js — fixed labels only, never a message or a stack)
 // The visit count lives in this browser's localStorage and never leaves it —
 // only the coarse bucket ("3rd-5th visit", "7-29 days") is sent.  Each event
 // is sent at most once per page load, so a count reads as "visitors who did X".

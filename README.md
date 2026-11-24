@@ -596,13 +596,21 @@ as it would if you opened the image yourself.  Nothing else is fetched from a
 third party when you select something.
 
 It also counts failures, as a bare category with no message, stack or detail:
-`orbital/error/…` (`script`, `promise`, `network`, `boot`, `render`,
+`orbital/error/…` (`script`, `promise`, `network`, `boot`, `render/…`,
 `webgl-lost`, `worker-propagator`, `worker-tca`, `worker-passes`,
 `worker-gave-up`) and `orbital/degraded/…` (`catalog-stale`, `catalog-bundled`
 — new data could not be loaded and a saved copy or the committed snapshot was
 shown instead — plus why, as one of `feed-timeout`, `feed-http-4xx`,
 `feed-http-5xx`, `feed-http-other`, `feed-network`, `feed-bad-data`).  Each is sent at
 most once per page load, so a count reads as "visitors this happened to".
+
+A stopped 3D view is counted as `orbital/error/render/<view>/<kind>/<when>`,
+each part a fixed label chosen in the browser (`src/recover.js`): the view
+(`earth`, `moon`, `system`, `planet`); the kind of failure (`type`, `reference`,
+`recursion`, `shader`, `framebuffer`, `memory`, `texture`, `not-a-number`,
+`unsupported`, `cesium-check`, `cesium-runtime`, `range`, `other`); and when
+(`first-frame`, `early` — the view's first 20 seconds — or `later`).  The
+error's own text is read only to pick the label and is never sent.
 
 ## When things break
 

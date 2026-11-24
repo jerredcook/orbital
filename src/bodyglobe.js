@@ -98,7 +98,7 @@ function makeViewer(name) {
     sceneModePicker: false, navigationHelpButton: false, animation: false,
     timeline: false, fullscreenButton: false, infoBox: false, selectionIndicator: false,
   });
-  watchViewer(v);
+  watchViewer(v, 'planet');
 
   // The mosaics are uniformly-lit albedo maps; leave lighting off so the whole
   // globe reads (enabling it would re-impose a terminator and black out half).

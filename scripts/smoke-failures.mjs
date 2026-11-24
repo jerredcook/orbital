@@ -9,6 +9,7 @@
 //   • the position worker fails to load, crashes mid-flight, or silently stalls;
 //   • the pass-scan worker crashes mid-scan;
 //   • the device takes the graphics context away;
+//   • the drawing itself throws;
 //   • the network is gone on a later launch (the service worker's job);
 //   • saved settings are corrupt, and shared links are malformed or hostile.
 //
@@ -509,6 +510,31 @@ await scenario('planetSwapIsNotAFailure', {}, async ({ p }) => {
   const s = await state(p);
   check('planetSwap:scenarioIsReal', entered === 2);   // the second descent is what destroys the first globe
   check('planetSwap:noFalseAlarm', !s.card && !s.events.includes('error/webgl-lost'));
+});
+
+// The drawing itself throws (a driver that will not compile a shader, a code
+// path one browser trips on): the visitor gets the reload card, and the count
+// says which view, what sort of failure and when — and nothing from the error.
+await scenario('drawingCrashes', {}, async ({ p }) => {
+  await p.goto(`${SITE}#sat=25544`, { waitUntil: 'load', timeout: 30000 });
+  await booted(p);
+  await O(p, () => {
+    // A primitive is updated inside Cesium's frame, where a real failure happens.
+    window.__orbital.viewer.scene.primitives.add({
+      update() { throw new TypeError("smoke: cannot read 'shaderProgram' of someone@example.com"); },
+      isDestroyed: () => false, destroy() {},
+    });
+  });
+  const s = await poll(() => state(p), (v) => v.card, 6000);
+  const counted = s.events.filter((e) => e.startsWith('error/render'));
+  notes.drawingCrashes = counted;
+  check('drawingCrashes:cardAppears', s.card && await p.locator('#recover-reload').isVisible());
+  check('drawingCrashes:countedWithViewKindAndWhen', counted.length === 1 && /^error\/render\/earth\/type\/(early|later)$/.test(counted[0]));
+  check('drawingCrashes:nothingFromTheMessage', !s.events.some((e) => /smoke|example|shaderProgram/i.test(e)));
+  check('drawingCrashes:notMistakenForGpuLoss', !s.events.includes('error/webgl-lost'));
+  await Promise.all([p.waitForEvent('load', { timeout: 30000 }), p.locator('#recover-reload').click()]);
+  const s2 = await booted(p);
+  check('drawingCrashes:reloadRestoresTheApp', s2.catalog > 5000 && !s2.card);
 });
 
 // ============================================================== the network ====

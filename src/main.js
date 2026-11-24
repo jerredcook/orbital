@@ -61,7 +61,7 @@ const viewer = new Viewer('cesiumContainer', {
   timeline: false, fullscreenButton: false, infoBox: false,
   selectionIndicator: false,
 });
-watchViewer(viewer);
+watchViewer(viewer, 'earth');
 
 viewer.scene.moon = new Moon();
 viewer.scene.globe.enableLighting = true;

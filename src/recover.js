@@ -4,7 +4,9 @@
 //   • COUNT it.  Script errors, failed promises, dead workers, a lost graphics
 //     context and render-loop crashes each send one anonymous `error/<kind>`
 //     event (analytics.js — no message text, no stack, nothing about the
-//     person), so "nobody came back" can be told apart from "it broke".
+//     person), so "nobody came back" can be told apart from "it broke".  A
+//     render-loop crash also says which view, what sort of failure and when
+//     (renderErrorKind, renderErrorWhen) — fixed labels, chosen here.
 //   • RECOVER.  The one failure the app cannot repair in place is losing the
 //     GPU: phones reclaim a background tab's graphics context routinely, and
 //     Cesium cannot rebuild a scene on a new one.  Left alone the visitor
@@ -100,16 +102,62 @@ const contextGone = (canvas) => {
   try { return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'))?.isContextLost(); } catch { return false; }
 };
 
+// Pure: a short fixed label for what a render-loop error was.  The label is all
+// that is ever reported — the message is only read here, to choose it.
+//   type / reference / recursion — a plain code bug on this browser's path
+//   shader / framebuffer / texture / unsupported — the graphics chip or driver
+//     could not do something the scene asked of it
+//   memory — the device ran out of room
+//   not-a-number — a bad position or direction reached the drawing code
+//   cesium-check / cesium-runtime / range / other — none of the above
+// TypeError and ReferenceError go by name first: their messages quote property
+// names ("reading 'shaderProgram'") that would otherwise look like a GPU fault.
+export function renderErrorKind(err) {
+  let name = '', msg = '';
+  try { name = String(err?.name ?? ''); msg = String(err?.message ?? err ?? ''); } catch { return 'other'; }
+  if (name === 'TypeError') return 'type';
+  if (name === 'ReferenceError') return 'reference';
+  if (/call stack|too much recursion/i.test(msg)) return 'recursion';
+  if (/shader|failed to (compile|link)/i.test(msg)) return 'shader';
+  if (/framebuffer/i.test(msg)) return 'framebuffer';
+  if (/out of memory|allocation|array (buffer )?length|typed array length/i.test(msg)) return 'memory';
+  if (/texture|cube ?map/i.test(msg)) return 'texture';
+  if (/\bNaN\b|not a number|finite/.test(msg)) return 'not-a-number';
+  if (/not supported|unsupported/i.test(msg)) return 'unsupported';
+  if (name === 'DeveloperError') return 'cesium-check';
+  if (name === 'RuntimeError') return 'cesium-runtime';
+  if (name === 'RangeError') return 'range';
+  return 'other';
+}
+
+// Pure: when in a view's life it stopped.  A view that never drew one frame is
+// a device that cannot run it at all; one that stops in its first seconds
+// usually met something it could not draw as the scene filled in; later than
+// that, something the visitor did set it off.
+const EARLY_MS = 20_000;
+export function renderErrorWhen({ frames, sinceFirstFrameMs }) {
+  if (!(frames > 0)) return 'first-frame';
+  return sinceFirstFrameMs < EARLY_MS ? 'early' : 'later';
+}
+
 // Hook a Cesium viewer's render loop: when it stops on an error, Cesium's own
-// panel is a wall of stack trace — replace it with the reload card.
-export function watchViewer(viewer) {
+// panel is a wall of stack trace — replace it with the reload card, and count
+// it as `error/render/<view>/<kind>/<when>` (e.g. error/render/earth/shader/early).
+// `view` names the viewer: 'earth', 'moon', 'system' or 'planet'.
+export function watchViewer(viewer, view = 'earth') {
   try {
-    viewer.scene.renderError.addEventListener((scene) => {
+    let frames = 0, firstFrameAt = 0;
+    viewer.scene.postRender.addEventListener(() => { if (frames++ === 0) firstFrameAt = Date.now(); });
+    viewer.scene.renderError.addEventListener((scene, error) => {
       // Drawing on a lost context fails too — and the frame can get there
       // before the browser's "context lost" event does.  That is the GPU case
       // (which may be waiting quietly for a hidden tab), not a second failure.
       if (gpuLost || contextGone(scene?.canvas ?? viewer.scene.canvas)) { gpuLoss(); return; }
-      track('error/render');
+      let name = 'error/render';
+      try {
+        name = `error/render/${view}/${renderErrorKind(error)}/${renderErrorWhen({ frames, sinceFirstFrameMs: Date.now() - firstFrameAt })}`;
+      } catch { /* count it anyway */ }
+      track(name);
       reloadCard('The 3D view stopped', 'Something went wrong while drawing the scene. Reload to start it again.');
     });
   } catch { /* an API change must not break boot */ }

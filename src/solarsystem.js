@@ -1019,7 +1019,7 @@ function createViewer() {
     timeline: false, fullscreenButton: false, infoBox: false,
     selectionIndicator: false,
   });
-  watchViewer(v);
+  watchViewer(v, 'system');
 
   v.scene.backgroundColor = Color.BLACK;
   v.scene.sun.show = false;          // the real Sun lives at our origin instead

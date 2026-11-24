@@ -10,6 +10,15 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.6.4 — 24 November 2026
+
+- **A stopped 3D view now says what kind of failure it was.** When the drawing
+  stops and the "The 3D view stopped" card appears, the anonymous count sent
+  with it now records which view it was (Earth, the Moon, the solar system or a
+  planet), a one-word kind of failure, and whether it happened at the start or
+  later on. It still sends no error text and nothing about you or your device.
+  It is there so the cause can be found and fixed.
+
 ## 0.6.3 — 19 November 2026
 
 - **The source code is linked.** The end of the guide (the **?** button) now
