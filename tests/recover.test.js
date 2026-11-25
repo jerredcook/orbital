@@ -1,7 +1,7 @@
 // recover.js — how a browser error event is bucketed for counting.  Only the
 // category is ever reported; these check the buckets and the noise filter.
 import { describe, it, expect } from 'vitest';
-import { errorKind, gpuLossAction, renderErrorKind, renderErrorWhen, watchViewer } from '../src/recover.js';
+import { errorKind, gpuLossAction, renderErrorKind, renderErrorWhen, watchViewer, renderStopped } from '../src/recover.js';
 import { track, trackedEvents } from '../src/analytics.js';
 
 describe('errorKind', () => {
@@ -106,27 +106,43 @@ describe('renderErrorWhen — when in a view\'s life it stopped', () => {
   });
 });
 
-describe('watchViewer — a render-loop crash is counted with its view, kind and time', () => {
-  // The least of a Cesium viewer that watchViewer touches.
+describe('watchViewer — a stopped view is counted with its view, where, kind and time', () => {
+  // The least of a Cesium viewer that watchViewer touches.  Cesium's own
+  // renderError listener is registered first and puts the error panel up, so a
+  // drawing error reaches showErrorPanel BEFORE watchViewer's listener.
   const fakeViewer = () => {
     const event = () => { const fns = []; return { addEventListener: (f) => fns.push(f), raise: (...a) => fns.forEach((f) => f(...a)) }; };
     const canvas = { getContext: () => ({ isContextLost: () => false }) };
-    return { scene: { canvas, postRender: event(), renderError: event() } };
+    const v = { scene: { canvas, postRender: event(), renderError: event() }, cesiumWidget: { panels: 0, showErrorPanel() { this.panels++; } } };
+    v.scene.renderError.addEventListener((scene, error) => v.cesiumWidget.showErrorPanel('title', undefined, error));
+    return v;
   };
-  it('reports all three parts, and nothing from the message', () => {
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+  const renderEvents = (view) => trackedEvents().filter((e) => e.startsWith(`error/render/${view}/`));
+
+  it('reports a drawing error once, as the drawing, and nothing from the message', async () => {
     const v = fakeViewer();
     watchViewer(v, 'moon');
     v.scene.renderError.raise(v.scene, cesiumError('RuntimeError', 'Vertex shader failed to compile.  Compile log: secret-detail'));
-    expect(trackedEvents()).toContain('error/render/moon/shader/first-frame');
+    await settle();
+    expect(renderEvents('moon')).toEqual(['error/render/moon/draw/shader/first-frame']);
     expect(trackedEvents().join(' ')).not.toContain('secret-detail');
+    expect(v.cesiumWidget.panels).toBe(1);   // Cesium's own panel is still called
   });
-  it('knows a view that had been drawing', () => {
+  it('reports the app\'s per-frame code throwing, which Cesium signals only by its panel', async () => {
     const v = fakeViewer();
-    watchViewer(v, 'earth');
+    watchViewer(v, 'system');
     v.scene.postRender.raise();
     v.scene.postRender.raise();
-    v.scene.renderError.raise(v.scene, new TypeError('x is undefined'));
-    expect(trackedEvents()).toContain('error/render/earth/type/early');
+    v.cesiumWidget.showErrorPanel('An error occurred while rendering.  Rendering has stopped.', undefined, new TypeError('x is undefined'));
+    await settle();
+    expect(renderEvents('system')).toEqual(['error/render/system/frame/type/early']);
+    expect(renderStopped()).toBe(true);
+  });
+  it('still works on a viewer with no panel to watch', () => {
+    const v = fakeViewer();
+    delete v.cesiumWidget;
+    expect(() => watchViewer(v, 'planet')).not.toThrow();
   });
 });
 

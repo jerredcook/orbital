@@ -10,6 +10,16 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.6.5 — 25 November 2026
+
+- **A frozen globe now says so, and offers a way out.** One kind of failure
+  could leave the 3D view frozen with no message at all. It now shows the same
+  "The 3D view stopped" card, with a Reload button, as other drawing failures.
+- **That failure is now counted.** It was missing from the anonymous failure
+  counts. It is counted like the others, with one more fixed label saying
+  whether the drawing or Orbital's own per-frame code stopped. As before, no
+  error text is sent and nothing about you or your device.
+
 ## 0.6.4 — 24 November 2026
 
 - **A stopped 3D view now says what kind of failure it was.** When the drawing

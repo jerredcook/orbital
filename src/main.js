@@ -33,7 +33,7 @@ import { esc } from './esc.js';
 import { initAnalytics, track, trackedEvents } from './analytics.js';
 import { initClip, clipMode } from './clip.js';
 import { guardWorker } from './worker-guard.js';
-import { initRecovery, watchViewer, reloadCard } from './recover.js';
+import { initRecovery, watchViewer, reloadCard, renderStopped } from './recover.js';
 import { VERSION, BUILD, versionLabel, initUpdateCheck } from './version.js';
 
 initAnalytics();   // anonymous feature-use + return-visit counts; inert off the production host
@@ -1231,7 +1231,9 @@ setInterval(() => {
 // wall-clock delta since the previous tick, so overlapping tickers (the system
 // view's per-frame tick + this heartbeat) partition time rather than double it.
 // (ARC-03)
-setInterval(() => { if (!viewer.useDefaultRenderLoop) viewer.clock.tick(); }, 250);
+// It stands down once a view has stopped on an error (recover.js): Cesium turns
+// the loop off then too, and ticking on would only re-run whatever broke.
+setInterval(() => { if (!viewer.useDefaultRenderLoop && !renderStopped()) viewer.clock.tick(); }, 250);
 
 // ---------------------------------------------------------------- search ----
 

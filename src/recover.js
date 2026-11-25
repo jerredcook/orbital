@@ -5,8 +5,9 @@
 //     context and render-loop crashes each send one anonymous `error/<kind>`
 //     event (analytics.js — no message text, no stack, nothing about the
 //     person), so "nobody came back" can be told apart from "it broke".  A
-//     render-loop crash also says which view, what sort of failure and when
-//     (renderErrorKind, renderErrorWhen) — fixed labels, chosen here.
+//     render-loop crash also says which view, whether it was the drawing or
+//     the app's per-frame code, what sort of failure and when (watchViewer,
+//     renderErrorKind, renderErrorWhen) — fixed labels, chosen here.
 //   • RECOVER.  The one failure the app cannot repair in place is losing the
 //     GPU: phones reclaim a background tab's graphics context routinely, and
 //     Cesium cannot rebuild a scene on a new one.  Left alone the visitor
@@ -140,26 +141,53 @@ export function renderErrorWhen({ frames, sinceFirstFrameMs }) {
   return sinceFirstFrameMs < EARLY_MS ? 'early' : 'later';
 }
 
-// Hook a Cesium viewer's render loop: when it stops on an error, Cesium's own
-// panel is a wall of stack trace — replace it with the reload card, and count
-// it as `error/render/<view>/<kind>/<when>` (e.g. error/render/earth/shader/early).
-// `view` names the viewer: 'earth', 'moon', 'system' or 'planet'.
+// True once a view has stopped on an error and the reload card is up: whatever
+// broke would only break again, so the clock's keep-alive (main.js) stands down.
+let viewStopped = false;
+export const renderStopped = () => viewStopped;
+
+// Hook a Cesium viewer's render loop: when it stops on an error, show the
+// reload card and count it as `error/render/<view>/<where>/<kind>/<when>`
+// (e.g. error/render/earth/draw/shader/early).  `view` names the viewer:
+// 'earth', 'moon', 'system' or 'planet'.  The loop stops in two ways:
+//   draw  — the scene's own drawing threw; Cesium raises `renderError`.
+//   frame — code run from the loop outside the drawing threw: a listener on
+//           the clock or on a frame event, which is this app's own per-frame
+//           code.  Cesium raises nothing for this; its only signal is the
+//           error panel it puts up (hidden by style.css — a wall of stack
+//           trace).  Unwatched, the visitor is left with a frozen globe and
+//           no message, and nothing is counted.
 export function watchViewer(viewer, view = 'earth') {
   try {
-    let frames = 0, firstFrameAt = 0;
+    let frames = 0, firstFrameAt = 0, handled = false;
     viewer.scene.postRender.addEventListener(() => { if (frames++ === 0) firstFrameAt = Date.now(); });
-    viewer.scene.renderError.addEventListener((scene, error) => {
+    const stopped = (error, where) => {
+      if (handled) return;
+      handled = true;
       // Drawing on a lost context fails too — and the frame can get there
       // before the browser's "context lost" event does.  That is the GPU case
       // (which may be waiting quietly for a hidden tab), not a second failure.
-      if (gpuLost || contextGone(scene?.canvas ?? viewer.scene.canvas)) { gpuLoss(); return; }
+      if (gpuLost || contextGone(viewer.scene.canvas)) { gpuLoss(); return; }
       let name = 'error/render';
       try {
-        name = `error/render/${view}/${renderErrorKind(error)}/${renderErrorWhen({ frames, sinceFirstFrameMs: Date.now() - firstFrameAt })}`;
+        name = `error/render/${view}/${where}/${renderErrorKind(error)}/${renderErrorWhen({ frames, sinceFirstFrameMs: Date.now() - firstFrameAt })}`;
       } catch { /* count it anyway */ }
       track(name);
+      viewStopped = true;
       reloadCard('The 3D view stopped', 'Something went wrong while drawing the scene. Reload to start it again.');
-    });
+    };
+    viewer.scene.renderError.addEventListener((scene, error) => stopped(error, 'draw'));
+    // Cesium puts its panel up for a drawing error too, and does so BEFORE the
+    // listener above is called — so wait a beat: if `renderError` has claimed
+    // the error by then it was the drawing, and if not it was the frame code.
+    const widget = viewer.cesiumWidget;
+    if (typeof widget?.showErrorPanel === 'function') {
+      const cesiumPanel = widget.showErrorPanel;
+      widget.showErrorPanel = function (title, message, error) {
+        try { Promise.resolve().then(() => stopped(error, 'frame')); } catch { /* count nothing rather than throw */ }
+        return cesiumPanel.apply(this, arguments);
+      };
+    }
   } catch { /* an API change must not break boot */ }
 }
 

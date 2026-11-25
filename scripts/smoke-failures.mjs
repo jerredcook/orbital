@@ -9,7 +9,7 @@
 //   • the position worker fails to load, crashes mid-flight, or silently stalls;
 //   • the pass-scan worker crashes mid-scan;
 //   • the device takes the graphics context away;
-//   • the drawing itself throws;
+//   • the drawing itself throws, or the app's own per-frame code does;
 //   • the network is gone on a later launch (the service worker's job);
 //   • saved settings are corrupt, and shared links are malformed or hostile.
 //
@@ -529,13 +529,40 @@ await scenario('drawingCrashes', {}, async ({ p }) => {
   const counted = s.events.filter((e) => e.startsWith('error/render'));
   notes.drawingCrashes = counted;
   check('drawingCrashes:cardAppears', s.card && await p.locator('#recover-reload').isVisible());
-  check('drawingCrashes:countedWithViewKindAndWhen', counted.length === 1 && /^error\/render\/earth\/type\/(early|later)$/.test(counted[0]));
+  check('drawingCrashes:countedWithViewWhereKindAndWhen', counted.length === 1 && /^error\/render\/earth\/draw\/type\/(early|later)$/.test(counted[0]));
   check('drawingCrashes:nothingFromTheMessage', !s.events.some((e) => /smoke|example|shaderProgram/i.test(e)));
   check('drawingCrashes:notMistakenForGpuLoss', !s.events.includes('error/webgl-lost'));
   await Promise.all([p.waitForEvent('load', { timeout: 30000 }), p.locator('#recover-reload').click()]);
   const s2 = await booted(p);
   check('drawingCrashes:reloadRestoresTheApp', s2.catalog > 5000 && !s2.card);
 });
+
+// The app's own per-frame code throws (a listener on the clock or on a frame
+// event).  Cesium stops its loop for this without raising renderError, and its
+// only signal — an error panel — is hidden: unwatched, the visitor is left with
+// a frozen globe, no message, and nothing counted.
+for (const hook of ['onTick', 'preRender']) {
+  await scenario(`frameCodeCrashes:${hook}`, {}, async ({ p }) => {
+    await p.goto(`${SITE}#sat=25544`, { waitUntil: 'load', timeout: 30000 });
+    await booted(p);
+    await O(p, (hook) => {
+      const v = window.__orbital.viewer;
+      (hook === 'onTick' ? v.clock.onTick : v.scene[hook]).addEventListener(() => { throw new RangeError('smoke: frame code, someone@example.com'); });
+    }, hook);
+    const s = await poll(() => state(p), (v) => v.card, 6000);
+    await sleep(1500);   // long enough for the clock's keep-alive to have run again, if it were going to
+    const events = (await state(p)).events;
+    const counted = events.filter((e) => e.startsWith('error/render'));
+    notes[`frameCodeCrashes:${hook}`] = events.filter((e) => e.startsWith('error/'));
+    check(`frameCodeCrashes:${hook}:cardAppears`, s.card && await p.locator('#recover-reload').isVisible());
+    check(`frameCodeCrashes:${hook}:countedAsFrameCode`, counted.length === 1 && /^error\/render\/earth\/frame\/range\/(early|later)$/.test(counted[0]));
+    check(`frameCodeCrashes:${hook}:countedOnce`, !events.includes('error/script'));
+    check(`frameCodeCrashes:${hook}:nothingFromTheMessage`, !events.some((e) => /smoke|example/i.test(e)));
+    await Promise.all([p.waitForEvent('load', { timeout: 30000 }), p.locator('#recover-reload').click()]);
+    const s2 = await booted(p);
+    check(`frameCodeCrashes:${hook}:reloadRestoresTheApp`, s2.catalog > 5000 && !s2.card);
+  });
+}
 
 // ============================================================== the network ====
 

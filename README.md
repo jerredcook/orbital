@@ -604,9 +604,11 @@ shown instead — plus why, as one of `feed-timeout`, `feed-http-4xx`,
 `feed-http-5xx`, `feed-http-other`, `feed-network`, `feed-bad-data`).  Each is sent at
 most once per page load, so a count reads as "visitors this happened to".
 
-A stopped 3D view is counted as `orbital/error/render/<view>/<kind>/<when>`,
-each part a fixed label chosen in the browser (`src/recover.js`): the view
-(`earth`, `moon`, `system`, `planet`); the kind of failure (`type`, `reference`,
+A stopped 3D view is counted as
+`orbital/error/render/<view>/<where>/<kind>/<when>`, each part a fixed label
+chosen in the browser (`src/recover.js`): the view (`earth`, `moon`, `system`,
+`planet`); where it stopped (`draw` — the drawing itself — or `frame` — the
+app's own per-frame code); the kind of failure (`type`, `reference`,
 `recursion`, `shader`, `framebuffer`, `memory`, `texture`, `not-a-number`,
 `unsupported`, `cesium-check`, `cesium-runtime`, `range`, `other`); and when
 (`first-frame`, `early` — the view's first 20 seconds — or `later`).  The
