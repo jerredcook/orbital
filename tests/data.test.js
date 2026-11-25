@@ -1,6 +1,6 @@
 // TLE parsing + orbit-regime classification (pure functions from data.js).
 import { describe, it, expect } from 'vitest';
-import { parseTLEs, classifyRegime, tleEpochMs, feedFailureKind } from '../src/data.js';
+import { parseTLEs, classifyRegime, tleEpochMs, feedFailureKind, activeListNote } from '../src/data.js';
 
 const ISS = `ISS (ZARYA)
 1 25544U 98067A   26001.50000000  .00016717  00000-0  10270-3 0  9002
@@ -63,5 +63,35 @@ describe('feedFailureKind', () => {
   it('only ever returns one of a fixed set of words', () => {
     const kinds = new Set(['timeout', 'http-4xx', 'http-5xx', 'http-other', 'network', 'bad-data']);
     for (const m of ['HTTP 404', 'HTTP 999', 'HTTP', 'secret-token=abc123', '']) expect(kinds.has(feedFailureKind(new Error(m)))).toBe(true);
+  });
+});
+
+// The orbits come from Space-Track and the list of which satellites are active
+// from CelesTrak.  When CelesTrak is down the last list stays in use.
+describe('activeListNote — the active list is older than the data it was used with', () => {
+  const DAY = 86_400_000;
+  const fetchedAt = Date.UTC(2026, 10, 25, 14, 40);
+  it('says nothing in the ordinary rhythm: a list from the same day, or the day before', () => {
+    expect(activeListNote({ fetchedAt, activeListAt: fetchedAt })).toBe('');
+    expect(activeListNote({ fetchedAt, activeListAt: fetchedAt - 23.7 * 3_600_000 })).toBe('');
+  });
+  it('says nothing for one failed day and the hold that follows it', () => {
+    expect(activeListNote({ fetchedAt, activeListAt: fetchedAt - 2.9 * DAY })).toBe('');
+  });
+  it('names the list\'s date once it lags the data by three days', () => {
+    expect(activeListNote({ fetchedAt, activeListAt: fetchedAt - 3 * DAY }))
+      .toBe('list of active satellites: 22 Nov 2026 · a few may be shown as active or inactive wrongly');
+    expect(activeListNote({ fetchedAt, activeListAt: Date.UTC(2026, 9, 31, 23, 59) })).toContain('31 Oct 2026');   // UTC, whatever the device's zone
+  });
+  it('goes by the gap between the two, not by how long ago either was: an old saved copy is not an outage', () => {
+    const old = Date.UTC(2026, 5, 1);
+    expect(activeListNote({ fetchedAt: old, activeListAt: old - 3_600_000 })).toBe('');
+  });
+  it('says nothing when either date is unknown (the bundled snapshot, a site from before the list was dated)', () => {
+    for (const bad of [null, undefined, NaN, 0, 'yesterday']) {
+      expect(activeListNote({ fetchedAt, activeListAt: bad })).toBe('');
+      expect(activeListNote({ fetchedAt: bad, activeListAt: fetchedAt - 9 * DAY })).toBe('');
+    }
+    expect(activeListNote({})).toBe('');
   });
 });

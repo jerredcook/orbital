@@ -77,11 +77,11 @@ export function splitCatalogue(rows, { activeIds, activeNames = new Map(), activ
     if (!lines) { dropped++; if (skipped.length < 10) skipped.push(`${row.OBJECT_NAME || '?'} (${row.NORAD_CAT_ID || '?'})`); continue; }
     seen.add(norad);
     const type = row.OBJECT_TYPE ?? '';
-    let file;
+    let file, presumed = false;
     if (activeIds.has(norad)) file = 'active';
     else if (type === 'PAYLOAD') {
       const launched = Date.parse(`${row.LAUNCH_DATE}T00:00:00Z`);
-      if (Number.isFinite(launched) && launched > since) { file = 'active'; presumedActive++; }
+      if (Number.isFinite(launched) && launched > since) { file = 'active'; presumed = true; presumedActive++; }
       else file = 'inactive';
     } else if (type === 'ROCKET BODY') file = 'rocketbodies';
     else file = 'debris';
@@ -90,7 +90,8 @@ export function splitCatalogue(rows, { activeIds, activeNames = new Map(), activ
     // Only what the elements cannot say: the app works out period, heights,
     // inclination and the designator from the element lines (catalog-parse.js),
     // which keeps this file a quarter of the size.
-    details.push([norad, { owner: row.COUNTRY_CODE || '', launchDate: row.LAUNCH_DATE || '', launchSite: row.SITE || '', type: TYPE_CODE[type] ?? 'UNK' }]);
+    // (`presumed`: shown as active on the strength of its launch date alone — the app says so in its panel.)
+    details.push([norad, { owner: row.COUNTRY_CODE || '', launchDate: row.LAUNCH_DATE || '', launchSite: row.SITE || '', type: TYPE_CODE[type] ?? 'UNK', ...(presumed ? { presumed: 1 } : {}) }]);
   }
   // Active objects CelesTrak listed but Space-Track did not return.
   let fromCelestrak = 0;

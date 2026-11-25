@@ -10,6 +10,17 @@ twice a week, the satellite lists every four hours) do not change the version.
 The version and build you are running are shown at the foot of the welcome
 card (the **?** button reopens it).
 
+## 0.6.6 — 25 November 2026
+
+- **A satellite that is only presumed active says so.** A newly launched
+  satellite is shown as active before it appears on the list of active
+  satellites. Its panel now reads "Presumed active" until the list confirms it.
+- **An old list of active satellites is dated.** The orbits and the list of
+  which satellites are active come from two different sources. If the list's
+  source is unreachable for three days or more, the foot of the welcome card
+  (the **?** button) gives the list's date and notes that a few satellites may
+  be shown as active or inactive wrongly. Positions are not affected.
+
 ## 0.6.5 — 25 November 2026
 
 - **A frozen globe now says so, and offers a way out.** One kind of failure

@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import * as satellite from 'satellite.js';
-import { loadCatalog, loadCatalogLocal, loadAbout, cacheExpiresInMs, dataFetchedAt, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
+import { loadCatalog, loadCatalogLocal, loadAbout, cacheExpiresInMs, dataFetchedAt, dataListNote, medianEpochMs, CATEGORIES, categoryOf, isActiveSat, KIND_LABEL } from './data.js';
 import { decodeOwner, decodeSite } from './decode.js';
 import { SatSwarm } from './swarm.js';
 import { initMoonView } from './moon.js';
@@ -357,9 +357,11 @@ async function boot() {
   }
 }
 // When the satellite data on screen was fetched (foot of the welcome card,
-// under the version) — the answer to "is this device up to date?".
+// under the version) — the answer to "is this device up to date?" — and, when
+// the list of active satellites is days older than that, a line saying so.
 function showDataDate() {
   const at = dataFetchedAt();
+  $('data-list-note').textContent = dataListNote();
   $('data-version').textContent = at === null ? '' : `satellite data: ${new Date(at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`;
 }
 boot();
@@ -701,6 +703,9 @@ function fillInfoPanel(sat) {
       : sat.kind === 'RB' ? `ROCKET BODY · ${sat.regime}`
         : `${m?.type === 'UNK' ? 'UNIDENTIFIED OBJECT' : 'DEBRIS'} · ${sat.regime}`;
   $('info-name').textContent = sat.name;
+  // Shown as active on its launch date alone: too new to be on the list of
+  // active satellites the data was sorted with (tools/spacetrack.mjs).
+  $('info-presumed').hidden = !(isActiveSat(sat) && m?.presumed);
   $('info-norad').textContent = sat.norad;
   $('info-intl').textContent = m?.intlDes || '—';
   $('info-owner').textContent = decodeOwner(m?.owner);

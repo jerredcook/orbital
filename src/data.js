@@ -64,9 +64,9 @@ async function savedBodies() {
 // What this PAGE downloaded, whether or not it could be saved: in a private
 // window (no Cache Storage) nothing persists, and without this the app would
 // download the lists again on every half-hourly check.
-let shown = null;   // { stamp, t, fetchedAt }
+let shown = null;   // { stamp, t, fetchedAt, activeListAt }
 async function saveBodies(bodies, state) {
-  shown = { stamp: state.stamp, t: state.t, fetchedAt: state.fetchedAt ?? null };
+  shown = { stamp: state.stamp, t: state.t, fetchedAt: state.fetchedAt ?? null, activeListAt: state.activeListAt ?? null };
   try {
     const c = await caches.open(DATA_CACHE);
     await Promise.all(BODIES.map((k) => c.put(bodyUrl(k), new Response(bodies[k]))));
@@ -86,6 +86,31 @@ try {
 export function dataFetchedAt() {
   const at = (readState() ?? shown)?.fetchedAt;
   return Number.isFinite(at) ? at : null;
+}
+
+// The list of which satellites are ACTIVE comes from CelesTrak, once a day; the
+// orbits come from Space-Track, every four hours (tools/fetch-data.mjs).  When
+// CelesTrak cannot be reached the orbits stay current and the last list is kept
+// in use, so a satellite that has since stopped working is still shown as
+// active.  Three days is the allowance the data fetch itself makes for a new
+// launch to be listed; a list that lags the orbits by more than that is worth
+// telling the visitor about, and one that lags by less is the ordinary rhythm.
+const LIST_LAG_NOTE_MS = 3 * 86_400_000;
+/**
+ * Pure: the line to show under the data's date when the active list is older
+ * than the data it was used with, or '' when there is nothing to say (the
+ * usual case, and whenever either date is unknown).
+ */
+export function activeListNote({ fetchedAt, activeListAt }) {
+  if (!Number.isFinite(fetchedAt) || !Number.isFinite(activeListAt) || activeListAt <= 0) return '';
+  if (fetchedAt - activeListAt < LIST_LAG_NOTE_MS) return '';
+  const day = new Date(activeListAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return `list of active satellites: ${day} · a few may be shown as active or inactive wrongly`;
+}
+/** That line for the data on screen. */
+export function dataListNote() {
+  const s = readState() ?? shown;
+  return activeListNote({ fetchedAt: s?.fetchedAt, activeListAt: s?.activeListAt });
 }
 
 /** Milliseconds until the site should next be asked for newer data (0 = now). */
@@ -190,12 +215,15 @@ export async function loadCatalog(onStatus, { patient = false, have = false } = 
     const meta = JSON.parse(await get(`${DATA_URL}meta.json`, patient ? 15000 : 8000, { cache: 'no-store' }));
     if (!meta || typeof meta.stamp !== 'string' || !/^[0-9a-f]{8,64}$/.test(meta.stamp)) throw new BadData('meta.json has no stamp');
     lastMeta = meta;
-    if (have && shown?.stamp === meta.stamp) { shown.t = Date.now(); return null; }   // this page already has it (unsaved: private mode)
+    // (The same files can be described by a newer active-list date — the list was
+    // fetched again and had not changed — so that date is taken from every answer.)
+    const activeListAt = Number(meta.activeListAt) || null;
+    if (have && shown?.stamp === meta.stamp) { shown.t = Date.now(); shown.activeListAt = activeListAt; return null; }   // this page already has it (unsaved: private mode)
     if (saved && state?.stamp === meta.stamp) {
       // Nothing newer.  Note that we asked, so the next 30 minutes ask nothing.
       const same = have ? null : build(saved);
       if (have || same.length >= MIN_OBJECTS) {
-        writeState({ ...state, t: Date.now() });
+        writeState({ ...state, activeListAt, t: Date.now() });
         return same;
       }
     }
@@ -227,7 +255,7 @@ export async function loadCatalog(onStatus, { patient = false, have = false } = 
     if (list.length < MIN_OBJECTS) throw new BadData('the active list is not a catalog');
     // Saved only when all three files arrived: a partial set is shown, but the
     // stamp stays unsaved so the next check fetches the rest.
-    if (complete) await saveBodies(bodies, { stamp: meta.stamp, fetchedAt: Number(meta.fetchedAt) || null, t: Date.now() });
+    if (complete) await saveBodies(bodies, { stamp: meta.stamp, fetchedAt: Number(meta.fetchedAt) || null, activeListAt, t: Date.now() });
     return list;
   } catch (err) {
     track(`degraded/feed-${feedFailureKind(err)}`);

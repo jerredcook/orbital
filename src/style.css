@@ -879,6 +879,9 @@ body.tl-on:not(.system-mode):not(.moon-mode):not(.clip-mode) #tl-era { top: calc
 .readout { margin: 0; }
 
 /* What the object is (src/about.js): photo, description, purpose, a link out. */
+/* A satellite shown as active on its launch date alone (main.js fillInfoPanel). */
+#info-presumed { margin: -8px 0 14px; font-size: 12px; line-height: 1.4; color: #A9B8CB; }
+#info-presumed[hidden] { display: none; }
 #info-about { margin: -4px 0 14px; }
 #info-about[hidden] { display: none; }
 #about-photo-link { display: block; margin: 0 0 10px; border-radius: 4px; overflow: hidden; background: #0A0F18; }
@@ -1034,7 +1037,7 @@ body.tl-on:not(.system-mode):not(.moon-mode):not(.clip-mode) #tl-era { top: calc
   body.following #infopanel {
     top: auto; max-height: none; padding: 10px 14px 12px;
   }
-  body.following #info-regime, body.following #info-about { display: none; }
+  body.following #info-regime, body.following #info-about, body.following #info-presumed { display: none; }
   body.following #infopanel h2 { margin: 0 0 6px; font-size: 15px; }
   body.following #info-close { top: 6px; }
   body.following #infopanel .readout > div:not(.live) { display: none; }

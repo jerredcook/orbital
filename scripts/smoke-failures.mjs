@@ -5,6 +5,7 @@
 //   • the satellite data refuses, hangs, or is not satellite data at all;
 //   • newer data arrives while a returning visitor is looking at the old;
 //   • every data source is gone (then comes back, and Retry works);
+//   • the list of which satellites are active is days older than the orbits;
 //   • the map imagery host is blocked;
 //   • the position worker fails to load, crashes mid-flight, or silently stalls;
 //   • the pass-scan worker crashes mid-scan;
@@ -441,6 +442,40 @@ await scenario('passWorkerCrashes', { storage: { 'orbital.station': JSON.stringi
   check('passWorkerCrashes:scanKeepsAdvancing', later.done || later.pct > resumed.pct);
   check('passWorkerCrashes:passesAreListed', (await poll(passState, (v) => v.rows > 0, 30000, 500)).rows > 0);
   check('passWorkerCrashes:noFailureMessage', !/failed/.test((await passState()).text));
+});
+
+// CelesTrak — the source of the list of which satellites are active — has been
+// unreachable for days, while Space-Track kept the orbits current.  Everything
+// works; the welcome card says how old the list is, and a satellite shown as
+// active on its launch date alone says so in its panel.
+await scenario('activeListIsOld', {}, async ({ ctx, p, errs }) => {
+  const DAY = 86_400_000;
+  let marked = false;
+  await ctx.route('**/data/meta.json*', async (route) => {
+    const meta = await (await route.fetch()).json();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...meta, activeListAt: meta.fetchedAt - 5 * DAY }) });
+  });
+  await ctx.route('**/data/satcat.json*', async (route) => {
+    const rows = await (await route.fetch()).json();
+    const hubble = rows.find((r) => r[0] === 20580);
+    if (hubble) { hubble[1].presumed = 1; marked = true; }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) });
+  });
+  await p.goto(SITE, { waitUntil: 'load', timeout: 30000 });
+  const s = await booted(p);
+  const foot = await poll(() => O(p, () => ({ data: document.getElementById('data-version').textContent, note: document.getElementById('data-list-note').textContent })), (v) => v.note, 8000);
+  notes.activeListIsOld = foot;
+  check('activeListIsOld:everythingStillWorks', s.catalog > 5000 && s.drawn > 5000 && !s.bootError && !s.card);
+  check('activeListIsOld:welcomeCardGivesTheListsDate', /^satellite data: /.test(foot.data) && /^list of active satellites: \d{1,2} \w{3} \d{4} · /.test(foot.note));
+  check('activeListIsOld:notCountedAsAFailure', !s.events.some((e) => e.startsWith('degraded/') || e.startsWith('error/')));
+  const select = (norad) => O(p, (n) => { const o = window.__orbital; o.selectByIndex(o.catalog.findIndex((x) => x.norad === n)); }, norad);
+  const presumedShown = () => p.locator('#info-presumed').isVisible();
+  await select(20580);
+  check('activeListIsOld:scenarioIsReal', marked);
+  check('activeListIsOld:presumedSatelliteSaysSo', await poll(presumedShown, (v) => v, 5000));
+  await select(25544);
+  check('activeListIsOld:othersDoNot', await poll(presumedShown, (v) => !v, 5000) === false);
+  check('activeListIsOld:noPageErrors', errs.length === 0);
 });
 
 // ============================================================ the graphics ====

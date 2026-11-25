@@ -113,6 +113,19 @@ describe('when CelesTrak\'s active list is missing or old', () => {
     expect(split.presumedActive).toBe(1);
     expect(ids(split.inactive)).toEqual([5, 27386]);            // old dead satellites stay dead
   });
+  it('and is marked as presumed, so the app can say so — nothing else is', () => {
+    const split = splitCatalogue(rows, { activeIds: new Set([25544, 20580]), activeListAt: Date.UTC(2026, 9, 10), now: NOW });
+    const details = new Map(JSON.parse(split.details));
+    expect(details.get(101111).presumed).toBe(1);
+    expect([...details].filter(([, d]) => 'presumed' in d).map(([n]) => n)).toEqual([101111]);
+    // the app carries the mark through to the object it draws
+    const drawn = withMeta(parseTLEs(split.active), details);
+    expect(drawn.find((s) => s.norad === 101111).meta.presumed).toBe(1);
+    expect(drawn.find((s) => s.norad === 25544).meta.presumed).toBeUndefined();
+    // once the list has it, the mark goes
+    const listed = splitCatalogue(rows, { activeIds: new Set([25544, 20580, 101111]), activeListAt: NOW, now: NOW });
+    expect(JSON.parse(listed.details).some(([, d]) => 'presumed' in d)).toBe(false);
+  });
   it('that covers the daily cadence: yesterday\'s list and a satellite launched this morning', () => {
     const fresh = rows.map((r) => ({ ...r }));
     fresh[4].LAUNCH_DATE = '2026-11-15';                                 // PULSAR, as if launched today

@@ -283,7 +283,12 @@ Data freshness and resilience:
   - **CelesTrak** for its curated active list, which decides which
     satellites count as active — one request, about once a day (the list
     changes slowly; in between, the one the site has is reused, and a
-    satellite launched since is presumed active).
+    satellite launched since is presumed active).  The app says so where
+    it matters: a presumed satellite's panel reads "Presumed active", and
+    if CelesTrak stays unreachable until the list is three days older than
+    the orbits, the foot of the welcome card gives the list's date and
+    warns that a few satellites may be shown as active or inactive wrongly
+    (`activeListNote` in `src/data.js`).
   The result is validated (`tools/satellite-data.mjs`,
   `tools/tle-snapshot.mjs`), built into the site as `data/active.tle`,
   `inactive.tle`, `rocketbodies.tle`, `debris.tle`, `satcat.json` (owner,
