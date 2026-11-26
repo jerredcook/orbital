@@ -1,6 +1,51 @@
 {
- "updated": "2026-11-23",
+ "updated": "2026-11-26",
  "previous": [
+  {
+   "name": "Long March 2D | Yaogan 49 Group 01",
+   "date": "2026-11-26T09:38:00Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "Chinese reconnaissance satellites of unknown functions.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
+   "pad": "Xichang Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Long March 2F/G | Shenzhou 24",
+   "date": "2026-11-25T00:18:52Z",
+   "agency": "China Aerospace Science and Technology Corporation",
+   "status": "Success",
+   "desc": "Shenzhou 24 will be the 24th flight of the Shenzhou program. The first astronaut from Pakistan, Muhammad Zeeshan Ali, will fly on this on a short duration mission, with Chinese astronaut Zhu Yangzhu of Shenzhou 23 to undergo a year long expedition and stay on ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/shenzhou_22_lau_image_20251129175823.jpg",
+   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | USSF-266",
+   "date": "2026-11-24T16:08:59Z",
+   "agency": "SpaceX",
+   "status": "Success",
+   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
+   "date": "2026-11-24T11:14:52Z",
+   "agency": "Arianespace",
+   "status": "Success",
+   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_64_lifto_image_20260618063419.jpg",
+   "pad": "Guiana Space Centre, French Guiana"
+  },
+  {
+   "name": "Soyuz 2.1b | Progress MS-36 (97P)",
+   "date": "2026-11-24T10:17:46Z",
+   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
+   "status": "Success",
+   "desc": "Progress resupply mission to the International Space Station.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
+   "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
+  },
   {
    "name": "Falcon 9 Block 5 | NROL-136",
    "date": "2026-11-22T12:23:56Z",
@@ -27,96 +72,15 @@
    "desc": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group. The constellation will eventually consists of 13000 satellites.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_20251206093107.jpeg",
    "pad": "Wenchang Space Launch Site, People's Republic of China"
-  },
-  {
-   "name": "Long March 2D | Shijian 24",
-   "date": "2026-11-18T22:51:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Success",
-   "desc": "Experimental Chinese satellite of unknown purposes.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
-   "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Vulcan VC6L | Amazon Leo (LV-01)",
-   "date": "2026-11-15T17:40:30Z",
-   "agency": "United Launch Alliance",
-   "status": "Failure",
-   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vulcan_vc6l_on__image_20261114102518.jpeg",
-   "pad": "Cape Canaveral SFS, FL, USA"
-  },
-  {
-   "name": "Electron | The Mountain God Rises (iQPS Launch 10)",
-   "date": "2026-11-14T05:30:00Z",
-   "agency": "Rocket Lab",
-   "status": "Success",
-   "desc": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/100th_electron__image_20261115204552.jpg",
-   "pad": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand"
-  },
-  {
-   "name": "Soyuz 2.1b/Fregat-M | MKA Kinosputnik, KOEN and others",
-   "date": "2026-11-14T01:16:00Z",
-   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
-   "status": "Success",
-   "desc": "Share-ride of multiple satellites, including dual-use optical Earth observation satellites and drone-guiding satellites: * MKA Kinosputnik * KOEN, KA MT-LAB * NPO Kaisant 6U cubesat with a Germes modem * NPO Kaisant 16U cubesat with Gonets modems",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
-   "pad": "Vostochny Cosmodrome, Siberia, Russian Federation"
-  },
-  {
-   "name": "Starship | Starlink Group 31-2 (Starship Flight 15)",
-   "date": "2026-11-13T22:47:36Z",
-   "agency": "SpaceX",
-   "status": "Success",
-   "desc": "15th test flight of the two-stage Starship launch vehicle and 4th flight of Starship V3. Second Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-2) into stable Low Earth Orbit and first ever to attempt returning t",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_42_dur_image_20261118092530.jpeg",
-   "pad": "SpaceX Starbase, TX, USA"
   }
  ],
  "upcoming": [
   {
-   "name": "Soyuz 2.1b | Progress MS-36 (97P)",
-   "date": "2026-11-24T10:13:00Z",
-   "agency": "Russian Federal Space Agency (ROSCOSMOS)",
-   "status": "TBC",
-   "desc": "Progress resupply mission to the International Space Station.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/soyuz_2.1b_image_20230802085331.jpg",
-   "pad": "Baikonur Cosmodrome, Republic of Kazakhstan"
-  },
-  {
-   "name": "Ariane 64 Block 2 | Amazon Leo (LE-04)",
-   "date": "2026-11-24T10:45:00Z",
-   "agency": "Arianespace",
-   "status": "Go",
-   "desc": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_64_lifto_image_20260618063419.jpg",
-   "pad": "Guiana Space Centre, French Guiana"
-  },
-  {
-   "name": "Falcon 9 Block 5 | USSF-266",
-   "date": "2026-11-24T15:55:00Z",
-   "agency": "SpaceX",
-   "status": "Go",
-   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
-   "pad": "Vandenberg SFB, CA, USA"
-  },
-  {
-   "name": "Long March 2F/G | Shenzhou 24",
-   "date": "2026-11-25T00:18:00Z",
+   "name": "Long March 2D | Yaogan 49 Group 01",
+   "date": "2026-11-26T09:38:00Z",
    "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Shenzhou 24 will be the 24th flight of the Shenzhou program. The first astronaut from Pakistan is expected to fly on this on a short duration mission, with another Chinese astronaut to undergo a year long expedition.",
-   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/shenzhou_22_lau_image_20251129175823.jpg",
-   "pad": "Jiuquan Satellite Launch Center, People's Republic of China"
-  },
-  {
-   "name": "Long March 2D | Unknown Payload",
-   "date": "2026-11-26T09:35:00Z",
-   "agency": "China Aerospace Science and Technology Corporation",
-   "status": "Go",
-   "desc": "Details TBD.",
+   "status": "Success",
+   "desc": "Chinese reconnaissance satellites of unknown functions.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long2520march25202d_image_20190222031211.jpeg",
    "pad": "Xichang Satellite Launch Center, People's Republic of China"
   },
@@ -146,6 +110,42 @@
    "desc": "Details TBD.",
    "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-6c_on_the_la_image_20240507065151.jpg",
    "pad": "Taiyuan Satellite Launch Center, People's Republic of China"
+  },
+  {
+   "name": "Falcon 9 Block 5 | USSF-380",
+   "date": "2026-11-29T04:39:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+   "pad": "Vandenberg SFB, CA, USA"
+  },
+  {
+   "name": "Falcon 9 Block 5 | Cygnus CRS-2 NG-25",
+   "date": "2026-11-29T15:47:00Z",
+   "agency": "SpaceX",
+   "status": "Go",
+   "desc": "This is the 25th flight of the Orbital ATK's uncrewed resupply spacecraft Cygnus and its 24th flight to the International Space Station under the Commercial Resupply Services contract with NASA.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
+   "pad": "Cape Canaveral SFS, FL, USA"
+  },
+  {
+   "name": "Mir | Demo Flight",
+   "date": "2026-11-30T00:00:00Z",
+   "agency": "Agency for Defense Development",
+   "status": "TBD",
+   "desc": "Note: Launch vehicle name is provisional. First orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd ",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/south2520korea_image_20231204145331.png",
+   "pad": "Sea Launch"
+  },
+  {
+   "name": "Kinetica 1 | Unknown Payload",
+   "date": "2026-12-01T01:45:00Z",
+   "agency": "CAS Space",
+   "status": "Go",
+   "desc": "Details TBD.",
+   "img": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/zhongke-1a_image_20220912002218.png",
+   "pad": "Haiyang Oriental Spaceport"
   }
  ]
 }
